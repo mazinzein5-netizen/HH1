@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IbnCeena Interactive Triage</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; line-height: 1.5; }
+        .card { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; text-align: center; }
+        .section { margin-bottom: 20px; padding: 10px; border-bottom: 1px solid #eee; }
+        label { display: block; margin: 8px 0; cursor: pointer; }
+        textarea, select { width: 100%; padding: 8px; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; }
+        button { width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        
+        /* Triage Colors */
+        #result { margin-top: 20px; padding: 15px; border-radius: 8px; font-weight: bold; display: none; }
+        .cat-1 { background: #ff7675; color: white; } /* Emergency */
+        .cat-2 { background: #fab1a0; color: #2d3436; } /* Fast Track */
+        .cat-3 { background: #ffeaa7; color: #2d3436; } /* Physio */
+        .cat-4 { background: #55efc4; color: #2d3436; } /* Virtual */
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>IbnCeena Clinical Triage</h2>
+    
+    <div class="section">
+        <label><input type="checkbox" class="red-flag"> 🔴 CES / Myelopathy / ACS signs</label>
+        <label><input type="checkbox" id="anticoag"> ⚠️ Currently on Blood Thinners?</label>
+    </div>
+
+    <div class="section">
+        <label>Primary Site:</label>
+        <select id="site"><option>Spine</option><option>Hip</option><option>Knee</option><option>Ankle</option></select>
+        <label>Patient Concerns:</label>
+        <textarea id="notes" rows="3" placeholder="Enter clinical history..."></textarea>
+    </div>
+
+    <button onclick="runTriage()">Assess Patient</button>
+
+    <div id="result"></div>
+</div>
+
+<script>
+function runTriage() {
+    const isEmergency = document.querySelector('.red-flag').checked;
+    const isAnticoag = document.getElementById('anticoag').checked;
+    const resultDiv = document.getElementById('result');
+    
+    resultDiv.style.display = 'block';
+    
+    if (isEmergency) {
+        resultDiv.className = 'cat-1';
+        resultDiv.innerHTML = "CRITICAL ALERT: Present to A&E immediately. High risk of neurovascular compromise.";
+    } else if (isAnticoag) {
+        resultDiv.className = 'cat-2';
+        resultDiv.innerHTML = "ORANGE: Fast Track. High-risk medication alert. Schedule for urgent assessment.";
+    } else {
+        resultDiv.className = 'cat-3';
+        resultDiv.innerHTML = "YELLOW: Physiotherapy / Conservative management. Monitor for progress.";
+    }
+}
+</script>
+</body>
+</html>
