@@ -1,50 +1,51 @@
 const colors = {
   light: {
-    text: "#1A2B3C",
-    tint: "#1A3A5C",
+    background: "#0d0d1a",
+    foreground: "#FFFFFF",
 
-    background: "#F0F4F8",
-    foreground: "#1A2B3C",
+    card: "#16162a",
+    cardForeground: "#FFFFFF",
+    cardElevated: "#1d1d38",
 
-    card: "#FFFFFF",
-    cardForeground: "#1A2B3C",
+    border: "#2a2a45",
+    input: "#2a2a45",
 
-    primary: "#1A3A5C",
+    primary: "#4F6EF7",
     primaryForeground: "#FFFFFF",
+    primaryLight: "#6B84FA",
 
-    secondary: "#E8EEF4",
-    secondaryForeground: "#1A2B3C",
+    secondary: "#1d1d38",
+    secondaryForeground: "#8891B4",
 
-    muted: "#E8EEF4",
-    mutedForeground: "#6B7D8E",
+    muted: "#1d1d38",
+    mutedForeground: "#7882b0",
 
-    accent: "#2980B9",
+    accent: "#E5294E",
     accentForeground: "#FFFFFF",
 
-    destructive: "#E74C3C",
+    destructive: "#FF4757",
     destructiveForeground: "#FFFFFF",
 
-    border: "#D1DCE8",
-    input: "#D1DCE8",
+    text: "#FFFFFF",
+    tint: "#4F6EF7",
 
-    // Triage category colors
-    emergency: "#C0392B",
-    emergencyBg: "#FDEDEC",
-    emergencyBorder: "#E74C3C",
+    emergency: "#FF4757",
+    emergencyBg: "#2a1218",
+    emergencyBorder: "#6B1C28",
 
-    fastTrack: "#D35400",
-    fastTrackBg: "#FEF5E7",
-    fastTrackBorder: "#E67E22",
+    fastTrack: "#FF9F43",
+    fastTrackBg: "#2a1e0d",
+    fastTrackBorder: "#6B4420",
 
-    physio: "#B7770D",
-    physioBg: "#FEF9E7",
-    physioBorder: "#F39C12",
+    physio: "#4F6EF7",
+    physioBg: "#0f1230",
+    physioBorder: "#2a3488",
 
-    virtual: "#1E8449",
-    virtualBg: "#EAFAF1",
-    virtualBorder: "#27AE60",
+    virtual: "#5EE7A0",
+    virtualBg: "#0d2218",
+    virtualBorder: "#1a5a38",
   },
-  radius: 12,
+  radius: 14,
 };
 
 export default colors;

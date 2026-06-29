@@ -1,4 +1,5 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React from "react";
 import {
@@ -11,186 +12,148 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import { useAuth } from "@/context/AuthContext";
-import { usePatient, type Complaint } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
 
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-function severityColor(severity: string, colors: any) {
-  switch (severity) {
-    case "life-threatening": return { bg: colors.emergencyBg, text: colors.emergency, border: colors.emergencyBorder };
-    case "severe": return { bg: colors.emergencyBg, text: colors.emergency, border: colors.emergencyBorder };
-    case "moderate": return { bg: colors.fastTrackBg, text: colors.fastTrack, border: colors.fastTrackBorder };
-    default: return { bg: colors.physioBg, text: colors.physio, border: colors.physioBorder };
-  }
+function HexLogo({ size = 40, color = "#4F6EF7" }: { size?: number; color?: string }) {
+  return (
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <MaterialCommunityIcons
+        name="hexagon-outline"
+        size={size}
+        color={color}
+        style={StyleSheet.absoluteFill}
+      />
+      <MaterialCommunityIcons name="heart-flash" size={size * 0.44} color={color} />
+    </View>
+  );
 }
 
 export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
-  const { data, loading } = usePatient();
-
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPad = Platform.OS === "web" ? 34 + 84 : insets.bottom + 84;
-
-  const activeConditions = data.medicalHistory.filter((c) => c.status !== "resolved").length;
-  const activeKardex = data.kardex.filter((k) => k.status === "active").length;
-  const recentComplaints = data.complaints.slice(0, 3);
+  const bottomPad = Platform.OS === "web" ? 34 + 68 : insets.bottom + 64;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 20, paddingBottom: bottomPad + 16 }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: topPad + 16, paddingBottom: bottomPad + 16 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.headerRow}>
+        <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <HexLogo size={40} color={colors.primary} />
           <View>
-            <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              {getGreeting()},
+            <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              IbnCeena
             </Text>
-            <Text style={[styles.username, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-              {user?.fullName || user?.username}
-            </Text>
-          </View>
-          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.avatarText, { fontFamily: "Inter_700Bold" }]}>
-              {(user?.fullName || user?.username || "?")[0].toUpperCase()}
+            <Text style={[styles.appEco, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>
+              HEALTH ECOSYSTEM
             </Text>
           </View>
-        </View>
-
-        {/* Allergy Alert */}
-        {data.allergies.some((a) => a.severity === "life-threatening" || a.severity === "severe") && (
-          <View style={[styles.allergyBanner, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}>
-            <Feather name="alert-triangle" size={16} color={colors.emergency} />
-            <Text style={[styles.allergyBannerText, { color: colors.emergency, fontFamily: "Inter_600SemiBold" }]}>
-              High-risk allergy on record — see Profile
-            </Text>
+          <View style={styles.navLinks}>
+            <TouchableOpacity onPress={() => router.push("/(app)/(tabs)/triage")} activeOpacity={0.7}>
+              <Text style={[styles.navLink, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
+                Health{"\n"}Hive
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push("/(app)/(tabs)/profile")} activeOpacity={0.7}>
+              <Text style={[styles.navLink, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
+                Health{"\n"}Card
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
-
-        {/* Stats row */}
-        <View style={styles.statsRow}>
-          {[
-            { label: "Conditions", value: activeConditions, icon: "heart-pulse", color: colors.primary },
-            { label: "Allergies", value: data.allergies.length, icon: "alert-rhombus", color: colors.emergency },
-            { label: "Medications", value: activeKardex, icon: "pill", color: colors.virtual },
-          ].map((s) => (
-            <View key={s.label} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <MaterialCommunityIcons name={s.icon as any} size={20} color={s.color} />
-              <Text style={[styles.statValue, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{s.value}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{s.label}</Text>
-            </View>
-          ))}
         </View>
 
-        {/* Quick Actions */}
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>NEW ASSESSMENT</Text>
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => router.push("/(app)/(tabs)/complaint")}
-            style={[styles.actionCard, { backgroundColor: colors.primary }]}
-          >
-            <MaterialCommunityIcons name="brain" size={28} color="#fff" />
-            <Text style={[styles.actionTitle, { fontFamily: "Inter_700Bold" }]}>AI Complaint</Text>
-            <Text style={[styles.actionSub, { fontFamily: "Inter_400Regular" }]}>Intelligent intake</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => router.push("/(app)/(tabs)/triage")}
-            style={[styles.actionCard, { backgroundColor: colors.accent }]}
-          >
-            <MaterialCommunityIcons name="cross-outline" size={28} color="#fff" />
-            <Text style={[styles.actionTitle, { fontFamily: "Inter_700Bold" }]}>Triage</Text>
-            <Text style={[styles.actionSub, { fontFamily: "Inter_400Regular" }]}>Clinical assessment</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Hero Card */}
+        <LinearGradient
+          colors={["#111a6e", "#1a268c", "#121870"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          {/* Hex watermark */}
+          <View style={styles.heroWatermark} pointerEvents="none">
+            <MaterialCommunityIcons name="hexagon-outline" size={220} color="rgba(255,255,255,0.04)" />
+          </View>
+          <View style={styles.heroWatermark2} pointerEvents="none">
+            <MaterialCommunityIcons name="hexagon-outline" size={160} color="rgba(255,255,255,0.04)" />
+          </View>
 
-        {/* Medical Records */}
-        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, marginTop: 8 }]}>MEDICAL RECORDS</Text>
-        <View style={styles.recordsRow}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => router.push("/(app)/medical-history")}
-            style={[styles.recordCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-          >
-            <MaterialCommunityIcons name="clipboard-pulse" size={22} color={colors.primary} />
-            <Text style={[styles.recordTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Medical History</Text>
-            <Text style={[styles.recordCount, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              {data.medicalHistory.length} conditions
+          <View style={styles.heroContent}>
+            <Text style={[styles.heroTitle1, { fontFamily: "Inter_700Bold" }]}>Objective Triage.</Text>
+            <Text style={[styles.heroTitle2, { color: colors.primaryLight, fontFamily: "Inter_700Bold" }]}>
+              Absolute Security.
             </Text>
-            <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={styles.recordArrow} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => router.push("/(app)/kardex")}
-            style={[styles.recordCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-          >
-            <MaterialCommunityIcons name="pill" size={22} color={colors.virtual} />
-            <Text style={[styles.recordTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Kardex</Text>
-            <Text style={[styles.recordCount, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              {data.kardex.length} medications
+            <Text style={[styles.heroBody, { fontFamily: "Inter_400Regular" }]}>
+              Bridging the gap between primary care and specialized treatment. Generating verified clinical
+              metrics for MSK pathways and providing instant, life-saving data access for first responders.
             </Text>
-            <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={styles.recordArrow} />
-          </TouchableOpacity>
-        </View>
 
-        {/* Drug Allergies */}
-        {data.allergies.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, { color: colors.mutedForeground, marginTop: 8 }]}>DRUG ALLERGIES</Text>
-            <View style={styles.listCol}>
-              {data.allergies.map((a) => {
-                const sc = severityColor(a.severity, colors);
-                return (
-                  <View key={a.id} style={[styles.allergyCard, { backgroundColor: sc.bg, borderColor: sc.border }]}>
-                    <View style={styles.allergyRow}>
-                      <MaterialCommunityIcons name="alert-rhombus" size={16} color={sc.text} />
-                      <Text style={[styles.allergyDrug, { color: sc.text, fontFamily: "Inter_700Bold" }]}>{a.drug}</Text>
-                      <View style={[styles.severityBadge, { backgroundColor: sc.border }]}>
-                        <Text style={[styles.severityText, { fontFamily: "Inter_600SemiBold" }]}>{a.severity.toUpperCase()}</Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.allergyReaction, { color: sc.text, fontFamily: "Inter_400Regular" }]}>{a.reaction}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </>
-        )}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => router.push("/(app)/(tabs)/triage")}
+              style={styles.heroCta}
+            >
+              <MaterialCommunityIcons name="clipboard-text" size={17} color="#fff" />
+              <Text style={[styles.heroCtaText, { fontFamily: "Inter_600SemiBold" }]}>
+                Start Triage Flow
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
 
-        {/* Recent Complaints */}
-        {recentComplaints.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, { color: colors.mutedForeground, marginTop: 8 }]}>RECENT COMPLAINTS</Text>
-            <View style={styles.listCol}>
-              {recentComplaints.map((c: Complaint) => (
-                <View key={c.id} style={[styles.complaintCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <Text style={[styles.complaintChief, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{c.chiefComplaint}</Text>
-                  <Text style={[styles.complaintDate, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    {new Date(c.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                  </Text>
-                  {c.triageRecommendation && (
-                    <Text style={[styles.complaintTriage, { color: colors.primary, fontFamily: "Inter_500Medium" }]}>
-                      {c.triageRecommendation}
-                    </Text>
-                  )}
-                </View>
-              ))}
-            </View>
-          </>
-        )}
+        {/* Health Hive Section */}
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push("/(app)/(tabs)/triage")}
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <View style={[styles.sectionIcon, { backgroundColor: "#0f1a5a" }]}>
+            <MaterialCommunityIcons name="waveform" size={22} color={colors.primary} />
+          </View>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+            Health Hive Triage
+          </Text>
+          <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Digital triage for Neck, Back, Knee, and Hip chronic pain. Generates verified Oxford, ODI, and
+            mJOA scores with GP referral generation.
+          </Text>
+          <View style={styles.sectionLink}>
+            <Text style={[styles.sectionLinkText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>
+              Explore Pathways
+            </Text>
+            <Feather name="chevron-right" size={14} color={colors.primary} />
+          </View>
+        </TouchableOpacity>
+
+        {/* Health Card Section */}
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push("/(app)/(tabs)/profile")}
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <View style={[styles.sectionIcon, { backgroundColor: "#2a0f12" }]}>
+            <MaterialCommunityIcons name="shield-alert" size={22} color={colors.accent} />
+          </View>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+            Health Card Portal
+          </Text>
+          <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Emergency QR access to medications and history. Features a geriatric safety package with falls
+            detection and automatic GPS help call.
+          </Text>
+          <View style={styles.sectionLink}>
+            <Text style={[styles.sectionLinkText, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>
+              View Portal
+            </Text>
+            <Feather name="chevron-right" size={14} color={colors.accent} />
+          </View>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -198,37 +161,58 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scroll: { paddingHorizontal: 20 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  greeting: { fontSize: 13 },
-  username: { fontSize: 22, letterSpacing: -0.3 },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  avatarText: { color: "#fff", fontSize: 18 },
-  allergyBanner: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 16 },
-  allergyBannerText: { fontSize: 13, flex: 1 },
-  statsRow: { flexDirection: "row", gap: 10, marginBottom: 24 },
-  statCard: { flex: 1, alignItems: "center", borderRadius: 14, borderWidth: 1, padding: 14, gap: 4 },
-  statValue: { fontSize: 22 },
-  statLabel: { fontSize: 11, textAlign: "center" },
-  sectionTitle: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 1.2, marginBottom: 10, marginLeft: 2 },
-  actionRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
-  actionCard: { flex: 1, borderRadius: 16, padding: 16, gap: 6 },
-  actionTitle: { color: "#fff", fontSize: 15 },
-  actionSub: { color: "rgba(255,255,255,0.75)", fontSize: 12 },
-  recordsRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
-  recordCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, gap: 3 },
-  recordTitle: { fontSize: 13 },
-  recordCount: { fontSize: 11 },
-  recordArrow: { position: "absolute", top: 14, right: 12 },
-  listCol: { gap: 8, marginBottom: 16 },
-  allergyCard: { borderRadius: 12, borderWidth: 1, padding: 12, gap: 4 },
-  allergyRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  allergyDrug: { fontSize: 14, flex: 1 },
-  severityBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
-  severityText: { color: "#fff", fontSize: 10 },
-  allergyReaction: { fontSize: 12, marginLeft: 24 },
-  complaintCard: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 4 },
-  complaintChief: { fontSize: 14 },
-  complaintDate: { fontSize: 12 },
-  complaintTriage: { fontSize: 12 },
+  scroll: { paddingHorizontal: 16, gap: 14 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  appName: { fontSize: 16, letterSpacing: -0.3 },
+  appEco: { fontSize: 9, letterSpacing: 1.4 },
+  navLinks: { flexDirection: "row", gap: 16, marginLeft: "auto" },
+  navLink: { fontSize: 12, textAlign: "center", lineHeight: 17 },
+  heroCard: {
+    borderRadius: 20,
+    overflow: "hidden",
+    padding: 24,
+    minHeight: 280,
+  },
+  heroWatermark: {
+    position: "absolute",
+    right: -50,
+    top: -40,
+    opacity: 1,
+  },
+  heroWatermark2: {
+    position: "absolute",
+    right: 20,
+    bottom: -30,
+    opacity: 1,
+  },
+  heroContent: { gap: 12, zIndex: 1 },
+  heroTitle1: { fontSize: 30, color: "#FFFFFF", letterSpacing: -0.5, lineHeight: 36 },
+  heroTitle2: { fontSize: 30, letterSpacing: -0.5, lineHeight: 36, marginTop: -4 },
+  heroBody: { fontSize: 14, color: "rgba(255,255,255,0.75)", lineHeight: 22, marginTop: 4 },
+  heroCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 100,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  heroCtaText: { color: "#FFFFFF", fontSize: 15 },
+  sectionCard: { borderRadius: 18, borderWidth: 1, padding: 20, gap: 10 },
+  sectionIcon: { width: 46, height: 46, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  sectionTitle: { fontSize: 18, letterSpacing: -0.3 },
+  sectionBody: { fontSize: 13, lineHeight: 20 },
+  sectionLink: { flexDirection: "row", alignItems: "center", gap: 4 },
+  sectionLinkText: { fontSize: 14 },
 });
