@@ -12,6 +12,17 @@ export interface User {
   createdAt: string;
 }
 
+const DEMO_USER: User = {
+  id: "demo001",
+  username: "johndoe",
+  email: "john.doe@ibnceena.health",
+  password: "",
+  fullName: "John Doe",
+  dateOfBirth: "12/04/1955",
+  bloodType: "O+",
+  createdAt: "2024-01-01T00:00:00.000Z",
+};
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -26,8 +37,8 @@ const CURRENT_USER_KEY = "ibnceena_current_user";
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User>(DEMO_USER);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -35,7 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const stored = await AsyncStorage.getItem(CURRENT_USER_KEY);
         if (stored) setUser(JSON.parse(stored));
       } catch {}
-      setLoading(false);
     })();
   }, []);
 
@@ -81,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function logout() {
     await AsyncStorage.removeItem(CURRENT_USER_KEY);
-    setUser(null);
+    setUser(DEMO_USER);
   }
 
   return (

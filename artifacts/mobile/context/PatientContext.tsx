@@ -1,6 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useAuth } from "./AuthContext";
 
 export interface MedicalCondition {
   id: string;
@@ -54,124 +53,56 @@ interface PatientContextType {
   refresh: () => Promise<void>;
 }
 
-const SAMPLE: PatientData = {
+const DEMO_PATIENT: PatientData = {
   medicalHistory: [
-    {
-      id: "mh1",
-      name: "Hypertension",
-      icd10: "I10",
-      diagnosedDate: "2019-03-15",
-      status: "active",
-      notes: "Well controlled on Amlodipine. BP target <130/80 mmHg.",
-    },
-    {
-      id: "mh2",
-      name: "Type 2 Diabetes Mellitus",
-      icd10: "E11",
-      diagnosedDate: "2018-07-20",
-      status: "chronic",
-      notes: "HbA1c 7.2% (March 2025). Diet controlled + Metformin.",
-    },
-    {
-      id: "mh3",
-      name: "Chronic Lower Back Pain",
-      icd10: "M54.5",
-      diagnosedDate: "2022-01-10",
-      status: "active",
-      notes: "L4/L5 disc herniation on MRI. Under physiotherapy management.",
-    },
+    { id: "mh1", name: "Hypertension", icd10: "I10", diagnosedDate: "2019-03-15", status: "active", notes: "Well controlled on Amlodipine." },
+    { id: "mh2", name: "Type 2 Diabetes Mellitus", icd10: "E11", diagnosedDate: "2018-07-20", status: "chronic", notes: "HbA1c 7.2% — March 2025." },
+    { id: "mh3", name: "Atrial Fibrillation", icd10: "I48", diagnosedDate: "2020-11-05", status: "active", notes: "Anticoagulated with Apixaban." },
   ],
   allergies: [
-    {
-      id: "al1",
-      drug: "Penicillin",
-      reaction: "Anaphylaxis",
-      severity: "life-threatening",
-    },
-    {
-      id: "al2",
-      drug: "Aspirin",
-      reaction: "Gastric irritation and GI bleeding",
-      severity: "moderate",
-    },
+    { id: "al1", drug: "Penicillin", reaction: "Anaphylaxis", severity: "life-threatening" },
+    { id: "al2", drug: "Codeine", reaction: "Respiratory depression", severity: "severe" },
   ],
   kardex: [
-    {
-      id: "kx1",
-      medication: "Metformin",
-      dose: "500mg",
-      frequency: "Twice daily (BD)",
-      route: "Oral",
-      startDate: "2018-08-01",
-      prescribedBy: "Dr. Ahmed Al-Rashid",
-      status: "active",
-      notes: "Take with meals to reduce GI side effects.",
-    },
-    {
-      id: "kx2",
-      medication: "Amlodipine",
-      dose: "5mg",
-      frequency: "Once daily (OD)",
-      route: "Oral",
-      startDate: "2019-04-01",
-      prescribedBy: "Dr. Ahmed Al-Rashid",
-      status: "active",
-    },
-    {
-      id: "kx3",
-      medication: "Naproxen",
-      dose: "250mg",
-      frequency: "Three times daily PRN",
-      route: "Oral",
-      startDate: "2022-02-01",
-      prescribedBy: "Dr. Sara Khan",
-      status: "active",
-      notes: "For pain management. Take with food. Max 3 times/day.",
-    },
+    { id: "kx1", medication: "Apixaban", dose: "5mg", frequency: "BD for AFib", route: "Oral", startDate: "2020-12-01", prescribedBy: "Dr. Ahmed Al-Rashid", status: "active", notes: "Do not crush. Check renal function every 6 months." },
+    { id: "kx2", medication: "Atorvastatin", dose: "40mg", frequency: "ON for Hyperlipidemia", route: "Oral", startDate: "2019-01-10", prescribedBy: "Dr. Ahmed Al-Rashid", status: "active" },
+    { id: "kx3", medication: "Metformin", dose: "500mg", frequency: "Twice daily (BD)", route: "Oral", startDate: "2018-08-01", prescribedBy: "Dr. Sara Khan", status: "active", notes: "Take with meals." },
+    { id: "kx4", medication: "Amlodipine", dose: "5mg", frequency: "Once daily (OD)", route: "Oral", startDate: "2019-04-01", prescribedBy: "Dr. Ahmed Al-Rashid", status: "active" },
   ],
   complaints: [],
 };
 
+const STORAGE_KEY = "ibnceena_demo_patient";
+
 const PatientContext = createContext<PatientContextType | null>(null);
 
 export function PatientProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const [data, setData] = useState<PatientData>({
-    medicalHistory: [],
-    allergies: [],
-    kardex: [],
-    complaints: [],
-  });
+  const [data, setData] = useState<PatientData>(DEMO_PATIENT);
   const [loading, setLoading] = useState(true);
 
-  const getKey = () => `ibnceena_patient_${user?.id}`;
-
   useEffect(() => {
-    if (user) {
-      load();
-    } else {
-      setData({ medicalHistory: [], allergies: [], kardex: [], complaints: [] });
-      setLoading(false);
-    }
-  }, [user?.id]);
+    load();
+  }, []);
 
   async function load() {
     setLoading(true);
     try {
-      const stored = await AsyncStorage.getItem(getKey());
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         setData(JSON.parse(stored));
       } else {
-        await AsyncStorage.setItem(getKey(), JSON.stringify(SAMPLE));
-        setData(SAMPLE);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(DEMO_PATIENT));
+        setData(DEMO_PATIENT);
       }
-    } catch {}
+    } catch {
+      setData(DEMO_PATIENT);
+    }
     setLoading(false);
   }
 
   async function save(next: PatientData) {
     try {
-      await AsyncStorage.setItem(getKey(), JSON.stringify(next));
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       setData(next);
     } catch {}
   }

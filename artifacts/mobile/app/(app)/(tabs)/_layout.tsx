@@ -1,13 +1,13 @@
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import { Feather } from "@expo/vector-icons";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 
 export default function TabLayout() {
   const colors = useColors();
+  const isIOS = Platform.OS === "ios";
 
   return (
     <Tabs
@@ -17,24 +17,24 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: Platform.OS === "ios" ? "transparent" : colors.card,
+          backgroundColor: isIOS ? "transparent" : colors.card,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           elevation: 0,
-          height: Platform.OS === "web" ? 68 : 64,
-          paddingBottom: Platform.OS === "web" ? 8 : 6,
+          height: 64,
+          paddingBottom: 8,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
           fontFamily: "Inter_500Medium",
           fontSize: 10,
-          marginTop: 2,
+          marginTop: 1,
         },
         tabBarBackground: () =>
-          Platform.OS === "ios" ? (
+          isIOS ? (
             <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
           ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border }]} />
           ),
       }}
     >
@@ -42,15 +42,15 @@ export default function TabLayout() {
         name="dashboard"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => <Feather name="home" size={20} color={color} />,
+          tabBarIcon: ({ color, size }) => <Feather name="home" size={size ?? 20} color={color} />,
         }}
       />
       <Tabs.Screen
         name="triage"
         options={{
           title: "Health Hive",
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="waveform" size={22} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="waveform" size={(size ?? 20) + 2} color={color} />
           ),
         }}
       />
@@ -58,16 +58,14 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Health Card",
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="shield-account" size={22} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="shield-account" size={(size ?? 20) + 2} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="complaint"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
       />
     </Tabs>
   );
