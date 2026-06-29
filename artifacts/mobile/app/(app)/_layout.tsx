@@ -16,6 +16,8 @@ export default function AppLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="kardex" options={{ title: "Medical Kardex", headerShown: true }} />
       <Stack.Screen name="medical-history" options={{ title: "Medical History", headerShown: true }} />
+      <Stack.Screen name="geriatric" options={{ headerShown: false }} />
+      <Stack.Screen name="consultation" options={{ headerShown: false }} />
     </Stack>
   );
 }
