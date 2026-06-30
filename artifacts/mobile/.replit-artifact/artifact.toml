@@ -1,6 +1,6 @@
 kind = "mobile"
 previewPath = "/"
-title = "IbnCeena Triage"
+title = "HH application"
 version = "1.0.0"
 id = "artifacts/mobile"
 router = "expo-domain"
