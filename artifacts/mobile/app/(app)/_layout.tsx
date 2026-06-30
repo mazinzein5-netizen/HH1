@@ -7,7 +7,7 @@ export default function AppLayout() {
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: colors.background },
-        headerTintColor: colors.primary,
+        headerTintColor: colors.gold,
         headerTitleStyle: { fontFamily: "Inter_600SemiBold", color: colors.foreground },
         headerShadowVisible: false,
         headerBackTitle: "Back",
@@ -18,6 +18,8 @@ export default function AppLayout() {
       <Stack.Screen name="medical-history" options={{ title: "Medical History", headerShown: true }} />
       <Stack.Screen name="geriatric" options={{ headerShown: false }} />
       <Stack.Screen name="consultation" options={{ headerShown: false }} />
+      <Stack.Screen name="monitoring" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
     </Stack>
   );
 }

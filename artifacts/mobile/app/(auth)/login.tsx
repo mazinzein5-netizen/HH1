@@ -18,12 +18,34 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
-function HexLogo({ size = 52 }: { size?: number }) {
+function HoneycombLogo({ size = 52 }: { size?: number }) {
   const colors = useColors();
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
-      <MaterialCommunityIcons name="hexagon-outline" size={size} color={colors.primary} style={StyleSheet.absoluteFill} />
+      <MaterialCommunityIcons name="hexagon" size={size} color={colors.background} style={StyleSheet.absoluteFill} />
+      <MaterialCommunityIcons name="hexagon-outline" size={size} color={colors.gold} style={StyleSheet.absoluteFill} />
       <MaterialCommunityIcons name="heart-flash" size={size * 0.44} color={colors.primary} />
+    </View>
+  );
+}
+
+function HoneycombBg() {
+  const positions = [
+    { top: -20, left: -30, size: 110 }, { top: -20, left: 60, size: 90 }, { top: -20, left: 140, size: 110 },
+    { top: 50, left: 10, size: 80 },   { top: 50, left: 100, size: 100 },{ top: 50, left: 200, size: 80 },
+    { top: 110, left: -20, size: 90 }, { top: 110, left: 70, size: 110 }, { top: 110, left: 160, size: 90 },
+  ];
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {positions.map((p, i) => (
+        <MaterialCommunityIcons
+          key={i}
+          name="hexagon-outline"
+          size={p.size}
+          color="rgba(201,134,10,0.06)"
+          style={{ position: "absolute", top: p.top, left: p.left }}
+        />
+      ))}
     </View>
   );
 }
@@ -31,7 +53,7 @@ function HexLogo({ size = 52 }: { size?: number }) {
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { login } = useAuth();
+  const { login, loginAsGuest } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -57,36 +79,47 @@ export default function LoginScreen() {
     }
   }
 
+  async function handleGuest() {
+    Haptics.selectionAsync();
+    await loginAsGuest();
+    router.replace("/(app)/(tabs)/dashboard");
+  }
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 40, paddingBottom: bottomPad + 32 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 28, paddingBottom: bottomPad + 32 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo */}
-        <View style={styles.logoBlock}>
-          <HexLogo size={56} />
-          <View>
-            <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>IbnCeena</Text>
-            <Text style={[styles.appEco, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>HEALTH ECOSYSTEM</Text>
+        {/* Honeycomb hero area */}
+        <View style={[styles.heroArea, { backgroundColor: colors.goldBg, borderColor: colors.goldBorder }]}>
+          <HoneycombBg />
+          <View style={styles.logoRow}>
+            <HoneycombLogo size={58} />
+            <View>
+              <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>IbnCeena</Text>
+              <Text style={[styles.appEco, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>HEALTH ECOSYSTEM</Text>
+            </View>
           </View>
+          <Text style={[styles.heroTagline, { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_700Bold" }]}>
+            Secure Patient{"\n"}
+            <Text style={{ color: colors.goldLight }}>Access Portal.</Text>
+          </Text>
+          <Text style={[styles.heroSub, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>
+            Clinical-grade triage · Emergency health card · Telemedicine
+          </Text>
         </View>
 
-        {/* Hero gradient card */}
-        <LinearGradient colors={["#0f1560", "#151ea0", "#0f1560"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
-          <Text style={[styles.heroLine1, { fontFamily: "Inter_700Bold" }]}>Secure Patient</Text>
-          <Text style={[styles.heroLine2, { color: colors.primaryLight, fontFamily: "Inter_700Bold" }]}>Access Portal.</Text>
-        </LinearGradient>
-
-        <View style={styles.formCard}>
+        {/* Form */}
+        <View style={styles.formSection}>
           <Text style={[styles.formHeading, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Sign In</Text>
           <Text style={[styles.formSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
             Enter your patient credentials
           </Text>
 
-          <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.inputWrap, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <Feather name="user" size={17} color={colors.mutedForeground} />
             <TextInput
               style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
@@ -100,7 +133,7 @@ export default function LoginScreen() {
             />
           </View>
 
-          <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.inputWrap, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <Feather name="lock" size={17} color={colors.mutedForeground} />
             <TextInput
               style={[styles.input, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
@@ -124,26 +157,43 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={handleLogin}
-            disabled={loading}
-            style={[styles.btn, { opacity: loading ? 0.7 : 1 }]}
-          >
-            <LinearGradient colors={["#3055e8", "#4F6EF7"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGrad}>
-              {loading ? <ActivityIndicator color="#fff" /> : (
-                <Text style={[styles.btnText, { fontFamily: "Inter_600SemiBold" }]}>Sign In</Text>
-              )}
+          <TouchableOpacity activeOpacity={0.85} onPress={handleLogin} disabled={loading} style={{ opacity: loading ? 0.7 : 1 }}>
+            <LinearGradient colors={["#C9860A", "#D4A017", "#C9860A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btn}>
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={[styles.btnText, { fontFamily: "Inter_700Bold" }]}>Sign In</Text>
+              }
             </LinearGradient>
           </TouchableOpacity>
 
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>New patient? </Text>
             <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
-              <Text style={[styles.footerLink, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>Register</Text>
+              <Text style={[styles.footerLink, { color: colors.goldLight, fontFamily: "Inter_600SemiBold" }]}>Register</Text>
             </TouchableOpacity>
           </View>
+
+          <View style={[styles.divider, { borderTopColor: colors.border }]}>
+            <Text style={[styles.dividerText, { backgroundColor: colors.background, color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              or
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleGuest}
+            style={[styles.guestBtn, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}
+          >
+            <MaterialCommunityIcons name="incognito" size={18} color={colors.mutedForeground} />
+            <Text style={[styles.guestText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
+              Continue as Guest — Demo Patient
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        <Text style={[styles.disclaimer, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+          IbnCeena Health Ecosystem · GDPR Compliant · HSE Approved Framework
+        </Text>
       </ScrollView>
     </View>
   );
@@ -152,23 +202,27 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { paddingHorizontal: 20, gap: 20 },
-  logoBlock: { flexDirection: "row", alignItems: "center", gap: 14 },
+  heroArea: { borderRadius: 22, padding: 28, gap: 14, overflow: "hidden", borderWidth: 1 },
+  logoRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   appName: { fontSize: 24, letterSpacing: -0.5 },
-  appEco: { fontSize: 10, letterSpacing: 1.4 },
-  heroCard: { borderRadius: 18, padding: 24 },
-  heroLine1: { fontSize: 24, color: "#fff", letterSpacing: -0.3 },
-  heroLine2: { fontSize: 24, letterSpacing: -0.3 },
-  formCard: { gap: 12 },
+  appEco: { fontSize: 10, letterSpacing: 1.6 },
+  heroTagline: { fontSize: 26, letterSpacing: -0.5, lineHeight: 34 },
+  heroSub: { fontSize: 12, lineHeight: 18 },
+  formSection: { gap: 12 },
   formHeading: { fontSize: 22, letterSpacing: -0.3 },
   formSub: { fontSize: 14, marginBottom: 4 },
   inputWrap: { flexDirection: "row", alignItems: "center", borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   input: { flex: 1, fontSize: 15 },
   errorBox: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 10, borderWidth: 1, padding: 12 },
   errorText: { fontSize: 13, flex: 1 },
-  btn: { borderRadius: 14, overflow: "hidden" },
-  btnGrad: { paddingVertical: 16, alignItems: "center" },
+  btn: { borderRadius: 14, paddingVertical: 16, alignItems: "center" },
   btnText: { color: "#fff", fontSize: 16 },
-  footer: { flexDirection: "row", justifyContent: "center", marginTop: 8 },
+  footer: { flexDirection: "row", justifyContent: "center" },
   footerText: { fontSize: 14 },
   footerLink: { fontSize: 14 },
+  divider: { borderTopWidth: 1, alignItems: "center", marginVertical: 4 },
+  dividerText: { marginTop: -9, paddingHorizontal: 12, fontSize: 12 },
+  guestBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 14, borderWidth: 1, paddingVertical: 14 },
+  guestText: { fontSize: 14 },
+  disclaimer: { fontSize: 11, textAlign: "center", lineHeight: 16 },
 });

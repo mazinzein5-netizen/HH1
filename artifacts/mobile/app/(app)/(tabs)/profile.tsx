@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StatusBar,
@@ -17,7 +18,7 @@ import QRCode from "react-native-qrcode-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
-import { usePatient } from "@/context/PatientContext";
+import { KardexEntry, usePatient } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
 
 type MemberGrade = "standard" | "gold" | "geriatric";
@@ -29,11 +30,12 @@ function getPIN(userId?: string) {
   return String((n % 900) + 100);
 }
 
-function HexLogo({ size = 32, color = "#4F6EF7" }: { size?: number; color?: string }) {
+function HoneycombLogo({ size = 30, hexColor = "#C9860A", heartColor = "#4F6EF7" }: { size?: number; hexColor?: string; heartColor?: string }) {
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
-      <MaterialCommunityIcons name="hexagon-outline" size={size} color={color} style={StyleSheet.absoluteFill} />
-      <MaterialCommunityIcons name="heart-flash" size={size * 0.44} color={color} />
+      <MaterialCommunityIcons name="hexagon" size={size} color="#0a0a16" style={{ position: "absolute" }} />
+      <MaterialCommunityIcons name="hexagon-outline" size={size} color={hexColor} style={{ position: "absolute" }} />
+      <MaterialCommunityIcons name="heart-flash" size={size * 0.44} color={heartColor} />
     </View>
   );
 }
@@ -50,7 +52,7 @@ const MEMBER_GRADES: { key: MemberGrade; label: string; color: string; gradient:
     key: "gold",
     label: "Gold Premium",
     color: "#D4A017",
-    gradient: ["#3a2800", "#7a5a00", "#3a2800"],
+    gradient: ["#2a1a00", "#6b4400", "#2a1a00"],
     benefits: ["All Standard Features", "All 4 Triage Pathways", "Priority GP Referral", "Annual Health Review", "Physiotherapy Network Access"],
   },
   {
@@ -62,6 +64,121 @@ const MEMBER_GRADES: { key: MemberGrade; label: string; color: string; gradient:
   },
 ];
 
+function MedDetailModal({ med, onClose }: { med: KardexEntry | null; onClose: () => void }) {
+  const colors = useColors();
+  if (!med) return null;
+
+  const rows: { label: string; value: string; color?: string }[] = [
+    { label: "Prescriber", value: med.prescribedBy },
+    { label: "Title / Specialty", value: med.prescriberTitle ?? "General Practitioner" },
+    { label: "IMC Registration No.", value: med.prescriberIMC ? `IMC ${med.prescriberIMC}` : "N/A", color: colors.goldLight },
+    { label: "HSE Reference", value: med.prescriberHSERef ?? "N/A" },
+    { label: "Prescription Date", value: med.prescriptionDate ?? med.startDate },
+    { label: "Prescription Time", value: med.prescriptionTime ? `${med.prescriptionTime}` : "N/A" },
+    {
+      label: "Prescription Type",
+      value: med.isRecurring
+        ? `Recurring — every ${med.reviewIntervalDays ?? 90} days`
+        : "Once-off prescription",
+      color: med.isRecurring ? "#22c55e" : colors.foreground,
+    },
+    { label: "Next Review Date", value: med.nextReviewDate ?? "N/A" },
+    { label: "Pharmacy", value: med.pharmacy ?? "N/A" },
+    { label: "Batch / Lot Number", value: med.batchNumber ?? "N/A" },
+  ];
+
+  return (
+    <Modal visible={!!med} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={[mStyles.overlay]}>
+        <TouchableOpacity style={mStyles.backdrop} activeOpacity={1} onPress={onClose} />
+        <View style={[mStyles.sheet, { backgroundColor: colors.card }]}>
+          {/* Handle */}
+          <View style={[mStyles.handle, { backgroundColor: colors.border }]} />
+
+          {/* Header */}
+          <LinearGradient colors={["#0e1560", "#1320a0"]} style={mStyles.modalHeader}>
+            <MaterialCommunityIcons name="pill" size={20} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[mStyles.medName, { color: "#fff", fontFamily: "Inter_700Bold" }]}>{med.medication}</Text>
+              <Text style={[mStyles.medDose, { color: "rgba(255,255,255,0.65)", fontFamily: "Inter_400Regular" }]}>
+                {med.dose} · {med.frequency} · {med.route}
+              </Text>
+            </View>
+            <View style={[mStyles.statusBadge, {
+              backgroundColor: med.status === "active" ? "#0a2818" : colors.cardElevated,
+              borderColor: med.status === "active" ? "#22c55e44" : colors.border,
+            }]}>
+              <Text style={[mStyles.statusText, {
+                color: med.status === "active" ? "#22c55e" : colors.mutedForeground,
+                fontFamily: "Inter_600SemiBold",
+              }]}>
+                {med.status.toUpperCase()}
+              </Text>
+            </View>
+          </LinearGradient>
+
+          <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
+            {/* Prescriber Section */}
+            <View style={mStyles.section}>
+              <View style={[mStyles.sectionHeader, { backgroundColor: colors.glassGold, borderColor: colors.glassGoldBorder }]}>
+                <MaterialCommunityIcons name="doctor" size={16} color={colors.gold} />
+                <Text style={[mStyles.sectionTitle, { color: colors.goldLight, fontFamily: "Inter_700Bold" }]}>
+                  PRESCRIBER DETAILS
+                </Text>
+              </View>
+              {rows.slice(0, 5).map((r) => (
+                <View key={r.label} style={[mStyles.row, { borderBottomColor: colors.border }]}>
+                  <Text style={[mStyles.rowLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
+                  <Text style={[mStyles.rowVal, { color: r.color ?? colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{r.value}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Prescription Details */}
+            <View style={mStyles.section}>
+              <View style={[mStyles.sectionHeader, { backgroundColor: colors.glassPrimary, borderColor: colors.glassPrimaryBorder }]}>
+                <MaterialCommunityIcons name="calendar-clock" size={16} color={colors.primary} />
+                <Text style={[mStyles.sectionTitle, { color: colors.primaryLight, fontFamily: "Inter_700Bold" }]}>
+                  PRESCRIPTION DETAILS
+                </Text>
+              </View>
+              {rows.slice(5).map((r) => (
+                <View key={r.label} style={[mStyles.row, { borderBottomColor: colors.border }]}>
+                  <Text style={[mStyles.rowLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
+                  <Text style={[mStyles.rowVal, { color: r.color ?? colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{r.value}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Clinical Notes */}
+            {med.notes && (
+              <View style={mStyles.section}>
+                <View style={[mStyles.sectionHeader, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+                  <MaterialCommunityIcons name="note-text" size={16} color={colors.mutedForeground} />
+                  <Text style={[mStyles.sectionTitle, { color: colors.mutedForeground, fontFamily: "Inter_700Bold" }]}>
+                    CLINICAL NOTES
+                  </Text>
+                </View>
+                <View style={mStyles.notesBox}>
+                  <Text style={[mStyles.notesText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{med.notes}</Text>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={onClose}
+            style={[mStyles.closeBtn, { backgroundColor: colors.cardElevated, borderColor: colors.border }]}
+          >
+            <Text style={[mStyles.closeBtnText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function HealthCardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -69,6 +186,8 @@ export default function HealthCardScreen() {
   const { data } = usePatient();
   const [cardTab, setCardTab] = useState<CardTab>("standard");
   const [memberGrade, setMemberGrade] = useState<MemberGrade>("standard");
+  const [selectedMed, setSelectedMed] = useState<KardexEntry | null>(null);
+  const deviceConnected = true;
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 + 68 : insets.bottom + 64;
@@ -104,6 +223,9 @@ export default function HealthCardScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+
+      <MedDetailModal med={selectedMed} onClose={() => setSelectedMed(null)} />
+
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: topPad + 16, paddingBottom: bottomPad + 16 }]}
         showsVerticalScrollIndicator={false}
@@ -126,12 +248,14 @@ export default function HealthCardScreen() {
                 onPress={() => { Haptics.selectionAsync(); setCardTab(t); }}
                 style={[styles.subTab, {
                   backgroundColor: cardTab === t
-                    ? (t === "geriatric" ? colors.emergencyBg : colors.cardElevated)
+                    ? (t === "geriatric" ? colors.emergencyBg : colors.glassPrimary)
                     : "transparent",
+                  borderWidth: cardTab === t ? 1 : 0,
+                  borderColor: cardTab === t ? (t === "geriatric" ? colors.emergencyBorder : colors.glassPrimaryBorder) : "transparent",
                 }]}
               >
                 <Text style={[styles.subTabText, {
-                  color: cardTab === t ? (t === "geriatric" ? colors.accent : colors.foreground) : colors.mutedForeground,
+                  color: cardTab === t ? (t === "geriatric" ? colors.accent : colors.primary) : colors.mutedForeground,
                   fontFamily: cardTab === t ? "Inter_600SemiBold" : "Inter_400Regular",
                 }]}>
                   {t === "standard" ? "Standard\nID" : "Geriatric\nSafety Pack"}
@@ -141,7 +265,7 @@ export default function HealthCardScreen() {
           </View>
         </View>
 
-        {/* Membership Grade Selector */}
+        {/* Membership Grade Selector — glass bubble style */}
         <View style={styles.gradeRow}>
           {MEMBER_GRADES.map((g) => (
             <TouchableOpacity
@@ -150,7 +274,8 @@ export default function HealthCardScreen() {
               onPress={() => { Haptics.selectionAsync(); setMemberGrade(g.key); }}
               style={[styles.gradeBtn, {
                 borderColor: memberGrade === g.key ? g.color : colors.border,
-                backgroundColor: memberGrade === g.key ? g.color + "22" : colors.card,
+                backgroundColor: memberGrade === g.key ? g.color + "1a" : colors.glass,
+                borderWidth: memberGrade === g.key ? 1.5 : 1,
               }]}
             >
               <MaterialCommunityIcons
@@ -170,18 +295,19 @@ export default function HealthCardScreen() {
 
         {/* Patient ID Card */}
         <LinearGradient colors={cardGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.patientCard}>
-          {/* Watermark hex */}
           <View style={styles.cardWatermark} pointerEvents="none">
-            <MaterialCommunityIcons name="hexagon-outline" size={180} color="rgba(255,255,255,0.05)" />
+            <MaterialCommunityIcons name="hexagon-outline" size={190} color="rgba(201,134,10,0.07)" />
           </View>
+          {/* Gold top accent */}
+          <View style={[styles.goldBar, { backgroundColor: memberGrade === "gold" ? colors.gold : "rgba(201,134,10,0.4)" }]} />
           <View style={styles.patientCardTop}>
             <View style={styles.patientLogoRow}>
-              <HexLogo size={30} color={isGeriatric ? "#E5294E" : grade.color} />
+              <HoneycombLogo size={32} hexColor={isGeriatric ? "#E5294E" : grade.color} heartColor={isGeriatric ? "#fff" : "#4F6EF7"} />
               <View>
                 <Text style={[styles.patientBrand, { color: isGeriatric ? "#E5294E" : grade.color, fontFamily: "Inter_700Bold", letterSpacing: 2 }]}>
                   IBNCEENA
                 </Text>
-                <Text style={[styles.memberLabel, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" }]}>
+                <Text style={[styles.memberLabel, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>
                   {grade.label.toUpperCase()}
                 </Text>
               </View>
@@ -191,7 +317,7 @@ export default function HealthCardScreen() {
             </View>
           </View>
           <View style={styles.patientInfo}>
-            <Text style={[styles.patientIdLabel, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.patientIdLabel, { color: "rgba(255,255,255,0.45)", fontFamily: "Inter_400Regular" }]}>
               PATIENT IDENTIFIER
             </Text>
             <Text style={[styles.patientName, { color: "#FFFFFF", fontFamily: "Inter_700Bold" }]}>
@@ -247,32 +373,58 @@ export default function HealthCardScreen() {
             <View style={[styles.profileIconWrap, { backgroundColor: colors.emergencyBg }]}>
               <MaterialCommunityIcons name="shield-alert" size={22} color={colors.accent} />
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.profileTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Active Medical Profile</Text>
               <Text style={[styles.profileSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                Live API Link {"  "}
-                <Text style={{ color: "#5EE7A0" }}>●</Text>
-                {"  "}AI Safety Scan Active
+                Live API Link {"  "}<Text style={{ color: "#5EE7A0" }}>●</Text>{"  "}AI Safety Scan Active
               </Text>
             </View>
           </View>
 
-          {/* Vitals */}
+          {/* Vitals — 3-card row including SpO2 */}
           <View style={styles.vitalsRow}>
             <LinearGradient colors={["#2a1218", "#1a0c0e"]} style={[styles.vitalsCard, { borderColor: colors.emergencyBorder }]}>
-              <MaterialCommunityIcons name="heart-pulse" size={22} color={colors.accent} />
-              <Text style={[styles.vitalsLabel, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>LIVE VITALS</Text>
+              <MaterialCommunityIcons name="heart-pulse" size={18} color={colors.accent} />
+              <Text style={[styles.vitalsLabel, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>HEART RATE</Text>
               <View style={styles.vitalsValue}>
                 <Text style={[styles.vitalsNum, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>72</Text>
                 <Text style={[styles.vitalsUnit, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>bpm</Text>
               </View>
             </LinearGradient>
-            <LinearGradient colors={["#0f1840", "#111a50"]} style={[styles.vitalsCard, { borderColor: colors.physioBorder }]}>
-              <MaterialCommunityIcons name="map-marker" size={22} color={colors.primary} />
-              <Text style={[styles.vitalsLabel, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>GPS LOCATION</Text>
-              <Text style={[styles.gpsText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Tralee, Co.{"\n"}Kerry</Text>
+
+            {/* SpO2 — shown when device connected */}
+            {deviceConnected && (
+              <LinearGradient colors={["#0f1840", "#111a50"]} style={[styles.vitalsCard, { borderColor: colors.physioBorder }]}>
+                <MaterialCommunityIcons name="water-percent" size={18} color={colors.primary} />
+                <Text style={[styles.vitalsLabel, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>SpO₂</Text>
+                <View style={styles.vitalsValue}>
+                  <Text style={[styles.vitalsNum, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>97</Text>
+                  <Text style={[styles.vitalsUnit, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>%</Text>
+                </View>
+              </LinearGradient>
+            )}
+
+            <LinearGradient colors={["#0f200a", "#111a0c"]} style={[styles.vitalsCard, { borderColor: "#22c55e33" }]}>
+              <MaterialCommunityIcons name="map-marker" size={18} color="#22c55e" />
+              <Text style={[styles.vitalsLabel, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>GPS</Text>
+              <Text style={[styles.gpsText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Tralee{"\n"}Kerry</Text>
             </LinearGradient>
           </View>
+
+          {/* Full monitoring link */}
+          {deviceConnected && (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => { Haptics.selectionAsync(); router.push("/(app)/monitoring"); }}
+              style={[styles.monitoringBtn, { backgroundColor: colors.glassPrimary, borderColor: colors.glassPrimaryBorder }]}
+            >
+              <MaterialCommunityIcons name="chart-areaspline" size={17} color={colors.primary} />
+              <Text style={[styles.monitoringBtnText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>
+                View Full Health Monitoring — Sleep · ECG · HRV · Metabolism
+              </Text>
+              <Feather name="chevron-right" size={14} color={colors.primary} />
+            </TouchableOpacity>
+          )}
 
           {/* SOS Button */}
           <TouchableOpacity activeOpacity={0.85} onPress={handleSOS}>
@@ -287,7 +439,7 @@ export default function HealthCardScreen() {
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => router.push("/(app)/geriatric")}
-              style={[styles.geriatricBtn, { backgroundColor: "#1a1040", borderColor: "#a78bfa55" }]}
+              style={[styles.geriatricBtn, { backgroundColor: "rgba(167,139,250,0.10)", borderColor: "rgba(167,139,250,0.25)" }]}
             >
               <MaterialCommunityIcons name="brain" size={18} color="#a78bfa" />
               <Text style={[styles.geriatricBtnText, { color: "#a78bfa", fontFamily: "Inter_600SemiBold" }]}>
@@ -311,7 +463,7 @@ export default function HealthCardScreen() {
                       color: a.severity === "life-threatening" ? colors.accent : colors.fastTrack,
                       fontFamily: "Inter_500Medium",
                     }]}>
-                      {a.drug}{a.severity === "life-threatening" ? ` (${a.reaction})` : ""}
+                      {a.drug}{a.severity === "life-threatening" ? ` — ${a.reaction}` : ""}
                     </Text>
                   </View>
                 ))}
@@ -319,23 +471,36 @@ export default function HealthCardScreen() {
             </>
           )}
 
-          {/* Medications */}
+          {/* Medications — tappable for prescriber detail */}
           {activeKardex.length > 0 && (
             <>
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>CURRENT MEDICATIONS</Text>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+                CURRENT MEDICATIONS
+                <Text style={{ fontSize: 9, color: colors.mutedForeground, fontFamily: "Inter_400Regular" }}> — TAP FOR PRESCRIBER DETAILS</Text>
+              </Text>
               {activeKardex.map((k, i) => (
-                <View key={k.id}>
-                  <View style={styles.medRow}>
+                <TouchableOpacity
+                  key={k.id}
+                  activeOpacity={0.78}
+                  onPress={() => { Haptics.selectionAsync(); setSelectedMed(k); }}
+                >
+                  <View style={[styles.medRow, { backgroundColor: colors.glass, borderColor: colors.glassBorder, borderRadius: 12, borderWidth: 1 }]}>
                     <View style={styles.medInfo}>
                       <Text style={[styles.medName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{k.medication}</Text>
                       <Text style={[styles.medFreq, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{k.frequency}</Text>
+                      <Text style={[styles.medPrescriber, { color: colors.gold, fontFamily: "Inter_400Regular" }]}>
+                        {k.prescribedBy} · IMC {k.prescriberIMC ?? "—"}
+                      </Text>
                     </View>
-                    <View style={[styles.doseBadge, { backgroundColor: colors.cardElevated, borderColor: colors.border }]}>
-                      <Text style={[styles.doseText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>{k.dose}</Text>
+                    <View style={{ alignItems: "flex-end", gap: 6 }}>
+                      <View style={[styles.doseBadge, { backgroundColor: colors.cardElevated, borderColor: colors.border }]}>
+                        <Text style={[styles.doseText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>{k.dose}</Text>
+                      </View>
+                      <Feather name="info" size={13} color={colors.mutedForeground} />
                     </View>
                   </View>
-                  {i < activeKardex.length - 1 && <View style={[styles.medDivider, { backgroundColor: colors.border }]} />}
-                </View>
+                  {i < activeKardex.length - 1 && <View style={{ height: 6 }} />}
+                </TouchableOpacity>
               ))}
             </>
           )}
@@ -345,6 +510,28 @@ export default function HealthCardScreen() {
   );
 }
 
+const mStyles = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: "flex-end" },
+  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.65)" },
+  sheet: { borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingBottom: 34, overflow: "hidden" },
+  handle: { width: 40, height: 4, borderRadius: 2, alignSelf: "center", marginTop: 10, marginBottom: 4 },
+  modalHeader: { padding: 18, flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  medName: { fontSize: 18, letterSpacing: -0.3 },
+  medDose: { fontSize: 12, marginTop: 2 },
+  statusBadge: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, marginTop: 2 },
+  statusText: { fontSize: 10, letterSpacing: 0.5 },
+  section: { marginHorizontal: 16, marginTop: 14, gap: 0 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4 },
+  sectionTitle: { fontSize: 11, letterSpacing: 1 },
+  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, gap: 12 },
+  rowLabel: { fontSize: 13, flex: 1 },
+  rowVal: { fontSize: 13, textAlign: "right", flex: 1 },
+  notesBox: { padding: 12 },
+  notesText: { fontSize: 13, lineHeight: 20 },
+  closeBtn: { margin: 16, borderRadius: 14, borderWidth: 1, paddingVertical: 14, alignItems: "center" },
+  closeBtnText: { fontSize: 15 },
+});
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { paddingHorizontal: 16, gap: 14 },
@@ -352,13 +539,14 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, letterSpacing: -0.5, lineHeight: 32 },
   titleSub: { fontSize: 12, lineHeight: 18, marginTop: 6 },
   subTabs: { borderRadius: 14, borderWidth: 1, overflow: "hidden", flexShrink: 0 },
-  subTab: { paddingHorizontal: 12, paddingVertical: 10 },
+  subTab: { paddingHorizontal: 12, paddingVertical: 10, margin: 4, borderRadius: 10 },
   subTabText: { fontSize: 11, textAlign: "center", lineHeight: 16 },
   gradeRow: { flexDirection: "row", gap: 8 },
-  gradeBtn: { flex: 1, borderRadius: 12, borderWidth: 1.5, padding: 10, alignItems: "center", gap: 5 },
+  gradeBtn: { flex: 1, borderRadius: 12, padding: 10, alignItems: "center", gap: 5 },
   gradeBtnText: { fontSize: 11, textAlign: "center", lineHeight: 15 },
   patientCard: { borderRadius: 20, padding: 20, gap: 16, overflow: "hidden" },
-  cardWatermark: { position: "absolute", right: -40, top: -30, opacity: 1 },
+  cardWatermark: { position: "absolute", right: -50, top: -30, opacity: 1 },
+  goldBar: { position: "absolute", top: 0, left: 0, right: 0, height: 2.5 },
   patientCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   patientLogoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   patientBrand: { fontSize: 13 },
@@ -383,13 +571,15 @@ const styles = StyleSheet.create({
   profileIconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   profileTitle: { fontSize: 16 },
   profileSub: { fontSize: 12, marginTop: 2 },
-  vitalsRow: { flexDirection: "row", gap: 10 },
-  vitalsCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, gap: 6 },
-  vitalsLabel: { fontSize: 10, letterSpacing: 1.2 },
-  vitalsValue: { flexDirection: "row", alignItems: "flex-end", gap: 4 },
-  vitalsNum: { fontSize: 38, lineHeight: 42 },
-  vitalsUnit: { fontSize: 14, marginBottom: 4 },
-  gpsText: { fontSize: 18, lineHeight: 26 },
+  vitalsRow: { flexDirection: "row", gap: 8 },
+  vitalsCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 12, gap: 4 },
+  vitalsLabel: { fontSize: 9, letterSpacing: 1.1 },
+  vitalsValue: { flexDirection: "row", alignItems: "flex-end", gap: 3 },
+  vitalsNum: { fontSize: 30, lineHeight: 34 },
+  vitalsUnit: { fontSize: 12, marginBottom: 3 },
+  gpsText: { fontSize: 14, lineHeight: 20 },
+  monitoringBtn: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12 },
+  monitoringBtnText: { flex: 1, fontSize: 12, lineHeight: 17 },
   sosBtn: { borderRadius: 14, paddingVertical: 17, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   sosBtnText: { color: "#FFFFFF", fontSize: 16 },
   geriatricBtn: { borderRadius: 12, borderWidth: 1, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 },
@@ -398,11 +588,11 @@ const styles = StyleSheet.create({
   allergyRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   allergyChip: { borderRadius: 20, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 7 },
   allergyChipText: { fontSize: 13 },
-  medRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10, gap: 12 },
-  medInfo: { flex: 1 },
+  medRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 12, gap: 12 },
+  medInfo: { flex: 1, gap: 2 },
   medName: { fontSize: 15 },
-  medFreq: { fontSize: 12, marginTop: 2 },
+  medFreq: { fontSize: 12 },
+  medPrescriber: { fontSize: 11 },
   doseBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
   doseText: { fontSize: 13 },
-  medDivider: { height: 1, opacity: 0.4 },
 });
