@@ -9,7 +9,7 @@ function _resolveComponent(
   name: string,
 ): ComponentType | undefined {
   const fns = Object.values(mod).filter(
-    (v) => typeof v === "function",
+    (v:any) => typeof v === "function",
   ) as ComponentType[];
   return (
     (mod.default as ComponentType) ||
