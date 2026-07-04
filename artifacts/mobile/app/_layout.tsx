@@ -8,7 +8,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -40,13 +40,30 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
+  const [logoThemeReady, setLogoThemeReady] = useState(false);
+  const splashHidden = useRef(false);
+
+  const maybeHideSplash = useCallback(
+    (fontsDone: boolean, themeDone: boolean) => {
+      if (splashHidden.current) return;
+      if (fontsDone && themeDone) {
+        splashHidden.current = true;
+        SplashScreen.hideAsync();
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
+      maybeHideSplash(true, logoThemeReady);
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, logoThemeReady, maybeHideSplash]);
 
-  if (!fontsLoaded && !fontError) return null;
+  const handleLogoThemeReady = useCallback(() => {
+    setLogoThemeReady(true);
+    maybeHideSplash(!!(fontsLoaded || fontError), true);
+  }, [fontsLoaded, fontError, maybeHideSplash]);
 
   return (
     <SafeAreaProvider>
@@ -56,7 +73,7 @@ export default function RootLayout() {
             <KeyboardProvider>
               <AuthProvider>
                 <PatientProvider>
-                  <LogoThemeProvider>
+                  <LogoThemeProvider onReady={handleLogoThemeReady}>
                     <RootLayoutNav />
                   </LogoThemeProvider>
                 </PatientProvider>
