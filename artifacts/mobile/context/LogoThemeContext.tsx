@@ -39,15 +39,20 @@ const LogoThemeContext = createContext<LogoThemeContextValue>({
 
 export function LogoThemeProvider({ children }: { children: React.ReactNode }) {
   const [prefs, setPrefs] = useState<LogoThemePrefs>(DEFAULTS);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
-      if (raw) {
-        try {
-          setPrefs({ ...DEFAULTS, ...JSON.parse(raw) });
-        } catch {}
-      }
-    });
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          try {
+            setPrefs({ ...DEFAULTS, ...JSON.parse(raw) });
+          } catch {}
+        }
+      })
+      .finally(() => {
+        setLoaded(true);
+      });
   }, []);
 
   function update(partial: Partial<LogoThemePrefs>) {
@@ -56,6 +61,10 @@ export function LogoThemeProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
+  }
+
+  if (!loaded) {
+    return null;
   }
 
   return (
