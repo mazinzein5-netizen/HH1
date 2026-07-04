@@ -2,7 +2,6 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import React, { useRef, useState } from "react";
 import {
@@ -28,6 +27,14 @@ import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import Toast from "@/components/Toast";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
+
+type MediaLibraryModule = typeof import("expo-media-library");
+let ML: MediaLibraryModule | null = null;
+try {
+  ML = require("expo-media-library") as MediaLibraryModule;
+} catch {
+  // expo-media-library native module unavailable on web
+}
 
 type MemberGrade = "standard" | "gold" | "geriatric";
 type CardTab = "standard" | "geriatric";
@@ -184,6 +191,7 @@ export default function HealthCardScreen() {
   const [sharing, setSharing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
   const exportRef = useRef<View>(null);
   const deviceConnected = true;
 
@@ -237,28 +245,84 @@ export default function HealthCardScreen() {
     }
   }
 
-  async function handleSaveToPhotos() {
-    if (!exportRef.current) return;
-    try {
-      setSaving(true);
-      Haptics.selectionAsync();
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "To save the Health Card to your photo library, please allow photo access in your device settings.",
-        );
-        return;
-      }
-      const uri = await captureRef(exportRef, { format: "png", quality: 1, result: "tmpfile" });
-      await MediaLibrary.saveToLibraryAsync(uri);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setToastVisible(true);
-    } catch {
-      Alert.alert("Save failed", "Could not save the health card. Please try again.");
-    } finally {
-      setSaving(false);
+  async function saveToLibrary(uri: string) {
+    await ML!.saveToLibraryAsync(uri);
+    setToastMessage("Saved to Camera Roll");
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setToastVisible(true);
+  }
+
+  async function saveToAlbum(uri: string) {
+    const asset = await ML!.createAssetAsync(uri);
+    const albumName = "IbnCeena Health Cards";
+    const existing = await ML!.getAlbumAsync(albumName);
+    if (existing == null) {
+      await ML!.createAlbumAsync(albumName, asset, false);
+    } else {
+      await ML!.addAssetsToAlbumAsync([asset], existing, false);
     }
+    setToastMessage(`Saved to "${albumName}" album`);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setToastVisible(true);
+  }
+
+  function handleSaveChoice() {
+    if (!exportRef.current) return;
+    if (Platform.OS === "web") {
+      Alert.alert(
+        "Not Available on Web",
+        "Saving to Photos isn't supported in the browser. Use the Share button to download your Health Card.",
+        [{ text: "OK" }],
+      );
+      return;
+    }
+    Alert.alert(
+      "Save Health Card",
+      "Where would you like to save the card?",
+      [
+        {
+          text: "Camera Roll",
+          onPress: async () => {
+            try {
+              setSaving(true);
+              Haptics.selectionAsync();
+              const { status } = await ML!.requestPermissionsAsync();
+              if (status !== "granted") {
+                Alert.alert("Permission Required", "Please allow photo access in your device settings.");
+                return;
+              }
+              const uri = await captureRef(exportRef, { format: "png", quality: 1, result: "tmpfile" });
+              await saveToLibrary(uri);
+            } catch {
+              Alert.alert("Save failed", "Could not save the health card. Please try again.");
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+        {
+          text: 'IbnCeena Health Cards Album',
+          onPress: async () => {
+            try {
+              setSaving(true);
+              Haptics.selectionAsync();
+              const { status } = await ML!.requestPermissionsAsync();
+              if (status !== "granted") {
+                Alert.alert("Permission Required", "Please allow photo access in your device settings.");
+                return;
+              }
+              const uri = await captureRef(exportRef, { format: "png", quality: 1, result: "tmpfile" });
+              await saveToAlbum(uri);
+            } catch {
+              Alert.alert("Save failed", "Could not save the health card. Please try again.");
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ],
+    );
   }
 
   return (
@@ -399,7 +463,7 @@ export default function HealthCardScreen() {
 
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={handleSaveToPhotos}
+            onPress={handleSaveChoice}
             disabled={saving || sharing}
             style={[styles.shareBtn, { backgroundColor: colors.glass, borderColor: colors.border, opacity: saving ? 0.6 : 1 }]}
           >
@@ -409,7 +473,7 @@ export default function HealthCardScreen() {
               <MaterialCommunityIcons name="download" size={18} color={colors.foreground} />
             )}
             <Text style={[styles.shareBtnText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-              {saving ? "Saving…" : "Save to Photos"}
+              {saving ? "Saving…" : "Save"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -652,7 +716,7 @@ export default function HealthCardScreen() {
       </View>
 
       <Toast
-        message="Health Card saved to your photo library"
+        message={toastMessage}
         visible={toastVisible}
         onHide={() => setToastVisible(false)}
         bottomOffset={bottomPad + 16}
