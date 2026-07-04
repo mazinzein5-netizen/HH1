@@ -18,6 +18,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { LogoThemeProvider } from "@/context/LogoThemeContext";
 import { PatientProvider } from "@/context/PatientContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { SmartDevicesProvider } from "@/context/SmartDevicesContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -81,9 +82,11 @@ export default function RootLayout() {
               <AuthProvider>
                 <PatientProvider>
                   <ThemeProvider onReady={handleThemeReady}>
-                    <LogoThemeProvider onReady={handleLogoThemeReady}>
-                      <RootLayoutNav />
-                    </LogoThemeProvider>
+                    <SmartDevicesProvider>
+                      <LogoThemeProvider onReady={handleLogoThemeReady}>
+                        <RootLayoutNav />
+                      </LogoThemeProvider>
+                    </SmartDevicesProvider>
                   </ThemeProvider>
                 </PatientProvider>
               </AuthProvider>

@@ -18,6 +18,7 @@ import HiveLogo from "@/components/HiveLogo";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useHiveBot } from "@/context/HiveBotContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
+import { useSmartDevices } from "@/context/SmartDevicesContext";
 import { useColors } from "@/hooks/useColors";
 
 const HEADER_SCROLL_DISTANCE = 48;
@@ -27,6 +28,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
   const hiveBot   = useHiveBot();
+  const { connectedCount } = useSmartDevices();
   const topPad    = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 + 68 : insets.bottom + 64;
 
@@ -225,6 +227,34 @@ export default function DashboardScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Smart Devices shortcut */}
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push("/(app)/smart-devices")}
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: "#22c55e33" }]}
+        >
+          <HiveCardBg gradientColors={["rgba(34,197,94,0.10)", "rgba(0,0,0,0.12)", "transparent"]} />
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={[styles.sectionIcon, { backgroundColor: "rgba(34,197,94,0.12)", borderColor: "rgba(34,197,94,0.28)", borderWidth: 1 }]}>
+              <MaterialCommunityIcons name="devices" size={22} color="#22c55e" />
+            </View>
+            <View style={[styles.deviceBadge, { backgroundColor: connectedCount > 0 ? "#22c55e22" : "rgba(255,255,255,0.06)", borderColor: connectedCount > 0 ? "#22c55e55" : "rgba(255,255,255,0.12)" }]}>
+              <View style={[styles.deviceDot, { backgroundColor: connectedCount > 0 ? "#22c55e" : "rgba(255,255,255,0.25)" }]} />
+              <Text style={[styles.deviceBadgeText, { color: connectedCount > 0 ? "#22c55e" : colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
+                {connectedCount > 0 ? `${connectedCount} Connected` : "No Devices"}
+              </Text>
+            </View>
+          </View>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Smart Devices</Text>
+          <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Wearables, smart rings, and fitness bands. Live vitals, falls detection, and activity monitoring.
+          </Text>
+          <View style={styles.sectionLink}>
+            <Text style={[styles.sectionLinkText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>Manage Devices</Text>
+            <Feather name="chevron-right" size={14} color="#22c55e" />
+          </View>
+        </TouchableOpacity>
+
         {/* Geriatric */}
         <TouchableOpacity
           activeOpacity={0.88}
@@ -306,6 +336,10 @@ const styles = StyleSheet.create({
   sectionLink: { flexDirection: "row", alignItems: "center", gap: 5 },
   sectionLinkText: { fontSize: 14 },
   liveDot: { width: 7, height: 7, borderRadius: 4 },
+
+  deviceBadge: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 20, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 5 },
+  deviceDot: { width: 7, height: 7, borderRadius: 4 },
+  deviceBadgeText: { fontSize: 12 },
 
   fab: {
     position: "absolute",

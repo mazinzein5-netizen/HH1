@@ -2,7 +2,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import {
   Platform,
   ScrollView,
@@ -14,42 +14,39 @@ import {
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import { useSmartDevices } from "@/context/SmartDevicesContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
-interface Device {
-  id: string;
-  name: string;
-  brand: string;
+type Category = "rings" | "watches" | "cgm";
+
+const CATEGORY_META: Record<Category, {
+  label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  connected: boolean;
-  reading: string;
-  readingLabel: string;
-  category: "rings" | "bands" | "watches";
-}
-
-const INITIAL_DEVICES: Device[] = [
-  { id: "oura",    name: "Oura Ring Gen 3",     brand: "Oura",    icon: "ring",         connected: false, reading: "—", readingLabel: "HRV ms",    category: "rings" },
-  { id: "xring",   name: "Xiaomi Smart Ring",   brand: "Xiaomi",  icon: "ring",         connected: false, reading: "—", readingLabel: "SpO₂ %",    category: "rings" },
-  { id: "sring",   name: "Samsung Galaxy Ring", brand: "Samsung", icon: "ring",         connected: false, reading: "—", readingLabel: "HR bpm",     category: "rings" },
-  { id: "miband",  name: "Xiaomi Mi Band 8",    brand: "Xiaomi",  icon: "watch",        connected: false, reading: "—", readingLabel: "Steps",      category: "bands" },
-  { id: "huaband", name: "Huawei Band 8",       brand: "Huawei",  icon: "watch",        connected: false, reading: "—", readingLabel: "SpO₂ %",    category: "bands" },
-  { id: "honor",   name: "HONOR Band 7",        brand: "HONOR",   icon: "watch",        connected: false, reading: "—", readingLabel: "HR bpm",     category: "bands" },
-  { id: "apple",   name: "Apple Watch Series 9",brand: "Apple",   icon: "watch-variant",connected: false, reading: "—", readingLabel: "ECG ready",  category: "watches" },
-  { id: "huagt4",  name: "Huawei Watch GT 4",   brand: "Huawei",  icon: "watch-variant",connected: false, reading: "—", readingLabel: "HR bpm",     category: "watches" },
-];
-
-const FAKE_READINGS: Record<string, string> = {
-  oura: "48", xring: "97", sring: "71",
-  miband: "4,830", huaband: "98", honor: "74",
-  apple: "Ready", huagt4: "68",
+  color: string;
+  description: string;
+}> = {
+  rings: {
+    label: "SMART RINGS",
+    icon: "ring",
+    color: "#a78bfa",
+    description: "HRV, SpO₂ & skin temperature — early metabolic & dehydration signals",
+  },
+  watches: {
+    label: "CLINICAL WEARABLES",
+    icon: "watch-variant",
+    color: "#4F6EF7",
+    description: "ECG, blood pressure & biometric monitoring",
+  },
+  cgm: {
+    label: "GLUCOSE MONITORS",
+    icon: "water-percent",
+    color: "#f59e0b",
+    description: "Continuous glucose — real-time diabetic early warnings",
+  },
 };
 
-const CATEGORY_META: Record<Device["category"], { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; color: string }> = {
-  rings:   { label: "SMART RINGS",   icon: "ring",         color: "#a78bfa" },
-  bands:   { label: "WRIST BANDS",   icon: "watch",        color: "#22c55e" },
-  watches: { label: "SMARTWATCHES",  icon: "watch-variant",color: "#4F6EF7" },
-};
+const CATEGORIES: Category[] = ["rings", "watches", "cgm"];
 
 export default function SmartDevicesScreen() {
   const colors = useColors();
@@ -57,21 +54,12 @@ export default function SmartDevicesScreen() {
   const { prefs } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
 
-  const [devices, setDevices] = useState<Device[]>(INITIAL_DEVICES);
+  const { devices, connectedCount, toggleDevice } = useSmartDevices();
 
-  function toggleDevice(id: string) {
+  function handleToggle(id: string) {
     Haptics.selectionAsync();
-    setDevices((prev) =>
-      prev.map((d) => {
-        if (d.id !== id) return d;
-        const connected = !d.connected;
-        return { ...d, connected, reading: connected ? FAKE_READINGS[id] : "—" };
-      })
-    );
+    toggleDevice(id);
   }
-
-  const connectedCount = devices.filter((d) => d.connected).length;
-  const categories: Device["category"][] = ["rings", "bands", "watches"];
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -88,7 +76,7 @@ export default function SmartDevicesScreen() {
             Smart Devices
           </Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Wearables · Bands · Smart rings
+            ECG · Blood Pressure · CGM · HRV
           </Text>
         </View>
         <MaterialCommunityIcons name="devices" size={26} color="#22c55e" />
@@ -101,7 +89,7 @@ export default function SmartDevicesScreen() {
           <MaterialCommunityIcons name="devices" size={36} color="#22c55e" />
           <Text style={[styles.heroTitle, { color: "#fff", fontFamily: "Inter_700Bold" }]}>Smart Device Hub</Text>
           <Text style={[styles.heroSub, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" }]}>
-            Connect wearables for live vitals,{"\n"}fall detection, and activity monitoring
+            Clinical-grade wearables with real-time ECG,{"\n"}BP, glucose, and metabolic monitoring
           </Text>
           <View style={[styles.connectedBadge, { backgroundColor: "#22c55e22", borderColor: "#22c55e55" }]}>
             <Text style={[styles.connectedBadgeText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>
@@ -110,16 +98,31 @@ export default function SmartDevicesScreen() {
           </View>
         </LinearGradient>
 
+        {/* Capability legend */}
+        <View style={[styles.legendRow, { borderColor: colors.border }]}>
+          {[
+            { icon: "heart-pulse"   as const, label: "ECG / Arrhythmia",  color: "#ef4444" },
+            { icon: "gauge"         as const, label: "Blood Pressure",     color: "#4F6EF7" },
+            { icon: "water-percent" as const, label: "Glucose (CGM)",      color: "#f59e0b" },
+            { icon: "thermometer"   as const, label: "Metabolic / Temp",   color: "#a78bfa" },
+          ].map((item) => (
+            <View key={item.label} style={styles.legendItem}>
+              <MaterialCommunityIcons name={item.icon} size={14} color={item.color} />
+              <Text style={[styles.legendText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
+
         {/* Live Readings grid — only when something is connected */}
         {connectedCount > 0 && (
           <>
             <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>LIVE READINGS</Text>
             <View style={styles.readingsGrid}>
               {[
-                { label: "Heart Rate",    value: "72",   unit: "bpm",   icon: "heart-pulse"    as const, color: "#ef4444" },
-                { label: "SpO₂",          value: "97",   unit: "%",     icon: "water-percent"  as const, color: "#4F6EF7" },
-                { label: "Steps Today",   value: "4,830",unit: "steps", icon: "shoe-sneaker"   as const, color: "#22c55e" },
-                { label: "Falls Detected",value: "0",    unit: "today", icon: "alert-circle"   as const, color: "#f59e0b" },
+                { label: "Heart Rate",    value: "72",   unit: "bpm",    icon: "heart-pulse"    as const, color: "#ef4444" },
+                { label: "SpO₂",          value: "98",   unit: "%",      icon: "water-percent"  as const, color: "#4F6EF7" },
+                { label: "Blood Glucose", value: "5.4",  unit: "mmol/L", icon: "water-percent"  as const, color: "#f59e0b" },
+                { label: "Falls Detected",value: "0",    unit: "today",  icon: "alert-circle"   as const, color: "#22c55e" },
               ].map((r) => (
                 <LinearGradient
                   key={r.label}
@@ -137,30 +140,46 @@ export default function SmartDevicesScreen() {
         )}
 
         {/* Device list grouped by category */}
-        {categories.map((cat) => {
+        {CATEGORIES.map((cat) => {
           const meta = CATEGORY_META[cat];
           const group = devices.filter((d) => d.category === cat);
           return (
             <View key={cat}>
-              <View style={styles.categoryHeader}>
+              <View style={[styles.categoryHeader, { borderColor: meta.color + "33", backgroundColor: meta.color + "0d" }]}>
                 <MaterialCommunityIcons name={meta.icon} size={15} color={meta.color} />
-                <Text style={[styles.groupLabel, { color: meta.color, marginBottom: 0, marginLeft: 6 }]}>{meta.label}</Text>
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={[styles.groupLabel, { color: meta.color, marginBottom: 1 }]}>{meta.label}</Text>
+                  <Text style={[styles.categoryDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{meta.description}</Text>
+                </View>
               </View>
 
               {group.map((d) => (
                 <View key={d.id} style={[styles.deviceCard, { backgroundColor: colors.card, borderColor: d.connected ? "#22c55e55" : colors.border }]}>
                   <View style={[styles.deviceIcon, { backgroundColor: d.connected ? "#0a2818" : colors.cardElevated }]}>
-                    <MaterialCommunityIcons name={d.icon} size={20} color={d.connected ? "#22c55e" : colors.mutedForeground} />
+                    <MaterialCommunityIcons
+                      name={d.icon as keyof typeof MaterialCommunityIcons.glyphMap}
+                      size={20}
+                      color={d.connected ? "#22c55e" : colors.mutedForeground}
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.deviceName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{d.name}</Text>
                     <Text style={[styles.deviceBrand, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                      {d.brand} · {d.connected ? `● Connected · ${d.reading} ${d.readingLabel}` : "○ Not paired"}
+                      {d.brand}
                     </Text>
+                    {d.connected ? (
+                      <Text style={[styles.deviceReading, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>
+                        ● {d.reading} {d.readingLabel}
+                      </Text>
+                    ) : (
+                      <Text style={[styles.deviceCaps, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                        {d.capabilities}
+                      </Text>
+                    )}
                   </View>
                   <TouchableOpacity
                     activeOpacity={0.85}
-                    onPress={() => toggleDevice(d.id)}
+                    onPress={() => handleToggle(d.id)}
                     style={[styles.connectBtn, {
                       backgroundColor: d.connected ? "#0a2818" : "#0f1a5a",
                       borderColor: d.connected ? "#22c55e55" : colors.primary + "55",
@@ -184,7 +203,7 @@ export default function SmartDevicesScreen() {
             <Text style={[styles.fallSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
               {connectedCount > 0
                 ? "Active — automatic SOS triggered if fall detected. No falls logged today."
-                : "Connect a compatible wearable to enable automatic fall detection and SOS alerting."}
+                : "Connect a compatible wearable (Apple Watch, Samsung Galaxy Watch) to enable automatic fall detection and SOS alerting."}
             </Text>
           </View>
         </View>
@@ -218,14 +237,25 @@ const styles = StyleSheet.create({
   },
   connectedBadgeText: { fontSize: 13 },
 
+  legendRow: {
+    flexDirection: "row", flexWrap: "wrap", gap: 10,
+    borderRadius: 12, borderWidth: 1,
+    padding: 12,
+  },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 5, minWidth: "44%" },
+  legendText: { fontSize: 11 },
+
   groupLabel: {
     fontSize: 10, fontFamily: "Inter_600SemiBold",
-    letterSpacing: 1.4, marginBottom: 8,
+    letterSpacing: 1.4, marginBottom: 2,
   },
   categoryHeader: {
-    flexDirection: "row", alignItems: "center",
-    marginTop: 8, marginBottom: 4,
+    flexDirection: "row", alignItems: "flex-start",
+    borderRadius: 10, borderWidth: 1,
+    paddingHorizontal: 12, paddingVertical: 10,
+    marginTop: 6, marginBottom: 8,
   },
+  categoryDesc: { fontSize: 11, lineHeight: 16 },
 
   readingsGrid: {
     flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 8,
@@ -247,7 +277,9 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   deviceName: { fontSize: 14 },
-  deviceBrand: { fontSize: 12, marginTop: 2 },
+  deviceBrand: { fontSize: 12, marginTop: 1 },
+  deviceCaps: { fontSize: 11, marginTop: 3, lineHeight: 16 },
+  deviceReading: { fontSize: 12, marginTop: 3 },
   connectBtn: {
     borderRadius: 10, borderWidth: 1,
     paddingHorizontal: 14, paddingVertical: 8,
