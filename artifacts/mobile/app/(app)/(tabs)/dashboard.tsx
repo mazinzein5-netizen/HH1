@@ -32,13 +32,13 @@ export default function DashboardScreen() {
 
   const headerBgOpacity = scrollY.interpolate({
     inputRange: [0, HEADER_SCROLL_DISTANCE],
-    outputRange: [1, 0],
+    outputRange: [1, 0.25],
     extrapolate: "clamp",
   });
 
   const headerBorderOpacity = scrollY.interpolate({
     inputRange: [0, HEADER_SCROLL_DISTANCE],
-    outputRange: [1, 0],
+    outputRange: [1, 0.25],
     extrapolate: "clamp",
   });
 
