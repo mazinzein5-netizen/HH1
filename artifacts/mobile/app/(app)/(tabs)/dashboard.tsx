@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import HiveCardBg from "@/components/HoneycombCardBg";
 import HiveLogo from "@/components/HiveLogo";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useLogoTheme } from "@/context/LogoThemeContext";
@@ -21,7 +22,7 @@ export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
+  const topPad    = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 + 68 : insets.bottom + 64;
 
   return (
@@ -46,12 +47,6 @@ export default function DashboardScreen() {
             <Text style={[styles.appEco, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>HEALTH ECOSYSTEM</Text>
           </View>
           <View style={styles.navLinks}>
-            <TouchableOpacity onPress={() => router.push("/(app)/(tabs)/triage")} activeOpacity={0.7}>
-              <Text style={[styles.navLink, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Health{"\n"}Hive</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push("/(app)/(tabs)/profile")} activeOpacity={0.7}>
-              <Text style={[styles.navLink, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Health{"\n"}Card</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push("/(app)/settings")}
               activeOpacity={0.7}
@@ -97,6 +92,7 @@ export default function DashboardScreen() {
         {/* Live Consultation */}
         <TouchableOpacity activeOpacity={0.88} onPress={() => router.push("/(app)/consultation")}>
           <LinearGradient colors={["#071a10", "#0a2818"]} style={[styles.sectionCard, { borderColor: "#22c55e33" }]}>
+            <HiveCardBg gradientColors={["rgba(139,94,0,0.14)", "rgba(0,0,0,0.22)", "transparent"]} />
             <View style={[styles.sectionIcon, { backgroundColor: "rgba(34,197,94,0.15)", borderColor: "rgba(34,197,94,0.3)", borderWidth: 1 }]}>
               <MaterialCommunityIcons name="video" size={22} color="#22c55e" />
             </View>
@@ -113,8 +109,12 @@ export default function DashboardScreen() {
         </TouchableOpacity>
 
         {/* Health Hive */}
-        <TouchableOpacity activeOpacity={0.88} onPress={() => router.push("/(app)/(tabs)/triage")}
-          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push("/(app)/(tabs)/triage")}
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <HiveCardBg />
           <View style={[styles.sectionIcon, { backgroundColor: colors.glassPrimary, borderColor: colors.glassPrimaryBorder, borderWidth: 1 }]}>
             <MaterialCommunityIcons name="waveform" size={22} color={colors.primary} />
           </View>
@@ -129,8 +129,12 @@ export default function DashboardScreen() {
         </TouchableOpacity>
 
         {/* Health Card */}
-        <TouchableOpacity activeOpacity={0.88} onPress={() => router.push("/(app)/(tabs)/profile")}
-          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push("/(app)/(tabs)/profile")}
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <HiveCardBg />
           <View style={[styles.sectionIcon, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder + "88", borderWidth: 1 }]}>
             <MaterialCommunityIcons name="shield-account" size={22} color={colors.accent} />
           </View>
@@ -145,8 +149,12 @@ export default function DashboardScreen() {
         </TouchableOpacity>
 
         {/* Geriatric */}
-        <TouchableOpacity activeOpacity={0.88} onPress={() => router.push("/(app)/geriatric")}
-          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push("/(app)/geriatric")}
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <HiveCardBg />
           <View style={[styles.sectionIcon, { backgroundColor: "rgba(167,139,250,0.12)", borderColor: "rgba(167,139,250,0.25)", borderWidth: 1 }]}>
             <MaterialCommunityIcons name="brain" size={22} color="#a78bfa" />
           </View>
@@ -171,7 +179,6 @@ const styles = StyleSheet.create({
   appName: { fontSize: 16, letterSpacing: -0.3 },
   appEco: { fontSize: 9, letterSpacing: 1.6 },
   navLinks: { flexDirection: "row", gap: 12, alignItems: "center" },
-  navLink: { fontSize: 11, textAlign: "center", lineHeight: 16 },
   menuBtn: { borderRadius: 10, borderWidth: 1, padding: 8 },
   heroOuter: { borderRadius: 22, overflow: "hidden" },
   heroCard: { borderRadius: 22, overflow: "hidden", padding: 24, minHeight: 330 },
@@ -183,7 +190,7 @@ const styles = StyleSheet.create({
   heroBody: { fontSize: 13.5, color: "rgba(255,255,255,0.72)", lineHeight: 22, marginTop: 4 },
   heroCta: { flexDirection: "row", alignItems: "center", gap: 9, alignSelf: "flex-start", borderRadius: 100, borderWidth: 1, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8 },
   heroCtaText: { fontSize: 15 },
-  sectionCard: { borderRadius: 18, borderWidth: 1, padding: 20, gap: 10 },
+  sectionCard: { borderRadius: 18, borderWidth: 1, padding: 20, gap: 10, overflow: "hidden" },
   sectionIcon: { width: 46, height: 46, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   sectionTitle: { fontSize: 18, letterSpacing: -0.3 },
   sectionBody: { fontSize: 13, lineHeight: 20 },

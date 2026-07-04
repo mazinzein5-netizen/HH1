@@ -13,8 +13,8 @@ interface HiveLogoProps {
 
 function interpolateGold(intensity: number): { back: string; mid: string; front: string } {
   const clamp = Math.max(0, Math.min(1, intensity));
-  const back = `rgba(139,94,0,${0.5 + clamp * 0.4})`;
-  const mid = `rgba(201,134,10,${0.65 + clamp * 0.3})`;
+  const back  = `rgba(139,94,0,${0.5 + clamp * 0.4})`;
+  const mid   = `rgba(201,134,10,${0.65 + clamp * 0.3})`;
   const front = clamp < 0.5
     ? `rgba(212,160,23,${0.7 + clamp * 0.6})`
     : `rgba(245,197,24,${0.5 + clamp * 0.5})`;
@@ -22,7 +22,7 @@ function interpolateGold(intensity: number): { back: string; mid: string; front:
 }
 
 function depthOffsets(depth: DepthLevel): { back: number; mid: number } {
-  if (depth === "Flat") return { back: 0, mid: 0 };
+  if (depth === "Flat")   return { back: 0, mid: 0 };
   if (depth === "Subtle") return { back: 6, mid: 3 };
   return { back: 12, mid: 6 };
 }
@@ -35,14 +35,12 @@ export default function HiveLogo({
   showText = true,
 }: HiveLogoProps) {
   const hexSize = size * 1.1;
-  const gold = interpolateGold(goldIntensity);
+  const gold    = interpolateGold(goldIntensity);
   const offsets = depthOffsets(depth);
 
   const fontFamily =
     textWeight === "Condensed"
       ? "Inter_600SemiBold"
-      : textWeight === "Bold"
-      ? "Inter_700Bold"
       : "Inter_700Bold";
 
   const hiveTextStyle = {
@@ -61,61 +59,116 @@ export default function HiveLogo({
     marginBottom: 1,
   };
 
+  const S = hexSize;
+
   return (
-    <View style={[styles.container, { width: size * 2.2, height: size * 1.6 }]}>
-      {/* Depth layer — back (darkest amber) */}
+    <View style={[styles.container, { width: size * 2.6, height: size * 1.8 }]}>
+
+      {/* ── Depth shadow layers ── */}
       {depth !== "Flat" && (
         <MaterialCommunityIcons
           name="hexagon"
-          size={hexSize * 0.9}
+          size={S * 0.82}
           color={gold.back}
-          style={[styles.hexLayer, { left: offsets.back * 0.8, top: offsets.back * 0.5, opacity: 0.5 }]}
+          style={[styles.hex, { left: offsets.back * 0.9 + 1, top: offsets.back * 0.6 + 1, opacity: 0.35 }]}
         />
       )}
-
-      {/* Depth layer — mid (gold) */}
       {depth !== "Flat" && (
         <MaterialCommunityIcons
           name="hexagon"
-          size={hexSize}
+          size={S * 0.88}
           color={gold.mid}
-          style={[styles.hexLayer, { left: offsets.mid * 0.5, top: offsets.mid * 0.3, opacity: 0.65 }]}
+          style={[styles.hex, { left: offsets.mid * 0.5, top: offsets.mid * 0.35, opacity: 0.55 }]}
         />
       )}
 
-      {/* Front layer — bright */}
+      {/* ── Central / largest hex ── */}
       <MaterialCommunityIcons
         name="hexagon"
-        size={hexSize * 0.85}
+        size={S * 0.82}
         color={gold.front}
-        style={[styles.hexLayer, { left: 0, top: 0, opacity: 0.85 }]}
+        style={[styles.hex, { left: 0, top: 0, opacity: 0.85 }]}
       />
-
-      {/* Hex outline on top */}
       <MaterialCommunityIcons
         name="hexagon-outline"
-        size={hexSize * 0.85}
+        size={S * 0.82}
         color={gold.front}
-        style={[styles.hexLayer, { left: 0, top: 0, opacity: 0.6 }]}
+        style={[styles.hex, { left: 0, top: 0, opacity: 0.55 }]}
       />
 
-      {/* Additional cluster hexagons for depth */}
+      {/* ── Medium upper-right ── */}
       <MaterialCommunityIcons
-        name="hexagon-outline"
-        size={hexSize * 0.45}
+        name="hexagon"
+        size={S * 0.56}
         color={gold.mid}
-        style={[styles.hexLayer, { left: hexSize * 0.55, top: -hexSize * 0.05, opacity: depth === "Strong" ? 0.7 : 0.4 }]}
+        style={[styles.hex, { left: S * 0.46, top: -S * 0.14, opacity: 0.70 }]}
       />
       <MaterialCommunityIcons
         name="hexagon-outline"
-        size={hexSize * 0.35}
-        color={gold.back}
-        style={[styles.hexLayer, { left: hexSize * 0.6, top: hexSize * 0.4, opacity: depth === "Flat" ? 0.15 : 0.35 }]}
+        size={S * 0.56}
+        color={gold.mid}
+        style={[styles.hex, { left: S * 0.46, top: -S * 0.14, opacity: 0.45 }]}
       />
 
-      {/* Text overlay */}
+      {/* ── Medium lower-right ── */}
+      <MaterialCommunityIcons
+        name="hexagon-outline"
+        size={S * 0.50}
+        color={gold.mid}
+        style={[styles.hex, { left: S * 0.44, top: S * 0.37, opacity: 0.60 }]}
+      />
+
+      {/* ── Small — far upper right ── */}
+      <MaterialCommunityIcons
+        name="hexagon"
+        size={S * 0.36}
+        color={gold.back}
+        style={[styles.hex, { left: S * 0.74, top: -S * 0.22, opacity: 0.55 }]}
+      />
+
+      {/* ── Small — right mid ── */}
+      <MaterialCommunityIcons
+        name="hexagon-outline"
+        size={S * 0.32}
+        color={gold.mid}
+        style={[styles.hex, { left: S * 0.76, top: S * 0.22, opacity: 0.50 }]}
+      />
+
+      {/* ── Small — lower centre-right ── */}
+      <MaterialCommunityIcons
+        name="hexagon-outline"
+        size={S * 0.28}
+        color={gold.back}
+        style={[styles.hex, { left: S * 0.60, top: S * 0.58, opacity: 0.42 }]}
+      />
+
+      {/* ── Tiny — outer far right ── */}
+      <MaterialCommunityIcons
+        name="hexagon"
+        size={S * 0.22}
+        color={gold.back}
+        style={[styles.hex, { left: S * 0.90, top: -S * 0.04, opacity: 0.38 }]}
+      />
+
+      {/* ── Tiny — outer lower edge ── */}
+      <MaterialCommunityIcons
+        name="hexagon-outline"
+        size={S * 0.18}
+        color={gold.back}
+        style={[styles.hex, { left: S * 0.88, top: S * 0.50, opacity: 0.30 }]}
+      />
+
+      {/* ── Tiny — far upper edge ── */}
+      <MaterialCommunityIcons
+        name="hexagon-outline"
+        size={S * 0.16}
+        color={gold.back}
+        style={[styles.hex, { left: S * 0.78, top: -S * 0.34, opacity: 0.25 }]}
+      />
+
+      {/* ── Text overlay ── */}
       {showText && (
-        <View style={[styles.textBlock, { left: hexSize * 0.72 }]}>
+        <View style={[styles.textBlock, { left: S * 1.02 }]}>
           <Text style={subTextStyle} numberOfLines={1}>HEALTH HIVE</Text>
           <Text style={hiveTextStyle} numberOfLines={1}>HIVE</Text>
         </View>
@@ -130,7 +183,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  hexLayer: {
+  hex: {
     position: "absolute",
   },
   textBlock: {
