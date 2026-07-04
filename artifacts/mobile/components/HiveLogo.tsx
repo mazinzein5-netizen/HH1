@@ -52,17 +52,26 @@ export default function HiveLogo({
   };
 
   const subTextStyle = {
-    fontSize: size * 0.18,
-    letterSpacing: size * 0.06,
+    fontSize: size * 0.155,
+    letterSpacing: size * 0.04,
     color: gold.mid,
     fontFamily: "Inter_600SemiBold",
-    marginBottom: 1,
+    marginBottom: 0,
+  };
+
+  const companyTextStyle = {
+    fontSize: size * 0.115,
+    letterSpacing: size * 0.01,
+    color: gold.back,
+    fontFamily: "Inter_400Regular",
+    opacity: 0.72,
+    marginTop: 1,
   };
 
   const S = hexSize;
 
   return (
-    <View style={[styles.container, { width: size * 2.6, height: size * 1.8 }]}>
+    <View style={[styles.container, { width: size * 3.8, height: size * 1.8 }]}>
 
       {/* ── Depth shadow layers ── */}
       {depth !== "Flat" && (
@@ -169,8 +178,9 @@ export default function HiveLogo({
       {/* ── Text overlay ── */}
       {showText && (
         <View style={[styles.textBlock, { left: S * 1.02 }]}>
-          <Text style={subTextStyle} numberOfLines={1}>HEALTH HIVE</Text>
+          <Text style={subTextStyle} numberOfLines={1}>HEALTH HIVE ECOSYSTEM</Text>
           <Text style={hiveTextStyle} numberOfLines={1}>HIVE</Text>
+          <Text style={companyTextStyle} numberOfLines={1}>IbnCeena Ltd.</Text>
         </View>
       )}
     </View>
