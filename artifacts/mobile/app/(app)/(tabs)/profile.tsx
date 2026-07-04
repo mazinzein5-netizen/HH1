@@ -25,6 +25,7 @@ import { useAuth } from "@/context/AuthContext";
 import { KardexEntry, usePatient } from "@/context/PatientContext";
 import HiveLogo from "@/components/HiveLogo";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import Toast from "@/components/Toast";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -182,6 +183,7 @@ export default function HealthCardScreen() {
   const [selectedMed, setSelectedMed] = useState<KardexEntry | null>(null);
   const [sharing, setSharing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
   const exportRef = useRef<View>(null);
   const deviceConnected = true;
 
@@ -251,7 +253,7 @@ export default function HealthCardScreen() {
       const uri = await captureRef(exportRef, { format: "png", quality: 1, result: "tmpfile" });
       await MediaLibrary.saveToLibraryAsync(uri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Saved", "Health Card saved to your photo library.");
+      setToastVisible(true);
     } catch {
       Alert.alert("Save failed", "Could not save the health card. Please try again.");
     } finally {
@@ -648,6 +650,13 @@ export default function HealthCardScreen() {
           </View>
         </LinearGradient>
       </View>
+
+      <Toast
+        message="Health Card saved to your photo library"
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+        bottomOffset={bottomPad + 16}
+      />
     </View>
   );
 }
