@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text } from "react-native";
+import { Animated, StyleSheet, Text, TouchableOpacity } from "react-native";
 
 interface ToastProps {
   message: string;
@@ -23,6 +23,14 @@ export default function Toast({
   const translateY = useRef(new Animated.Value(16)).current;
   const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const dismiss = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    Animated.parallel([
+      Animated.timing(translateY, { toValue: 16, duration: 260, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0, duration: 260, useNativeDriver: true }),
+    ]).start(() => onHide());
+  };
+
   useEffect(() => {
     if (visible) {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -32,12 +40,7 @@ export default function Toast({
         Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
       ]).start();
 
-      timerRef.current = setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(translateY, { toValue: 16, duration: 260, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0, duration: 260, useNativeDriver: true }),
-        ]).start(() => onHide());
-      }, 2400);
+      timerRef.current = setTimeout(dismiss, 2400);
     }
 
     return () => {
@@ -48,22 +51,22 @@ export default function Toast({
   if (!visible) return null;
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        { bottom: bottomOffset, opacity, transform: [{ translateY }] },
-      ]}
-    >
-      <MaterialCommunityIcons name={iconName} size={18} color={iconColor} />
-      <Text style={styles.message}>{message}</Text>
-    </Animated.View>
+    <TouchableOpacity activeOpacity={0.8} onPress={dismiss} style={{ position: "absolute", alignSelf: "center", bottom: bottomOffset, zIndex: 999 }}>
+      <Animated.View
+        style={[
+          styles.container,
+          { opacity, transform: [{ translateY }] },
+        ]}
+      >
+        <MaterialCommunityIcons name={iconName} size={18} color={iconColor} />
+        <Text style={styles.message}>{message}</Text>
+      </Animated.View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    position: "absolute",
-    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -78,7 +81,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 10,
-    zIndex: 999,
   },
   message: {
     color: "#e2fce8",
