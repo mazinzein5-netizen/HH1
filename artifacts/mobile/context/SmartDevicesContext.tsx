@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 export interface Device {
   id: string;
@@ -189,19 +190,48 @@ interface SmartDevicesContextValue {
   toggleDevice: (id: string) => void;
 }
 
+const STORAGE_KEY = "ibnceena_paired_devices";
+
 const SmartDevicesContext = createContext<SmartDevicesContextValue | null>(null);
+
+function applyConnectedIds(ids: string[]): Device[] {
+  const connectedSet = new Set(ids);
+  return INITIAL_DEVICES.map((d) => {
+    const connected = connectedSet.has(d.id);
+    return { ...d, connected, reading: connected ? FAKE_READINGS[d.id] : "—" };
+  });
+}
 
 export function SmartDevicesProvider({ children }: { children: React.ReactNode }) {
   const [devices, setDevices] = useState<Device[]>(INITIAL_DEVICES);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const ids: string[] = JSON.parse(stored);
+          setDevices(applyConnectedIds(ids));
+        }
+      } catch {}
+    })();
+  }, []);
+
+  function persist(next: Device[]) {
+    const ids = next.filter((d) => d.connected).map((d) => d.id);
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ids)).catch(() => {});
+  }
+
   function toggleDevice(id: string) {
-    setDevices((prev) =>
-      prev.map((d) => {
+    setDevices((prev) => {
+      const next = prev.map((d) => {
         if (d.id !== id) return d;
         const connected = !d.connected;
         return { ...d, connected, reading: connected ? FAKE_READINGS[id] : "—" };
-      })
-    );
+      });
+      persist(next);
+      return next;
+    });
   }
 
   const connectedCount = devices.filter((d) => d.connected).length;
