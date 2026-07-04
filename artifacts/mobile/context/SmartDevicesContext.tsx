@@ -184,6 +184,42 @@ const FAKE_READINGS: Record<string, string> = {
   guardian4: "5.8",
 };
 
+// How often connected devices refresh their readings.
+const READING_REFRESH_MS = 3000;
+
+function jitterInt(base: number, spread: number, min: number, max: number): number {
+  const delta = Math.round((Math.random() * 2 - 1) * spread);
+  return Math.max(min, Math.min(max, base + delta));
+}
+
+function jitterFloat(
+  base: number,
+  spread: number,
+  min: number,
+  max: number,
+  decimals: number,
+): string {
+  const delta = (Math.random() * 2 - 1) * spread;
+  const value = Math.max(min, Math.min(max, base + delta));
+  return value.toFixed(decimals);
+}
+
+// Plausible per-device variation around the baseline reading. Values jitter
+// around the FAKE_READINGS baseline each tick (rather than drifting from the
+// previous value) so they stay within clinically believable ranges. Devices
+// without an entry here (e.g. ECG "Normal") keep a steady reading.
+const READING_VARIATION: Record<string, () => string> = {
+  oura4: () => String(jitterInt(48, 4, 38, 62)),
+  sring: () => String(jitterInt(71, 4, 58, 84)),
+  sgw7: () => `${jitterInt(121, 4, 110, 130)}/${jitterInt(79, 3, 70, 86)}`,
+  sgwultra: () => `${jitterInt(118, 4, 108, 128)}/${jitterInt(76, 3, 68, 84)}`,
+  sense2: () => jitterFloat(0.8, 0.15, 0.4, 1.4, 1),
+  venu3: () => String(jitterInt(98, 1, 95, 100)),
+  libre3: () => jitterFloat(5.4, 0.3, 4.4, 7.0, 1),
+  dexg7: () => jitterFloat(6.1, 0.3, 4.6, 7.5, 1),
+  guardian4: () => jitterFloat(5.8, 0.3, 4.6, 7.2, 1),
+};
+
 interface SmartDevicesContextValue {
   devices: Device[];
   connectedCount: number;
@@ -216,6 +252,25 @@ export function SmartDevicesProvider({ children }: { children: React.ReactNode }
       } catch {}
     })();
   }, []);
+
+  const hasConnected = devices.some((d) => d.connected);
+
+  // Periodically refresh readings on connected devices so the vitals feel live.
+  // The timer only runs while at least one device is connected and is torn down
+  // on unmount or when the last device disconnects, so no timers leak.
+  useEffect(() => {
+    if (!hasConnected) return;
+    const interval = setInterval(() => {
+      setDevices((prev) =>
+        prev.map((d) => {
+          if (!d.connected) return d;
+          const vary = READING_VARIATION[d.id];
+          return vary ? { ...d, reading: vary() } : d;
+        }),
+      );
+    }, READING_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [hasConnected]);
 
   function persist(next: Device[]) {
     const ids = next.filter((d) => d.connected).map((d) => d.id);
