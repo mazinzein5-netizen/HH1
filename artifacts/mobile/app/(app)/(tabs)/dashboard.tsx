@@ -85,7 +85,7 @@ export default function DashboardScreen() {
             showText={false}
           />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>IbnCeena</Text>
+            <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>HEALTH</Text>
             <Text style={[styles.appEco, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>HEALTH ECOSYSTEM</Text>
           </View>
           <TouchableOpacity
