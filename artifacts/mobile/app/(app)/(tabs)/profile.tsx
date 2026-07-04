@@ -417,7 +417,7 @@ export default function HealthCardScreen() {
               </Text>
             </View>
             <View style={styles.qrBox}>
-              <QRCode value={qrData} size={52} color={isGeriatric ? "#E5294E" : grade.color} backgroundColor="transparent" />
+              <QRCode value={qrData} size={76} color={isGeriatric ? "#E5294E" : grade.color} backgroundColor="transparent" />
             </View>
           </View>
           <View style={styles.patientInfo}>
