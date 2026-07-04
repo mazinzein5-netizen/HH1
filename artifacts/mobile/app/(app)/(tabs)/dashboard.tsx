@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HiveCardBg from "@/components/HoneycombCardBg";
 import HiveLogo from "@/components/HiveLogo";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import { useHiveBot } from "@/context/HiveBotContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -25,6 +26,7 @@ export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
+  const hiveBot   = useHiveBot();
   const topPad    = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 + 68 : insets.bottom + 64;
 
@@ -145,7 +147,7 @@ export default function DashboardScreen() {
         {/* HIVE Bot card */}
         <TouchableOpacity
           activeOpacity={0.88}
-          onPress={() => router.push("/(app)/hive-bot" as never)}
+          onPress={() => hiveBot.open()}
           style={[styles.sectionCard, { borderColor: colors.gold + "44" }]}
         >
           <LinearGradient colors={["#1a1200", "#2a1e00"]} style={StyleSheet.absoluteFillObject} borderRadius={18} />
@@ -247,7 +249,7 @@ export default function DashboardScreen() {
       {/* ── HIVE Bot floating action button ── */}
       <TouchableOpacity
         activeOpacity={0.88}
-        onPress={() => router.push("/(app)/hive-bot" as never)}
+        onPress={() => hiveBot.open()}
         style={[styles.fab, { bottom: bottomPad + 16 }]}
       >
         <LinearGradient

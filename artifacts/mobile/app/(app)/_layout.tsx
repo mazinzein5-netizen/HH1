@@ -1,9 +1,11 @@
 import { Stack } from "expo-router";
+import { HiveBotProvider } from "@/context/HiveBotContext";
 import { useColors } from "@/hooks/useColors";
 
 export default function AppLayout() {
   const colors = useColors();
   return (
+    <HiveBotProvider>
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor: colors.background },
@@ -22,5 +24,6 @@ export default function AppLayout() {
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="smart-devices" options={{ headerShown: false }} />
     </Stack>
+    </HiveBotProvider>
   );
 }

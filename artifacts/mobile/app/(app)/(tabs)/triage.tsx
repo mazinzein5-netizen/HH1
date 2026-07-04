@@ -15,8 +15,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { PATHWAYS, PathwayKey, RED_FLAG_QUESTIONS } from "@/data/pathwayQuestions";
+import { useHiveBot } from "@/context/HiveBotContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
+import { usePatient } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
+import {
+  callEmergencyServices,
+  EMERGENCY_NUMBER,
+  formatPatientCard,
+  shareWithHealthServices,
+} from "@/utils/healthShare";
 
 type Step = "pathway" | "redflags" | "scoring" | "results";
 
@@ -24,6 +32,8 @@ export default function TriageScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
+  const hiveBot = useHiveBot();
+  const { data: patient } = usePatient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 + 68 : insets.bottom + 64;
 
@@ -83,6 +93,67 @@ export default function TriageScreen() {
 
   const hasRedFlag = redFlagAnswers.some((a) => a === true);
   const stepNum = step === "pathway" ? 1 : step === "redflags" ? 2 : step === "scoring" ? 3 : 4;
+
+  function positiveRedFlags() {
+    return RED_FLAG_QUESTIONS.filter((_, i) => redFlagAnswers[i] === true);
+  }
+
+  function askHiveBotAboutPathway() {
+    if (!pathway) return;
+    const flags = positiveRedFlags();
+    const seed = [
+      `I'm going through the ${pathway.name} pain pathway in the app.`,
+      flags.length
+        ? `I answered YES to these red-flag screening questions: ${flags.join("; ")}.`
+        : "I did not report any red-flag symptoms.",
+      "Please help me understand my symptoms and what I should do next.",
+    ].join(" ");
+    hiveBot.open(seed);
+  }
+
+  function buildReferralSummary(total: number) {
+    if (!pathway) return "";
+    const result = pathway.getResult(total);
+    const flags = positiveRedFlags();
+    const scoreLines = pathway.questions.map((q, qi) => {
+      const label = q.text.split(" — ")[0].replace(/^\d+\.\s+/, "");
+      const val = answers[qi] !== null && answers[qi] !== undefined ? q.scores[answers[qi]!] : "—";
+      return `  • ${label}: ${val}`;
+    });
+
+    return [
+      "CLINICAL REFERRAL PACKET",
+      "",
+      `Pathway: ${pathway.name}`,
+      `Assessment tool: ${pathway.scoreTool}`,
+      `Score: ${pathway.formatScore(total)} (${result.label})`,
+      `Recommendation: ${result.recommendation}`,
+      `Suggested referral: ${result.referral}`,
+      "",
+      flags.length
+        ? `RED FLAGS PRESENT — urgent review required:\n${flags.map((f) => `  • ${f}`).join("\n")}`
+        : "Red flags: none reported.",
+      "",
+      "Score breakdown:",
+      ...scoreLines,
+      "",
+      formatPatientCard(patient),
+    ].join("\n");
+  }
+
+  function askHiveBotAboutResults(total: number) {
+    if (!pathway) return;
+    const result = pathway.getResult(total);
+    const seed = [
+      `I completed the ${pathway.name} ${pathway.scoreTool} assessment.`,
+      `My score was ${pathway.formatScore(total)} (${result.label}), and the suggested referral is: ${result.referral}.`,
+      hasRedFlag ? "I also reported red-flag symptoms during screening." : "",
+      "Can you explain what this means and how I should prepare?",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    hiveBot.open(seed);
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -199,13 +270,28 @@ export default function TriageScreen() {
             ))}
 
             {hasRedFlag && (
-              <View style={[styles.alertBanner, { backgroundColor: "#2a0808", borderColor: colors.accent }]}>
-                <MaterialCommunityIcons name="alert-circle" size={17} color={colors.accent} />
-                <Text style={[styles.alertText, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>
-                  Red Flag Detected — Urgent GP or Emergency Department assessment is required before completing this questionnaire.
-                </Text>
-              </View>
+              <>
+                <View style={[styles.alertBanner, { backgroundColor: "#2a0808", borderColor: colors.accent }]}>
+                  <MaterialCommunityIcons name="alert-circle" size={17} color={colors.accent} />
+                  <Text style={[styles.alertText, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>
+                    Red Flag Detected — Urgent GP or Emergency Department assessment is required before completing this questionnaire.
+                  </Text>
+                </View>
+                <TouchableOpacity activeOpacity={0.85} onPress={callEmergencyServices} style={[styles.emergencyBtn, { backgroundColor: colors.emergency }]}>
+                  <MaterialCommunityIcons name="phone-alert" size={18} color="#fff" />
+                  <Text style={[styles.emergencyBtnText, { fontFamily: "Inter_700Bold" }]}>
+                    Call Emergency Services ({EMERGENCY_NUMBER})
+                  </Text>
+                </TouchableOpacity>
+              </>
             )}
+
+            <TouchableOpacity activeOpacity={0.85} onPress={askHiveBotAboutPathway} style={[styles.botBtn, { borderColor: colors.glassGoldBorder, backgroundColor: colors.glassGold }]}>
+              <MaterialCommunityIcons name="robot-happy" size={17} color={colors.gold} />
+              <Text style={[styles.botBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
+                Ask HIVE Bot about these symptoms
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               activeOpacity={allRedFlagsAnswered() ? 0.85 : 0.4}
@@ -396,6 +482,32 @@ export default function TriageScreen() {
                 </View>
               </View>
 
+              {hasRedFlag && (
+                <TouchableOpacity activeOpacity={0.85} onPress={callEmergencyServices} style={[styles.emergencyBtn, { backgroundColor: colors.emergency }]}>
+                  <MaterialCommunityIcons name="phone-alert" size={18} color="#fff" />
+                  <Text style={[styles.emergencyBtnText, { fontFamily: "Inter_700Bold" }]}>
+                    Call Emergency Services ({EMERGENCY_NUMBER})
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => shareWithHealthServices(`Referral Packet — ${pathway.name}`, buildReferralSummary(total))}
+              >
+                <LinearGradient colors={["#0f6b3a", "#1fa35c"]} style={styles.primaryBtn}>
+                  <MaterialCommunityIcons name="send-check" size={18} color="#fff" />
+                  <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>Send to Health Services</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity activeOpacity={0.85} onPress={() => askHiveBotAboutResults(total)} style={[styles.botBtn, { borderColor: colors.glassGoldBorder, backgroundColor: colors.glassGold }]}>
+                <MaterialCommunityIcons name="robot-happy" size={17} color={colors.gold} />
+                <Text style={[styles.botBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
+                  Ask HIVE Bot about these results
+                </Text>
+              </TouchableOpacity>
+
               <TouchableOpacity activeOpacity={0.85} onPress={reset}>
                 <LinearGradient colors={["#1a2a8c", "#4F6EF7"]} style={styles.primaryBtn}>
                   <MaterialCommunityIcons name="refresh" size={17} color="#fff" />
@@ -437,6 +549,10 @@ const styles = StyleSheet.create({
   rfBtnText: { fontSize: 14, letterSpacing: 1 },
   primaryBtn: { borderRadius: 14, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   primaryBtnText: { color: "#fff", fontSize: 15 },
+  emergencyBtn: { borderRadius: 14, paddingVertical: 15, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  emergencyBtnText: { color: "#fff", fontSize: 15 },
+  botBtn: { borderRadius: 14, borderWidth: 1, paddingVertical: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  botBtnText: { fontSize: 14 },
   backBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 8 },
   backBtnText: { fontSize: 13 },
   toolBanner: { flexDirection: "row", alignItems: "flex-start", gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },

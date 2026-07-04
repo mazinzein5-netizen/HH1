@@ -1,17 +1,17 @@
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React from "react";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import ChatBot from "@/components/ChatBot";
+import { useHiveBot } from "@/context/HiveBotContext";
 import { useColors } from "@/hooks/useColors";
 
 export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isIOS = Platform.OS === "ios";
-  const [chatVisible, setChatVisible] = useState(false);
+  const hiveBot = useHiveBot();
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const fabBottom = bottomPad + 64 + 14;
@@ -80,13 +80,11 @@ export default function TabLayout() {
       {/* Floating HIVE Bot button — visible across all tabs */}
       <TouchableOpacity
         activeOpacity={0.88}
-        onPress={() => setChatVisible(true)}
+        onPress={() => hiveBot.open()}
         style={[styles.fab, { bottom: fabBottom, backgroundColor: "#C9860A", shadowColor: "#C9860A" }]}
       >
         <MaterialCommunityIcons name="robot-happy" size={24} color="#fff" />
       </TouchableOpacity>
-
-      <ChatBot visible={chatVisible} onClose={() => setChatVisible(false)} />
     </View>
   );
 }

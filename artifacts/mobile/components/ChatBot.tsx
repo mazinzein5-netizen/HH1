@@ -16,7 +16,14 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePatient } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
+import {
+  callEmergencyServices,
+  EMERGENCY_NUMBER,
+  formatPatientCard,
+  shareWithHealthServices,
+} from "@/utils/healthShare";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -26,6 +33,7 @@ export interface ChatMessage {
 interface Props {
   visible: boolean;
   onClose: () => void;
+  seedContext?: string;
 }
 
 const GREETING: ChatMessage = {
@@ -73,14 +81,20 @@ function UserBubble({ content, colors }: { content: string; colors: ReturnType<t
   );
 }
 
-export default function ChatBot({ visible, onClose }: Props) {
+export default function ChatBot({ visible, onClose, seedContext }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { data: patient } = usePatient();
   const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const seededRef = useRef<string | undefined>(undefined);
+
+  const hasRedFlag = messages.some(
+    (m) => m.role === "assistant" && (m.content.startsWith("⚠️") || m.content.includes("RED FLAG"))
+  );
 
   useEffect(() => {
     if (visible) {
@@ -100,12 +114,25 @@ export default function ChatBot({ visible, onClose }: Props) {
     }
   }, [visible]);
 
-  async function handleSend() {
-    const text = input.trim();
-    if (!text || loading) return;
-    setInput("");
+  // When opened from the pain pathway with clinical context, prime the bot.
+  // Waits for any in-flight request to finish before sending so the seed
+  // is never silently dropped on a rapid close/reopen.
+  useEffect(() => {
+    if (visible && seedContext && !loading && seededRef.current !== seedContext) {
+      seededRef.current = seedContext;
+      sendMessage(seedContext);
+    }
+    if (!visible) {
+      seededRef.current = undefined;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, seedContext, loading]);
 
-    const userMsg: ChatMessage = { role: "user", content: text };
+  async function sendMessage(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
+
+    const userMsg: ChatMessage = { role: "user", content: trimmed };
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
     setLoading(true);
@@ -140,9 +167,34 @@ export default function ChatBot({ visible, onClose }: Props) {
     }
   }
 
+  function handleSend() {
+    const text = input.trim();
+    if (!text || loading) return;
+    setInput("");
+    sendMessage(text);
+  }
+
+  function handleShareToServices() {
+    const transcript = messages
+      .filter((m) => m !== GREETING)
+      .map((m) => `${m.role === "user" ? "Patient" : "HIVE Bot"}: ${m.content}`)
+      .join("\n\n");
+
+    const body = [
+      formatPatientCard(patient),
+      "",
+      "PAIN ASSESSMENT CONVERSATION",
+      "",
+      transcript || "No conversation recorded yet.",
+    ].join("\n");
+
+    shareWithHealthServices("HIVE Bot — Clinical Handover Summary", body);
+  }
+
   function handleClear() {
     setMessages([GREETING]);
     setInput("");
+    seededRef.current = undefined;
   }
 
   function handleClose() {
@@ -177,14 +229,21 @@ export default function ChatBot({ visible, onClose }: Props) {
                 </Text>
               </View>
               <TouchableOpacity
+                onPress={callEmergencyServices}
+                style={[styles.emergencyPill, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons name="phone-alert" size={15} color={colors.emergency} />
+                <Text style={[styles.emergencyPillText, { color: colors.emergency, fontFamily: "Inter_700Bold" }]}>
+                  {EMERGENCY_NUMBER}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={handleClear}
                 style={[styles.clearBtn, { borderColor: colors.border }]}
                 activeOpacity={0.7}
               >
                 <MaterialCommunityIcons name="delete-sweep" size={16} color={colors.mutedForeground} />
-                <Text style={[styles.clearText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
-                  Clear
-                </Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={handleClose} style={styles.closeBtn} activeOpacity={0.7}>
                 <MaterialCommunityIcons name="close" size={20} color={colors.mutedForeground} />
@@ -219,6 +278,44 @@ export default function ChatBot({ visible, onClose }: Props) {
                 ) : null
               }
             />
+
+            {/* Urgent escalation banner when a red flag is detected */}
+            {hasRedFlag && (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={callEmergencyServices}
+                style={[styles.redFlagBanner, { backgroundColor: colors.emergencyBg, borderColor: colors.emergency }]}
+              >
+                <MaterialCommunityIcons name="phone-alert" size={18} color={colors.emergency} />
+                <Text style={[styles.redFlagText, { color: colors.emergency, fontFamily: "Inter_700Bold" }]}>
+                  Urgent symptoms flagged — Call Emergency Services ({EMERGENCY_NUMBER})
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Emergency + handover action toolbar */}
+            <View style={[styles.actionRow, { borderTopColor: colors.border }]}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={callEmergencyServices}
+                style={[styles.actionBtn, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}
+              >
+                <MaterialCommunityIcons name="phone-alert" size={16} color={colors.emergency} />
+                <Text style={[styles.actionBtnText, { color: colors.emergency, fontFamily: "Inter_600SemiBold" }]}>
+                  Emergency
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleShareToServices}
+                style={[styles.actionBtn, { backgroundColor: colors.glassGold, borderColor: colors.glassGoldBorder }]}
+              >
+                <MaterialCommunityIcons name="share-variant" size={16} color={colors.gold} />
+                <Text style={[styles.actionBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
+                  Send to Health Services
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             {/* Input bar */}
             <View style={[styles.inputBar, { borderTopColor: colors.border, paddingBottom: bottomPad }]}>
@@ -308,7 +405,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 1,
   },
-  clearBtn: {
+  emergencyPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
@@ -317,11 +414,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  clearText: {
+  emergencyPillText: {
     fontSize: 12,
+    letterSpacing: 0.3,
+  },
+  clearBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 7,
   },
   closeBtn: {
     padding: 4,
+  },
+  redFlagBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginHorizontal: 14,
+    marginBottom: 4,
+  },
+  redFlagText: {
+    fontSize: 13,
+    lineHeight: 18,
+    flex: 1,
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    borderTopWidth: 1,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+  },
+  actionBtnText: {
+    fontSize: 12.5,
   },
   messageList: {
     paddingHorizontal: 14,
