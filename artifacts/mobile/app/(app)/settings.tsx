@@ -3,12 +3,10 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import Slider from "@react-native-community/slider";
 import {
   Alert,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,11 +14,18 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
-import HiveLogo from "@/components/HiveLogo";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import ThemedStatusBar from "@/components/ThemedStatusBar";
 import Toast from "@/components/Toast";
-import { DensityLevel, DepthLevel, TextWeightLevel, useLogoTheme } from "@/context/LogoThemeContext";
+import { useLogoTheme } from "@/context/LogoThemeContext";
+import { ThemeMode, useTheme } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
+
+const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: "white-balance-sunny" | "moon-waning-crescent" | "cellphone-cog" }[] = [
+  { mode: "light", label: "Light", icon: "white-balance-sunny" },
+  { mode: "dark", label: "Dark", icon: "moon-waning-crescent" },
+  { mode: "system", label: "System", icon: "cellphone-cog" },
+];
 
 const SECTIONS = [
   {
@@ -56,53 +61,12 @@ const SECTIONS = [
   },
 ];
 
-function PickerRow<T extends string>({
-  label,
-  options,
-  value,
-  onSelect,
-  activeColor,
-}: {
-  label: string;
-  options: T[];
-  value: T;
-  onSelect: (v: T) => void;
-  activeColor: string;
-}) {
-  const colors = useColors();
-  return (
-    <View style={styles.pickerRow}>
-      <Text style={[styles.pickerLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{label}</Text>
-      <View style={styles.pickerChips}>
-        {options.map((opt) => (
-          <TouchableOpacity
-            key={opt}
-            activeOpacity={0.8}
-            onPress={() => { Haptics.selectionAsync(); onSelect(opt); }}
-            style={[styles.pickerChip, {
-              backgroundColor: value === opt ? activeColor + "22" : colors.cardElevated,
-              borderColor: value === opt ? activeColor : colors.border,
-              borderWidth: value === opt ? 1.5 : 1,
-            }]}
-          >
-            <Text style={[styles.pickerChipText, {
-              color: value === opt ? activeColor : colors.mutedForeground,
-              fontFamily: value === opt ? "Inter_600SemiBold" : "Inter_400Regular",
-            }]}>
-              {opt}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
-  const { prefs, setGoldIntensity, setDepth, setDensity, setTextWeight } = useLogoTheme();
+  const { prefs } = useLogoTheme();
+  const { mode, setMode } = useTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [toastVisible, setToastVisible] = useState(false);
@@ -141,7 +105,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <ThemedStatusBar />
       <HoneycombWallpaper density={prefs.density} />
 
       {/* Header */}
@@ -179,77 +143,45 @@ export default function SettingsScreen() {
           )}
         </LinearGradient>
 
-        {/* HIVE Logo & Visual Theme Editor */}
+        {/* Appearance */}
         <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.sectionTitleRow}>
-            <MaterialCommunityIcons name="palette" size={18} color={colors.gold} />
-            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Logo & Visual Theme</Text>
+            <MaterialCommunityIcons name="theme-light-dark" size={18} color={colors.gold} />
+            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Appearance</Text>
           </View>
           <Text style={[styles.sectionSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Customise the HIVE honeycomb logo and background theme.
+            Choose a light or dark colour theme, or match your device.
           </Text>
 
-          {/* Live preview */}
-          <View style={[styles.logoPreviewWrap, { backgroundColor: colors.cardElevated, borderColor: colors.goldBorder }]}>
-            <HiveLogo
-              size={40}
-              goldIntensity={prefs.goldIntensity}
-              depth={prefs.depth}
-              textWeight={prefs.textWeight}
-              showText
-            />
+          <View style={styles.themeRow}>
+            {THEME_OPTIONS.map((opt) => {
+              const active = mode === opt.mode;
+              return (
+                <TouchableOpacity
+                  key={opt.mode}
+                  activeOpacity={0.85}
+                  onPress={() => { Haptics.selectionAsync(); setMode(opt.mode); }}
+                  style={[styles.themeChip, {
+                    backgroundColor: active ? colors.glassGold : colors.cardElevated,
+                    borderColor: active ? colors.gold : colors.border,
+                    borderWidth: active ? 1.5 : 1,
+                  }]}
+                >
+                  <MaterialCommunityIcons
+                    name={opt.icon}
+                    size={22}
+                    color={active ? colors.gold : colors.mutedForeground}
+                  />
+                  <Text style={[styles.themeChipText, {
+                    color: active ? colors.gold : colors.mutedForeground,
+                    fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular",
+                  }]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-
-          {/* Gold Intensity Slider */}
-          <View style={styles.sliderRow}>
-            <Text style={[styles.pickerLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Gold Intensity
-            </Text>
-            <View style={styles.sliderTrack}>
-              <Text style={[styles.sliderEndLabel, { color: colors.honey, fontFamily: "Inter_400Regular" }]}>Amber</Text>
-              <View style={styles.sliderWrap}>
-                <Slider
-                  style={{ flex: 1, height: 36 }}
-                  minimumValue={0}
-                  maximumValue={1}
-                  step={0.05}
-                  value={prefs.goldIntensity}
-                  onValueChange={(v) => setGoldIntensity(v)}
-                  minimumTrackTintColor={colors.goldBright}
-                  maximumTrackTintColor={colors.border}
-                  thumbTintColor={colors.gold}
-                />
-              </View>
-              <Text style={[styles.sliderEndLabel, { color: colors.goldBright, fontFamily: "Inter_400Regular" }]}>Vivid</Text>
-            </View>
-          </View>
-
-          {/* 3D Depth picker */}
-          <PickerRow<DepthLevel>
-            label="3D Depth"
-            options={["Flat", "Subtle", "Strong"]}
-            value={prefs.depth}
-            onSelect={setDepth}
-            activeColor={colors.gold}
-          />
-
-          {/* Honeycomb Density picker */}
-          <PickerRow<DensityLevel>
-            label="Honeycomb Density"
-            options={["Sparse", "Medium", "Dense"]}
-            value={prefs.density}
-            onSelect={setDensity}
-            activeColor={colors.goldLight}
-          />
-
-          {/* Text Weight picker */}
-          <PickerRow<TextWeightLevel>
-            label="Text Weight"
-            options={["Bold", "Black", "Condensed"]}
-            value={prefs.textWeight}
-            onSelect={setTextWeight}
-            activeColor={colors.goldBright}
-          />
         </View>
 
         {/* Settings sections */}
@@ -319,24 +251,9 @@ const styles = StyleSheet.create({
   sectionTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   sectionTitle: { fontSize: 16 },
   sectionSub: { fontSize: 12, lineHeight: 18 },
-  logoPreviewWrap: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 100,
-    overflow: "hidden",
-  },
-  sliderRow: { gap: 8 },
-  sliderTrack: { flexDirection: "row", alignItems: "center", gap: 8 },
-  sliderEndLabel: { fontSize: 11, minWidth: 36, textAlign: "center" },
-  sliderWrap: { flex: 1 },
-  pickerRow: { gap: 8 },
-  pickerLabel: { fontSize: 12, letterSpacing: 0.3 },
-  pickerChips: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  pickerChip: { borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
-  pickerChipText: { fontSize: 13 },
+  themeRow: { flexDirection: "row", gap: 10 },
+  themeChip: { flex: 1, borderRadius: 14, paddingVertical: 16, alignItems: "center", justifyContent: "center", gap: 8 },
+  themeChipText: { fontSize: 13, letterSpacing: 0.2 },
   sectionGroupLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 1.4 },
   settingRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
   settingIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },

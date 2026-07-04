@@ -3,11 +3,11 @@ import React from "react";
 import {
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { usePatient, type KardexEntry } from "@/context/PatientContext";
@@ -81,7 +81,7 @@ export default function KardexScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="dark-content" />
+      <ThemedStatusBar />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad + 32 }]}
         showsVerticalScrollIndicator={false}

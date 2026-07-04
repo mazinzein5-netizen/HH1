@@ -5,12 +5,12 @@ import React, { useState } from "react";
 import {
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
@@ -157,7 +157,7 @@ export default function TriageScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <ThemedStatusBar />
       <HoneycombWallpaper density={prefs.density} />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: topPad + 16, paddingBottom: bottomPad + 24 }]}

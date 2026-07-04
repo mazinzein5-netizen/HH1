@@ -6,13 +6,13 @@ import {
   Animated,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { usePatient, type Complaint } from "@/context/PatientContext";
@@ -156,7 +156,7 @@ export default function ComplaintScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="dark-content" />
+      <ThemedStatusBar />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: topPad + 20, paddingBottom: bottomPad + 16 }]}
         keyboardShouldPersistTaps="handled"

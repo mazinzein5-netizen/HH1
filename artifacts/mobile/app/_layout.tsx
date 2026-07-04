@@ -17,6 +17,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/context/AuthContext";
 import { LogoThemeProvider } from "@/context/LogoThemeContext";
 import { PatientProvider } from "@/context/PatientContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -41,12 +42,13 @@ export default function RootLayout() {
   });
 
   const [logoThemeReady, setLogoThemeReady] = useState(false);
+  const [themeReady, setThemeReady] = useState(false);
   const splashHidden = useRef(false);
 
   const maybeHideSplash = useCallback(
-    (fontsDone: boolean, themeDone: boolean) => {
+    (fontsDone: boolean, logoDone: boolean, appThemeDone: boolean) => {
       if (splashHidden.current) return;
-      if (fontsDone && themeDone) {
+      if (fontsDone && logoDone && appThemeDone) {
         splashHidden.current = true;
         SplashScreen.hideAsync();
       }
@@ -56,14 +58,19 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      maybeHideSplash(true, logoThemeReady);
+      maybeHideSplash(true, logoThemeReady, themeReady);
     }
-  }, [fontsLoaded, fontError, logoThemeReady, maybeHideSplash]);
+  }, [fontsLoaded, fontError, logoThemeReady, themeReady, maybeHideSplash]);
 
   const handleLogoThemeReady = useCallback(() => {
     setLogoThemeReady(true);
-    maybeHideSplash(!!(fontsLoaded || fontError), true);
-  }, [fontsLoaded, fontError, maybeHideSplash]);
+    maybeHideSplash(!!(fontsLoaded || fontError), true, themeReady);
+  }, [fontsLoaded, fontError, themeReady, maybeHideSplash]);
+
+  const handleThemeReady = useCallback(() => {
+    setThemeReady(true);
+    maybeHideSplash(!!(fontsLoaded || fontError), logoThemeReady, true);
+  }, [fontsLoaded, fontError, logoThemeReady, maybeHideSplash]);
 
   return (
     <SafeAreaProvider>
@@ -73,9 +80,11 @@ export default function RootLayout() {
             <KeyboardProvider>
               <AuthProvider>
                 <PatientProvider>
-                  <LogoThemeProvider onReady={handleLogoThemeReady}>
-                    <RootLayoutNav />
-                  </LogoThemeProvider>
+                  <ThemeProvider onReady={handleThemeReady}>
+                    <LogoThemeProvider onReady={handleLogoThemeReady}>
+                      <RootLayoutNav />
+                    </LogoThemeProvider>
+                  </ThemeProvider>
                 </PatientProvider>
               </AuthProvider>
             </KeyboardProvider>

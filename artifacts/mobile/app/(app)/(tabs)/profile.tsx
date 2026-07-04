@@ -10,12 +10,12 @@ import {
   Modal,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import ThemedStatusBar from "@/components/ThemedStatusBar";
 import QRCode from "react-native-qrcode-svg";
 import { captureRef } from "react-native-view-shot";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -327,7 +327,7 @@ export default function HealthCardScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <ThemedStatusBar />
       <HoneycombWallpaper density={prefs.density} />
 
       <MedDetailModal med={selectedMed} onClose={() => setSelectedMed(null)} />

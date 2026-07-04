@@ -1,5 +1,5 @@
 const colors = {
-  light: {
+  dark: {
     background: "#07070f",
     foreground: "#FFFFFF",
 
@@ -58,6 +58,66 @@ const colors = {
     virtual: "#5EE7A0",
     virtualBg: "#0d2218",
     virtualBorder: "#1a5a38",
+  },
+  light: {
+    background: "#F4F5F9",
+    foreground: "#0F1526",
+
+    card: "#FFFFFF",
+    cardForeground: "#0F1526",
+    cardElevated: "#EDEFF6",
+
+    border: "#DDE1EC",
+    input: "#DDE1EC",
+
+    primary: "#3B57E0",
+    primaryForeground: "#FFFFFF",
+    primaryLight: "#6B84FA",
+
+    secondary: "#EDEFF6",
+    secondaryForeground: "#4A5578",
+
+    muted: "#EDEFF6",
+    mutedForeground: "#5A6484",
+
+    accent: "#D01B41",
+    accentForeground: "#FFFFFF",
+
+    destructive: "#D01B41",
+    destructiveForeground: "#FFFFFF",
+
+    text: "#0F1526",
+    tint: "#3B57E0",
+
+    gold: "#9A6800",
+    goldLight: "#B7860B",
+    goldBright: "#C9860A",
+    honey: "#7A5200",
+    goldBg: "#FBF3E0",
+    goldBorder: "#E7D2A0",
+
+    glass: "rgba(15,21,38,0.04)",
+    glassBorder: "rgba(15,21,38,0.10)",
+    glassPrimary: "rgba(59,87,224,0.10)",
+    glassPrimaryBorder: "rgba(59,87,224,0.25)",
+    glassGold: "rgba(154,104,0,0.10)",
+    glassGoldBorder: "rgba(154,104,0,0.28)",
+
+    emergency: "#D01B41",
+    emergencyBg: "#FDECEF",
+    emergencyBorder: "#F6C0CB",
+
+    fastTrack: "#D9791F",
+    fastTrackBg: "#FDF0E1",
+    fastTrackBorder: "#F3D3AE",
+
+    physio: "#3B57E0",
+    physioBg: "#E9EDFC",
+    physioBorder: "#C2CEF7",
+
+    virtual: "#12A150",
+    virtualBg: "#E4F7EC",
+    virtualBorder: "#B7E7C9",
   },
   radius: 14,
 };

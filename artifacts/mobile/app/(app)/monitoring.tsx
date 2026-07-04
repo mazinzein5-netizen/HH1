@@ -5,12 +5,12 @@ import React, { useState } from "react";
 import {
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useLogoTheme } from "@/context/LogoThemeContext";
@@ -41,7 +41,7 @@ export default function MonitoringScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <ThemedStatusBar />
       <HoneycombWallpaper density={prefs.density} />
 
       {/* Header */}

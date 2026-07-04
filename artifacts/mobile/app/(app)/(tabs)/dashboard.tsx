@@ -6,12 +6,12 @@ import {
   Animated,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HiveCardBg from "@/components/HoneycombCardBg";
 import HiveLogo from "@/components/HiveLogo";
@@ -49,7 +49,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <ThemedStatusBar backgroundColor="transparent" translucent />
       <HoneycombWallpaper density={prefs.density} />
 
       {/* ── Fixed transparent-on-scroll header ── */}
