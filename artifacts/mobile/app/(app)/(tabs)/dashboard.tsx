@@ -28,7 +28,8 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
   const hiveBot   = useHiveBot();
-  const { connectedCount } = useSmartDevices();
+  const { connectedCount, devices } = useSmartDevices();
+  const liveVitals = devices.filter((d) => d.connected).slice(0, 2);
   const topPad    = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 + 68 : insets.bottom + 64;
 
@@ -249,6 +250,23 @@ export default function DashboardScreen() {
           <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
             Wearables, smart rings, and fitness bands. Live vitals, falls detection, and activity monitoring.
           </Text>
+          {liveVitals.length > 0 && (
+            <View style={styles.vitalsRow}>
+              {liveVitals.map((d) => (
+                <View
+                  key={d.id}
+                  style={[styles.vitalChip, { backgroundColor: "#22c55e14", borderColor: "#22c55e33" }]}
+                >
+                  <Text style={[styles.vitalValue, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                    {d.reading}
+                  </Text>
+                  <Text style={[styles.vitalLabel, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
+                    {d.readingLabel}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
           <View style={styles.sectionLink}>
             <Text style={[styles.sectionLinkText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>Manage Devices</Text>
             <Feather name="chevron-right" size={14} color="#22c55e" />
@@ -340,6 +358,11 @@ const styles = StyleSheet.create({
   deviceBadge: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 20, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 5 },
   deviceDot: { width: 7, height: 7, borderRadius: 4 },
   deviceBadgeText: { fontSize: 12 },
+
+  vitalsRow: { flexDirection: "row", gap: 10, marginTop: 2 },
+  vitalChip: { flex: 1, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, gap: 2 },
+  vitalValue: { fontSize: 20, letterSpacing: -0.4 },
+  vitalLabel: { fontSize: 11, letterSpacing: 0.2 },
 
   fab: {
     position: "absolute",
