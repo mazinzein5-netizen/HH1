@@ -18,7 +18,7 @@ import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
-type ActiveSection = "cognitive" | "devices" | "falls";
+type ActiveSection = "cognitive" | "falls";
 
 const ORIENTATION_QUESTIONS = [
   { q: "What is today's date?", a: new Date().toLocaleDateString("en-IE", { day: "2-digit", month: "long", year: "numeric" }) },
@@ -38,15 +38,6 @@ const STRATIFY_ITEMS = [
   "Is the patient's transfer score (Barthel) rated as impaired (needing assistance)?",
 ];
 
-interface Device {
-  id: string;
-  name: string;
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  connected: boolean;
-  reading?: string;
-  readingLabel?: string;
-}
-
 export default function GeriatricScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -60,26 +51,6 @@ export default function GeriatricScreen() {
   const [cogScoreShown, setCogScoreShown] = useState(false);
   const [stratifyAnswers, setStratifyAnswers] = useState<(boolean | null)[]>(new Array(STRATIFY_ITEMS.length).fill(null));
   const [stratifyShown, setStratifyShown] = useState(false);
-  const [devices, setDevices] = useState<Device[]>([
-    { id: "watch", name: "Apple Watch", icon: "watch", connected: false, reading: "—", readingLabel: "HR bpm" },
-    { id: "fitbit", name: "Fitbit Sense", icon: "watch-variant", connected: false, reading: "—", readingLabel: "SpO₂ %" },
-    { id: "garmin", name: "Garmin Vívosmart", icon: "watch-export", connected: false, reading: "—", readingLabel: "Steps" },
-    { id: "samsung", name: "Samsung Galaxy Watch", icon: "watch-import", connected: false, reading: "—", readingLabel: "HR bpm" },
-  ]);
-
-  function toggleDevice(id: string) {
-    Haptics.selectionAsync();
-    setDevices((prev) =>
-      prev.map((d) => {
-        if (d.id !== id) return d;
-        const connected = !d.connected;
-        const fakeReading = connected
-          ? id === "fitbit" ? "97" : id === "garmin" ? "3,240" : "72"
-          : "—";
-        return { ...d, connected, reading: fakeReading };
-      })
-    );
-  }
 
   function setOrientation(i: number, val: string) {
     const next = [...cogAnswers];
@@ -110,11 +81,8 @@ export default function GeriatricScreen() {
     : stratifyScore <= 2 ? { label: "Medium Risk", color: "#f59e0b" }
     : { label: "High Risk — Urgent Review", color: "#ef4444" };
 
-  const connectedCount = devices.filter((d) => d.connected).length;
-
   const sections: { key: ActiveSection; label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; color: string }[] = [
     { key: "cognitive", label: "Cognitive Screen", icon: "brain", color: "#a78bfa" },
-    { key: "devices", label: "Smart Devices", icon: "devices", color: "#22c55e" },
     { key: "falls", label: "Falls Risk", icon: "walk", color: "#f59e0b" },
   ];
 
@@ -133,7 +101,7 @@ export default function GeriatricScreen() {
             Geriatric & Cognitive Care
           </Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Cognitive screen · Falls risk · Smart device vitals
+            Cognitive screen · Falls risk assessment
           </Text>
         </View>
         <MaterialCommunityIcons name="brain" size={26} color="#a78bfa" />
@@ -272,89 +240,6 @@ export default function GeriatricScreen() {
           </View>
         )}
 
-        {/* ── SMART DEVICES ── */}
-        {activeSection === "devices" && (
-          <View style={styles.section}>
-            <LinearGradient colors={["#0a2818", "#0d0d1a"]} style={styles.cogHero}>
-              <MaterialCommunityIcons name="devices" size={36} color="#22c55e" />
-              <Text style={[styles.cogHeroTitle, { color: "#fff", fontFamily: "Inter_700Bold" }]}>Smart Device Hub</Text>
-              <Text style={[styles.cogHeroSub, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" }]}>
-                Connect wearables for live vitals,{"\n"}fall detection, and activity monitoring
-              </Text>
-              <View style={[styles.connectedBadge, { backgroundColor: "#22c55e22", borderColor: "#22c55e55" }]}>
-                <Text style={[styles.connectedBadgeText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>
-                  {connectedCount} / {devices.length} Connected
-                </Text>
-              </View>
-            </LinearGradient>
-
-            {connectedCount > 0 && (
-              <>
-                <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>LIVE READINGS</Text>
-                <View style={styles.readingsGrid}>
-                  {[
-                    { label: "Heart Rate", value: "72", unit: "bpm", icon: "heart-pulse" as const, color: "#ef4444" },
-                    { label: "SpO₂", value: "97", unit: "%", icon: "water-percent" as const, color: "#4F6EF7" },
-                    { label: "Steps Today", value: "3,240", unit: "steps", icon: "shoe-sneaker" as const, color: "#22c55e" },
-                    { label: "Falls Detected", value: "0", unit: "today", icon: "alert-circle" as const, color: "#f59e0b" },
-                  ].map((r) => (
-                    <LinearGradient
-                      key={r.label}
-                      colors={[r.color + "22", r.color + "11"]}
-                      style={[styles.readingCard, { borderColor: r.color + "44" }]}
-                    >
-                      <MaterialCommunityIcons name={r.icon} size={22} color={r.color} />
-                      <Text style={[styles.readingValue, { color: r.color, fontFamily: "Inter_700Bold" }]}>{r.value}</Text>
-                      <Text style={[styles.readingUnit, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>{r.unit}</Text>
-                      <Text style={[styles.readingLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
-                    </LinearGradient>
-                  ))}
-                </View>
-              </>
-            )}
-
-            <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>AVAILABLE DEVICES</Text>
-
-            {devices.map((d) => (
-              <View key={d.id} style={[styles.deviceCard, { backgroundColor: colors.card, borderColor: d.connected ? "#22c55e55" : colors.border }]}>
-                <View style={[styles.deviceIcon, { backgroundColor: d.connected ? "#0a2818" : colors.background }]}>
-                  <MaterialCommunityIcons name={d.icon} size={22} color={d.connected ? "#22c55e" : colors.mutedForeground} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.deviceName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{d.name}</Text>
-                  <Text style={[styles.deviceStatus, { color: d.connected ? "#22c55e" : colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    {d.connected ? `● Connected · ${d.reading} ${d.readingLabel}` : "○ Not connected"}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => toggleDevice(d.id)}
-                  style={[styles.connectBtn, {
-                    backgroundColor: d.connected ? "#0a2818" : "#0f1a5a",
-                    borderColor: d.connected ? "#22c55e55" : colors.primary + "55",
-                  }]}
-                >
-                  <Text style={[styles.connectBtnText, { color: d.connected ? "#22c55e" : colors.primary, fontFamily: "Inter_600SemiBold" }]}>
-                    {d.connected ? "Disconnect" : "Pair"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-
-            <View style={[styles.fallCard, { backgroundColor: "#2a1218", borderColor: colors.accent + "55" }]}>
-              <MaterialCommunityIcons name="alert-circle" size={20} color={colors.accent} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.fallTitle, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>Fall Detection</Text>
-                <Text style={[styles.fallSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  {connectedCount > 0
-                    ? "Active — automatic SOS triggered if fall detected. No falls logged today."
-                    : "Connect a compatible wearable device to enable automatic fall detection and SOS alerting."}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
         {/* ── FALLS RISK ASSESSMENT ── */}
         {activeSection === "falls" && (
           <View style={styles.section}>
@@ -474,22 +359,6 @@ const styles = StyleSheet.create({
   cogResultScore: { fontSize: 48, letterSpacing: -2 },
   cogResultLabel: { fontSize: 16, textAlign: "center" },
   cogResultSub: { fontSize: 12, lineHeight: 18, textAlign: "center" },
-  connectedBadge: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6, marginTop: 4 },
-  connectedBadgeText: { fontSize: 13 },
-  readingsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  readingCard: { width: "47%", borderRadius: 14, borderWidth: 1, padding: 14, gap: 4, alignItems: "center" },
-  readingValue: { fontSize: 28, letterSpacing: -1 },
-  readingUnit: { fontSize: 11 },
-  readingLabel: { fontSize: 11, textAlign: "center" },
-  deviceCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
-  deviceIcon: { width: 46, height: 46, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  deviceName: { fontSize: 14 },
-  deviceStatus: { fontSize: 12, marginTop: 2 },
-  connectBtn: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 8 },
-  connectBtnText: { fontSize: 13 },
-  fallCard: { flexDirection: "row", alignItems: "flex-start", gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
-  fallTitle: { fontSize: 14, marginBottom: 4 },
-  fallSub: { fontSize: 12, lineHeight: 18 },
   rfCard: { borderRadius: 14, borderWidth: 1.5, padding: 14, gap: 12 },
   rfText: { fontSize: 14, lineHeight: 21 },
   rfBtnRow: { flexDirection: "row", gap: 10 },

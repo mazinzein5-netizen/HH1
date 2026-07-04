@@ -114,7 +114,7 @@ export default function SettingsScreen() {
         router.push("/(app)/geriatric");
         break;
       case "devices":
-        router.push("/(app)/geriatric");
+        router.push("/(app)/smart-devices");
         break;
       default:
         Alert.alert("Coming Soon", "This feature will be available in a future update.");
