@@ -14,6 +14,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
 type ActiveSection = "cognitive" | "devices" | "falls";
@@ -48,6 +50,7 @@ interface Device {
 export default function GeriatricScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { prefs } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
 
   const [activeSection, setActiveSection] = useState<ActiveSection>("cognitive");
@@ -118,6 +121,7 @@ export default function GeriatricScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <HoneycombWallpaper density={prefs.density} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
@@ -284,7 +288,6 @@ export default function GeriatricScreen() {
               </View>
             </LinearGradient>
 
-            {/* Live readings grid if any connected */}
             {connectedCount > 0 && (
               <>
                 <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>LIVE READINGS</Text>
@@ -443,57 +446,57 @@ const styles = StyleSheet.create({
   backBtn: { padding: 6 },
   headerTitle: { fontSize: 17, letterSpacing: -0.3 },
   headerSub: { fontSize: 11, marginTop: 2 },
-  tabRow: { flexDirection: "row", borderBottomWidth: 1 },
-  tabBtn: { flex: 1, flexDirection: "column", alignItems: "center", gap: 4, paddingVertical: 12 },
-  tabLabel: { fontSize: 10, textAlign: "center", letterSpacing: 0.2 },
-  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100, gap: 14 },
+  tabRow: { flexDirection: "row", borderBottomWidth: 1, paddingHorizontal: 16 },
+  tabBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
+  tabLabel: { fontSize: 12 },
+  scroll: { padding: 16, gap: 14, paddingBottom: 60 },
   section: { gap: 14 },
-  cogHero: { borderRadius: 18, padding: 24, gap: 8, alignItems: "center" },
-  cogHeroTitle: { fontSize: 20, letterSpacing: -0.3 },
-  cogHeroSub: { fontSize: 13, textAlign: "center", lineHeight: 20 },
-  connectedBadge: { marginTop: 6, borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6 },
-  connectedBadgeText: { fontSize: 13 },
+  cogHero: { borderRadius: 20, padding: 24, gap: 10, alignItems: "center" },
+  cogHeroTitle: { fontSize: 20, letterSpacing: -0.4 },
+  cogHeroSub: { fontSize: 13, lineHeight: 20, textAlign: "center" },
   sectionLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 1.4 },
-  cogCard: { borderRadius: 14, borderWidth: 1.5, padding: 14, gap: 10 },
+  cogCard: { borderRadius: 14, borderWidth: 1.5, padding: 14, gap: 12 },
   cogQ: { fontSize: 14, lineHeight: 21 },
   cogAnsRow: { flexDirection: "row", gap: 10 },
   cogAnsBtn: { flex: 1, borderRadius: 10, borderWidth: 1.5, paddingVertical: 10, alignItems: "center" },
-  cogAnsBtnText: { fontSize: 14 },
-  cogHint: { fontSize: 11, fontStyle: "italic" },
-  wordRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
-  wordBadge: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10 },
-  wordText: { fontSize: 18, letterSpacing: 1 },
+  cogAnsBtnText: { fontSize: 13 },
+  cogHint: { fontSize: 11, lineHeight: 16 },
+  wordRow: { flexDirection: "row", gap: 10 },
+  wordBadge: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 8 },
+  wordText: { fontSize: 14 },
   revealBtn: { borderRadius: 10, borderWidth: 1, paddingVertical: 12, alignItems: "center" },
   revealBtnText: { fontSize: 14 },
-  rfBtns: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 2 },
-  smallBtn: { width: 40, height: 40, borderRadius: 10, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
-  smallBtnText: { fontSize: 18 },
-  cogResult: { borderRadius: 18, padding: 24, gap: 8, alignItems: "center", borderWidth: 1 },
+  rfBtns: { flexDirection: "row", alignItems: "center", gap: 8 },
+  smallBtn: { borderRadius: 8, borderWidth: 1.5, width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  smallBtnText: { fontSize: 16 },
+  cogResult: { borderRadius: 18, borderWidth: 1, borderColor: "transparent", padding: 22, gap: 10, alignItems: "center" },
   cogResultTitle: { fontSize: 14, letterSpacing: 0.5 },
   cogResultScore: { fontSize: 48, letterSpacing: -2 },
-  cogResultLabel: { fontSize: 16, letterSpacing: -0.3 },
-  cogResultSub: { fontSize: 12, textAlign: "center", lineHeight: 18, marginTop: 4 },
+  cogResultLabel: { fontSize: 16, textAlign: "center" },
+  cogResultSub: { fontSize: 12, lineHeight: 18, textAlign: "center" },
+  connectedBadge: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 6, marginTop: 4 },
+  connectedBadgeText: { fontSize: 13 },
   readingsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  readingCard: { width: "47%", borderRadius: 14, borderWidth: 1, padding: 14, gap: 4 },
-  readingValue: { fontSize: 32, letterSpacing: -1 },
-  readingUnit: { fontSize: 12 },
-  readingLabel: { fontSize: 11 },
+  readingCard: { width: "47%", borderRadius: 14, borderWidth: 1, padding: 14, gap: 4, alignItems: "center" },
+  readingValue: { fontSize: 28, letterSpacing: -1 },
+  readingUnit: { fontSize: 11 },
+  readingLabel: { fontSize: 11, textAlign: "center" },
   deviceCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
-  deviceIcon: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  deviceIcon: { width: 46, height: 46, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   deviceName: { fontSize: 14 },
   deviceStatus: { fontSize: 12, marginTop: 2 },
   connectBtn: { borderRadius: 10, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 8 },
   connectBtnText: { fontSize: 13 },
   fallCard: { flexDirection: "row", alignItems: "flex-start", gap: 12, borderRadius: 14, borderWidth: 1, padding: 14 },
-  fallTitle: { fontSize: 14 },
-  fallSub: { fontSize: 12, lineHeight: 18, marginTop: 3 },
+  fallTitle: { fontSize: 14, marginBottom: 4 },
+  fallSub: { fontSize: 12, lineHeight: 18 },
   rfCard: { borderRadius: 14, borderWidth: 1.5, padding: 14, gap: 12 },
   rfText: { fontSize: 14, lineHeight: 21 },
   rfBtnRow: { flexDirection: "row", gap: 10 },
-  rfBtn: { flex: 1, borderRadius: 10, borderWidth: 1.5, paddingVertical: 10, alignItems: "center" },
+  rfBtn: { flex: 1, borderRadius: 10, borderWidth: 1.5, paddingVertical: 11, alignItems: "center" },
   rfBtnLabel: { fontSize: 14, letterSpacing: 1 },
-  primaryBtn: { borderRadius: 14, paddingVertical: 15, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
+  primaryBtn: { borderRadius: 14, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   primaryBtnText: { fontSize: 15 },
   noteCard: { borderRadius: 14, borderWidth: 1, padding: 14 },
-  noteText: { fontSize: 12, lineHeight: 19 },
+  noteText: { fontSize: 13, lineHeight: 20 },
 });

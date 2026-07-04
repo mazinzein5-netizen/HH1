@@ -1,4 +1,4 @@
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -15,26 +15,19 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import HiveLogo from "@/components/HiveLogo";
+import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useAuth } from "@/context/AuthContext";
+import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
-
-function HoneycombLogo({ size = 44 }: { size?: number }) {
-  const colors = useColors();
-  return (
-    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
-      <MaterialCommunityIcons name="hexagon" size={size} color={colors.background} style={StyleSheet.absoluteFill} />
-      <MaterialCommunityIcons name="hexagon-outline" size={size} color={colors.gold} style={StyleSheet.absoluteFill} />
-      <MaterialCommunityIcons name="heart-flash" size={size * 0.44} color={colors.primary} />
-    </View>
-  );
-}
 
 export default function RegisterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { register } = useAuth();
+  const { prefs } = useLogoTheme();
 
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
@@ -92,6 +85,7 @@ export default function RegisterScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <HoneycombWallpaper density={prefs.density} />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: topPad + 16, paddingBottom: bottomPad + 32 }]}
         keyboardShouldPersistTaps="handled"
@@ -102,7 +96,13 @@ export default function RegisterScreen() {
           <TouchableOpacity onPress={() => router.back()} hitSlop={12} style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <Feather name="arrow-left" size={18} color={colors.foreground} />
           </TouchableOpacity>
-          <HoneycombLogo size={40} />
+          <HiveLogo
+            size={20}
+            goldIntensity={prefs.goldIntensity}
+            depth={prefs.depth}
+            textWeight={prefs.textWeight}
+            showText={false}
+          />
           <View>
             <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>IbnCeena</Text>
             <Text style={[styles.appEco, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>HEALTH ECOSYSTEM</Text>

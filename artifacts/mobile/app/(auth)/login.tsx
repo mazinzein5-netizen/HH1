@@ -1,4 +1,4 @@
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -15,45 +15,17 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import HiveLogo from "@/components/HiveLogo";
+import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useAuth } from "@/context/AuthContext";
+import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
-
-function HoneycombLogo({ size = 52 }: { size?: number }) {
-  const colors = useColors();
-  return (
-    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
-      <MaterialCommunityIcons name="hexagon" size={size} color={colors.background} style={StyleSheet.absoluteFill} />
-      <MaterialCommunityIcons name="hexagon-outline" size={size} color={colors.gold} style={StyleSheet.absoluteFill} />
-      <MaterialCommunityIcons name="heart-flash" size={size * 0.44} color={colors.primary} />
-    </View>
-  );
-}
-
-function HoneycombBg() {
-  const positions = [
-    { top: -20, left: -30, size: 110 }, { top: -20, left: 60, size: 90 }, { top: -20, left: 140, size: 110 },
-    { top: 50, left: 10, size: 80 },   { top: 50, left: 100, size: 100 },{ top: 50, left: 200, size: 80 },
-    { top: 110, left: -20, size: 90 }, { top: 110, left: 70, size: 110 }, { top: 110, left: 160, size: 90 },
-  ];
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {positions.map((p, i) => (
-        <MaterialCommunityIcons
-          key={i}
-          name="hexagon-outline"
-          size={p.size}
-          color="rgba(201,134,10,0.06)"
-          style={{ position: "absolute", top: p.top, left: p.left }}
-        />
-      ))}
-    </View>
-  );
-}
 
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { login, loginAsGuest } = useAuth();
+  const { prefs } = useLogoTheme();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -88,6 +60,7 @@ export default function LoginScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <HoneycombWallpaper density={prefs.density} />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: topPad + 28, paddingBottom: bottomPad + 32 }]}
         keyboardShouldPersistTaps="handled"
@@ -95,13 +68,15 @@ export default function LoginScreen() {
       >
         {/* Honeycomb hero area */}
         <View style={[styles.heroArea, { backgroundColor: colors.goldBg, borderColor: colors.goldBorder }]}>
-          <HoneycombBg />
+          <HoneycombWallpaper density={prefs.density} />
           <View style={styles.logoRow}>
-            <HoneycombLogo size={58} />
-            <View>
-              <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>IbnCeena</Text>
-              <Text style={[styles.appEco, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>HEALTH ECOSYSTEM</Text>
-            </View>
+            <HiveLogo
+              size={36}
+              goldIntensity={prefs.goldIntensity}
+              depth={prefs.depth}
+              textWeight={prefs.textWeight}
+              showText
+            />
           </View>
           <Text style={[styles.heroTagline, { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_700Bold" }]}>
             Secure Patient{"\n"}
@@ -184,7 +159,7 @@ export default function LoginScreen() {
             onPress={handleGuest}
             style={[styles.guestBtn, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}
           >
-            <MaterialCommunityIcons name="incognito" size={18} color={colors.mutedForeground} />
+            <Feather name="user" size={18} color={colors.mutedForeground} />
             <Text style={[styles.guestText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
               Continue as Guest — Demo Patient
             </Text>
@@ -203,9 +178,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { paddingHorizontal: 20, gap: 20 },
   heroArea: { borderRadius: 22, padding: 28, gap: 14, overflow: "hidden", borderWidth: 1 },
-  logoRow: { flexDirection: "row", alignItems: "center", gap: 14 },
-  appName: { fontSize: 24, letterSpacing: -0.5 },
-  appEco: { fontSize: 10, letterSpacing: 1.6 },
+  logoRow: { alignItems: "flex-start" },
   heroTagline: { fontSize: 26, letterSpacing: -0.5, lineHeight: 34 },
   heroSub: { fontSize: 12, lineHeight: 18 },
   formSection: { gap: 12 },

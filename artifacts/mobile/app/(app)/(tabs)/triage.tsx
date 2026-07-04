@@ -13,7 +13,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { PATHWAYS, PathwayKey, RED_FLAG_QUESTIONS } from "@/data/pathwayQuestions";
+import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
 type Step = "pathway" | "redflags" | "scoring" | "results";
@@ -21,6 +23,7 @@ type Step = "pathway" | "redflags" | "scoring" | "results";
 export default function TriageScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { prefs } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 + 68 : insets.bottom + 64;
 
@@ -84,6 +87,7 @@ export default function TriageScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <HoneycombWallpaper density={prefs.density} />
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: topPad + 16, paddingBottom: bottomPad + 24 }]}
         showsVerticalScrollIndicator={false}

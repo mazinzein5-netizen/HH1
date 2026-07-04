@@ -12,6 +12,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
 const HR_BARS = [58, 62, 65, 72, 78, 88, 76, 72, 68, 70, 72, 74];
@@ -31,6 +33,7 @@ type DeviceName = "Apple Watch" | "Fitbit Sense" | "Garmin";
 export default function MonitoringScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { prefs } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
 
   const [deviceName] = useState<DeviceName>("Apple Watch");
@@ -39,6 +42,7 @@ export default function MonitoringScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <HoneycombWallpaper density={prefs.density} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
@@ -63,7 +67,6 @@ export default function MonitoringScreen() {
 
         {/* ── TOP METRICS ROW ── */}
         <View style={styles.topRow}>
-          {/* Heart Rate */}
           <LinearGradient colors={["#1a0818", "#2a0f22"]} style={[styles.topCard, { borderColor: colors.accent + "44" }]}>
             <MaterialCommunityIcons name="heart-pulse" size={18} color={colors.accent} />
             <Text style={[styles.topValue, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>72</Text>
@@ -71,7 +74,6 @@ export default function MonitoringScreen() {
             <Text style={[styles.topLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Heart Rate</Text>
           </LinearGradient>
 
-          {/* SpO2 */}
           <LinearGradient colors={["#0f1840", "#172060"]} style={[styles.topCard, { borderColor: colors.primary + "44" }]}>
             <MaterialCommunityIcons name="water-percent" size={18} color={colors.primary} />
             <Text style={[styles.topValue, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>97</Text>
@@ -79,7 +81,6 @@ export default function MonitoringScreen() {
             <Text style={[styles.topLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>SpO₂</Text>
           </LinearGradient>
 
-          {/* Stress */}
           <LinearGradient colors={["#1a1200", "#2a1e00"]} style={[styles.topCard, { borderColor: colors.gold + "44" }]}>
             <MaterialCommunityIcons name="head-dots-horizontal" size={18} color={colors.gold} />
             <Text style={[styles.topValue, { color: colors.gold, fontFamily: "Inter_700Bold" }]}>32</Text>
@@ -200,7 +201,6 @@ export default function MonitoringScreen() {
               <Text style={[styles.sleepScoreLabel, { color: "#a78bfa", fontFamily: "Inter_400Regular" }]}>/ 100</Text>
             </View>
           </View>
-          {/* Stage bar */}
           <View style={styles.sleepBar}>
             {SLEEP_STAGES.map((s) => (
               <View key={s.label} style={[styles.sleepSegment, { flex: s.pct, backgroundColor: s.color }]} />

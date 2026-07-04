@@ -14,6 +14,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
 type ConsultState = "booking" | "waiting" | "call";
@@ -37,12 +39,12 @@ const MOOD_OPTIONS = [
 export default function ConsultationScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { prefs } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
 
   const [state, setState] = useState<ConsultState>("booking");
   const [selectedType, setSelectedType] = useState<ConsultType | null>(null);
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
-  const [callTimer, setCallTimer] = useState(0);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
 
@@ -73,6 +75,7 @@ export default function ConsultationScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <HoneycombWallpaper density={prefs.density} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
@@ -114,7 +117,6 @@ export default function ConsultationScreen() {
             </View>
           </LinearGradient>
 
-          {/* Wellbeing check */}
           <View style={[styles.moodCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.moodTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
               How are you feeling today?
@@ -142,7 +144,6 @@ export default function ConsultationScreen() {
             </View>
           </View>
 
-          {/* Consult type selection */}
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>SELECT APPOINTMENT TYPE</Text>
 
           {CONSULT_TYPES.map((c) => (
@@ -208,7 +209,6 @@ export default function ConsultationScreen() {
       {/* ── CALL STATE ── */}
       {state === "call" && (
         <View style={styles.callScreen}>
-          {/* Remote video (simulated) */}
           <LinearGradient colors={["#0f1a5a", "#060d30"]} style={styles.remoteVideo}>
             <View style={styles.remoteAvatarWrap}>
               <View style={[styles.remoteAvatar, { backgroundColor: consult?.color + "33" }]}>
@@ -222,7 +222,6 @@ export default function ConsultationScreen() {
               </Text>
             </View>
 
-            {/* HiEmotion indicator */}
             {selectedMood !== null && (
               <View style={[styles.emotionBadge, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
                 <Text style={styles.emotionEmoji}>{MOOD_OPTIONS.find(m => m.value === selectedMood)?.emoji}</Text>
@@ -233,7 +232,6 @@ export default function ConsultationScreen() {
             )}
           </LinearGradient>
 
-          {/* Self view */}
           <View style={styles.selfView}>
             <LinearGradient colors={["#16162a", "#0d0d1a"]} style={styles.selfVideoBox}>
               {camOn
@@ -243,7 +241,6 @@ export default function ConsultationScreen() {
             </LinearGradient>
           </View>
 
-          {/* Controls */}
           <View style={[styles.callControls, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
             <TouchableOpacity onPress={() => { Haptics.selectionAsync(); setMicOn(!micOn); }} style={[styles.controlBtn, { backgroundColor: micOn ? colors.background : "#4a0f0f" }]}>
               <MaterialCommunityIcons name={micOn ? "microphone" : "microphone-off"} size={24} color={micOn ? colors.foreground : colors.accent} />
