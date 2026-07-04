@@ -56,7 +56,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "@react-native-community/slider": "^5.2.0",
+    "@react-native-community/slider": "5.0.1",
     "react-native-qrcode-svg": "^6.3.21"
   }
 }
