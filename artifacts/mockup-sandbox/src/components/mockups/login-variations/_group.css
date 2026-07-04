@@ -1,0 +1,25 @@
+/* Health Hive / IbnCeena brand tokens (dark palette) — shared baseline for login variations */
+.hive-scope {
+  --hive-bg: #07070f;
+  --hive-fg: #ffffff;
+  --hive-card: #16162a;
+  --hive-card-elevated: #1d1d38;
+  --hive-border: #2a2a45;
+  --hive-primary: #4f6ef7;
+  --hive-primary-light: #6b84fa;
+  --hive-muted-fg: #7882b0;
+  --hive-accent: #e5294e;
+  --hive-gold: #c9860a;
+  --hive-gold-light: #d4a017;
+  --hive-gold-bright: #f5c518;
+  --hive-gold-bg: #1a0e00;
+  --hive-gold-border: #4a3000;
+  --hive-glass: rgba(255, 255, 255, 0.05);
+  --hive-glass-border: rgba(255, 255, 255, 0.1);
+  --hive-glass-gold: rgba(201, 134, 10, 0.12);
+  --hive-glass-gold-border: rgba(201, 134, 10, 0.28);
+  --hive-emergency: #ff4757;
+  --hive-emergency-bg: #2a1218;
+  --hive-emergency-border: #6b1c28;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
