@@ -2,8 +2,10 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import * as Sharing from "expo-sharing";
+import React, { useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -15,6 +17,7 @@ import {
   View,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
+import { captureRef } from "react-native-view-shot";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
@@ -176,6 +179,8 @@ export default function HealthCardScreen() {
   const [cardTab, setCardTab] = useState<CardTab>("standard");
   const [memberGrade, setMemberGrade] = useState<MemberGrade>("standard");
   const [selectedMed, setSelectedMed] = useState<KardexEntry | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const exportRef = useRef<View>(null);
   const deviceConnected = true;
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -207,6 +212,25 @@ export default function HealthCardScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Trigger SOS", style: "destructive", onPress: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error) },
     ]);
+  }
+
+  async function handleShareCard() {
+    if (!exportRef.current) return;
+    try {
+      setSharing(true);
+      Haptics.selectionAsync();
+      const uri = await captureRef(exportRef, { format: "png", quality: 1, result: "tmpfile" });
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        Alert.alert("Sharing unavailable", "Your device does not support sharing files.");
+        return;
+      }
+      await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Share Health Card" });
+    } catch {
+      Alert.alert("Export failed", "Could not capture the health card. Please try again.");
+    } finally {
+      setSharing(false);
+    }
   }
 
   return (
@@ -326,6 +350,23 @@ export default function HealthCardScreen() {
             </View>
           </View>
         </LinearGradient>
+
+        {/* Share Health Card Button */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={handleShareCard}
+          disabled={sharing}
+          style={[styles.shareBtn, { backgroundColor: colors.glassPrimary, borderColor: colors.glassPrimaryBorder, opacity: sharing ? 0.6 : 1 }]}
+        >
+          {sharing ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <MaterialCommunityIcons name="share-variant" size={18} color={colors.primary} />
+          )}
+          <Text style={[styles.shareBtnText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>
+            {sharing ? "Exporting…" : "Share Health Card"}
+          </Text>
+        </TouchableOpacity>
 
         {/* Membership Benefits */}
         <View style={[styles.benefitsCard, { backgroundColor: colors.card, borderColor: grade.color + "44" }]}>
@@ -485,6 +526,84 @@ export default function HealthCardScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Off-screen export card — captured by captureRef when sharing */}
+      <View ref={exportRef} collapsable={false} style={xStyles.offscreen}>
+        <LinearGradient colors={["#0b1230", "#0e1a45", "#0b1230"]} style={xStyles.card}>
+          {/* Header row */}
+          <LinearGradient colors={cardGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={xStyles.header}>
+            <View style={xStyles.headerLeft}>
+              <HiveLogo size={22} goldIntensity={prefs.goldIntensity} depth={prefs.depth} textWeight={prefs.textWeight} showText />
+              <Text style={xStyles.memberLabel}>{grade.label.toUpperCase()}</Text>
+            </View>
+            <View>
+              <QRCode value={qrData} size={68} color={isGeriatric ? "#E5294E" : grade.color} backgroundColor="transparent" />
+            </View>
+          </LinearGradient>
+
+          {/* Patient identity */}
+          <View style={xStyles.identityBlock}>
+            <Text style={xStyles.idCaption}>PATIENT IDENTIFIER</Text>
+            <Text style={xStyles.patientName}>{user?.fullName ?? "John Doe"}</Text>
+            <View style={xStyles.metaRow}>
+              <View style={xStyles.metaChip}>
+                <Text style={xStyles.metaLabel}>DOB</Text>
+                <Text style={xStyles.metaValue}>{user?.dateOfBirth ?? "12/04/1955"}</Text>
+              </View>
+              <View style={xStyles.metaChip}>
+                <Text style={xStyles.metaLabel}>BLOOD TYPE</Text>
+                <Text style={[xStyles.metaValue, { color: "#E5294E" }]}>{user?.bloodType ?? "O+"}</Text>
+              </View>
+              <View style={xStyles.metaChip}>
+                <Text style={xStyles.metaLabel}>PIN</Text>
+                <Text style={xStyles.metaValue}>{pin}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Critical Allergies */}
+          {data.allergies.length > 0 && (
+            <View style={xStyles.section}>
+              <View style={xStyles.sectionHeader}>
+                <Text style={xStyles.sectionTitle}>⚠  CRITICAL ALLERGIES</Text>
+              </View>
+              <View style={xStyles.chipRow}>
+                {data.allergies.map((a) => (
+                  <View key={a.id} style={[xStyles.allergyChip, { borderColor: a.severity === "life-threatening" ? "#E5294E" : "#4F6EF7" }]}>
+                    <Text style={[xStyles.allergyChipText, { color: a.severity === "life-threatening" ? "#E5294E" : "#7b97ff" }]}>
+                      {a.drug}{a.severity === "life-threatening" ? ` — ${a.reaction}` : ""}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Active Medications */}
+          {activeKardex.length > 0 && (
+            <View style={xStyles.section}>
+              <View style={xStyles.sectionHeader}>
+                <Text style={xStyles.sectionTitle}>💊  ACTIVE MEDICATIONS</Text>
+              </View>
+              {activeKardex.map((med, i) => (
+                <View key={med.id} style={[xStyles.medRow, i > 0 && { borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.07)" }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={xStyles.medName}>{med.medication}</Text>
+                    <Text style={xStyles.medDetail}>{med.dose}  ·  {med.frequency}  ·  {med.route}</Text>
+                    <Text style={xStyles.medPrescriber}>Prescribed by Dr. {med.prescribedBy}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Footer */}
+          <View style={xStyles.footer}>
+            <Text style={xStyles.footerText}>FOR EMERGENCY USE — Scan QR and enter PIN for full clinical record</Text>
+            <Text style={xStyles.footerDate}>Exported {new Date().toLocaleDateString("en-IE", { day: "2-digit", month: "short", year: "numeric" })}</Text>
+          </View>
+        </LinearGradient>
+      </View>
     </View>
   );
 }
@@ -573,4 +692,34 @@ const styles = StyleSheet.create({
   medPrescriber: { fontSize: 11 },
   doseBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
   doseText: { fontSize: 13 },
+  shareBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, borderWidth: 1, paddingVertical: 14 },
+  shareBtnText: { fontSize: 15 },
+});
+
+const xStyles = StyleSheet.create({
+  offscreen: { position: "absolute", left: -9999, top: 0, width: 360 },
+  card: { borderRadius: 20, overflow: "hidden" },
+  header: { padding: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  headerLeft: { gap: 4 },
+  memberLabel: { fontSize: 9, color: "rgba(255,255,255,0.5)", letterSpacing: 1.2, fontFamily: "Inter_400Regular" },
+  identityBlock: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, gap: 6 },
+  idCaption: { fontSize: 9, color: "rgba(255,255,255,0.45)", letterSpacing: 1.5, fontFamily: "Inter_400Regular" },
+  patientName: { fontSize: 28, color: "#FFFFFF", fontFamily: "Inter_700Bold", letterSpacing: -0.3 },
+  metaRow: { flexDirection: "row", gap: 8, marginTop: 4 },
+  metaChip: { backgroundColor: "rgba(0,0,0,0.3)", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, gap: 2 },
+  metaLabel: { fontSize: 9, color: "rgba(255,255,255,0.45)", letterSpacing: 1, fontFamily: "Inter_400Regular" },
+  metaValue: { fontSize: 14, color: "#FFFFFF", fontFamily: "Inter_700Bold" },
+  section: { marginHorizontal: 16, marginBottom: 12 },
+  sectionHeader: { backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 8 },
+  sectionTitle: { fontSize: 11, color: "rgba(255,255,255,0.7)", fontFamily: "Inter_700Bold", letterSpacing: 1 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  allergyChip: { borderRadius: 16, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: "rgba(0,0,0,0.25)" },
+  allergyChipText: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  medRow: { paddingVertical: 10, paddingHorizontal: 12 },
+  medName: { fontSize: 14, color: "#FFFFFF", fontFamily: "Inter_600SemiBold" },
+  medDetail: { fontSize: 12, color: "rgba(255,255,255,0.55)", fontFamily: "Inter_400Regular", marginTop: 2 },
+  medPrescriber: { fontSize: 11, color: "rgba(255,255,255,0.4)", fontFamily: "Inter_400Regular", marginTop: 1 },
+  footer: { marginHorizontal: 16, marginBottom: 18, marginTop: 4, gap: 4, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)", paddingTop: 12 },
+  footerText: { fontSize: 10, color: "rgba(255,255,255,0.45)", fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 15 },
+  footerDate: { fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "Inter_400Regular", textAlign: "center" },
 });
