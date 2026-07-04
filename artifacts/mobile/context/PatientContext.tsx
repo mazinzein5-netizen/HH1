@@ -28,6 +28,16 @@ export interface KardexEntry {
   prescribedBy: string;
   status: "active" | "discontinued" | "completed";
   notes?: string;
+  prescriberTitle?: string;
+  prescriberIMC?: string;
+  prescriberHSERef?: string;
+  prescriptionDate?: string;
+  prescriptionTime?: string;
+  isRecurring?: boolean;
+  reviewIntervalDays?: number;
+  nextReviewDate?: string;
+  pharmacy?: string;
+  batchNumber?: string;
 }
 
 export interface Complaint {
@@ -64,10 +74,40 @@ const DEMO_PATIENT: PatientData = {
     { id: "al2", drug: "Codeine", reaction: "Respiratory depression", severity: "severe" },
   ],
   kardex: [
-    { id: "kx1", medication: "Apixaban", dose: "5mg", frequency: "BD for AFib", route: "Oral", startDate: "2020-12-01", prescribedBy: "Dr. Ahmed Al-Rashid", status: "active", notes: "Do not crush. Check renal function every 6 months." },
-    { id: "kx2", medication: "Atorvastatin", dose: "40mg", frequency: "ON for Hyperlipidemia", route: "Oral", startDate: "2019-01-10", prescribedBy: "Dr. Ahmed Al-Rashid", status: "active" },
-    { id: "kx3", medication: "Metformin", dose: "500mg", frequency: "Twice daily (BD)", route: "Oral", startDate: "2018-08-01", prescribedBy: "Dr. Sara Khan", status: "active", notes: "Take with meals." },
-    { id: "kx4", medication: "Amlodipine", dose: "5mg", frequency: "Once daily (OD)", route: "Oral", startDate: "2019-04-01", prescribedBy: "Dr. Ahmed Al-Rashid", status: "active" },
+    {
+      id: "kx1", medication: "Apixaban", dose: "5mg", frequency: "BD for AFib", route: "Oral",
+      startDate: "2020-12-01", prescribedBy: "Dr. Ahmed Al-Rashid", status: "active",
+      notes: "Do not crush. Check renal function every 6 months.",
+      prescriberTitle: "Consultant Cardiologist", prescriberIMC: "IMC-12345", prescriberHSERef: "HSE-C-00412",
+      prescriptionDate: "2020-12-01", prescriptionTime: "09:30",
+      isRecurring: true, reviewIntervalDays: 90, nextReviewDate: "2026-09-01",
+      pharmacy: "St. James's Hospital Pharmacy", batchNumber: "APX-2024-0831",
+    },
+    {
+      id: "kx2", medication: "Atorvastatin", dose: "40mg", frequency: "ON for Hyperlipidemia", route: "Oral",
+      startDate: "2019-01-10", prescribedBy: "Dr. Ahmed Al-Rashid", status: "active",
+      prescriberTitle: "Consultant Cardiologist", prescriberIMC: "IMC-12345", prescriberHSERef: "HSE-C-00412",
+      prescriptionDate: "2019-01-10", prescriptionTime: "10:00",
+      isRecurring: true, reviewIntervalDays: 180, nextReviewDate: "2026-07-10",
+      pharmacy: "St. James's Hospital Pharmacy", batchNumber: "ATV-2024-0614",
+    },
+    {
+      id: "kx3", medication: "Metformin", dose: "500mg", frequency: "Twice daily (BD)", route: "Oral",
+      startDate: "2018-08-01", prescribedBy: "Dr. Sara Khan", status: "active",
+      notes: "Take with meals.",
+      prescriberTitle: "Consultant Endocrinologist", prescriberIMC: "IMC-67890", prescriberHSERef: "HSE-E-00219",
+      prescriptionDate: "2018-08-01", prescriptionTime: "08:45",
+      isRecurring: true, reviewIntervalDays: 90, nextReviewDate: "2026-08-15",
+      pharmacy: "Lloyds Pharmacy, Rathmines", batchNumber: "MET-2024-1102",
+    },
+    {
+      id: "kx4", medication: "Amlodipine", dose: "5mg", frequency: "Once daily (OD)", route: "Oral",
+      startDate: "2019-04-01", prescribedBy: "Dr. Ahmed Al-Rashid", status: "active",
+      prescriberTitle: "Consultant Cardiologist", prescriberIMC: "IMC-12345", prescriberHSERef: "HSE-C-00412",
+      prescriptionDate: "2019-04-01", prescriptionTime: "09:00",
+      isRecurring: true, reviewIntervalDays: 180, nextReviewDate: "2026-10-01",
+      pharmacy: "St. James's Hospital Pharmacy", batchNumber: "AML-2024-0723",
+    },
   ],
   complaints: [],
 };
