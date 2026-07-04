@@ -7,6 +7,7 @@ interface ToastProps {
   visible: boolean;
   onHide: () => void;
   iconName?: keyof typeof MaterialCommunityIcons.glyphMap;
+  iconColor?: string;
   bottomOffset?: number;
 }
 
@@ -15,6 +16,7 @@ export default function Toast({
   visible,
   onHide,
   iconName = "check-circle",
+  iconColor = "#22c55e",
   bottomOffset = 100,
 }: ToastProps) {
   const opacity    = useRef(new Animated.Value(0)).current;
@@ -52,7 +54,7 @@ export default function Toast({
         { bottom: bottomOffset, opacity, transform: [{ translateY }] },
       ]}
     >
-      <MaterialCommunityIcons name={iconName} size={18} color="#22c55e" />
+      <MaterialCommunityIcons name={iconName} size={18} color={iconColor} />
       <Text style={styles.message}>{message}</Text>
     </Animated.View>
   );

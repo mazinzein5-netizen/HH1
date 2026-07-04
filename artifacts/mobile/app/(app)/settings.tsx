@@ -2,7 +2,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import Slider from "@react-native-community/slider";
 import {
   Alert,
@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import HiveLogo from "@/components/HiveLogo";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import Toast from "@/components/Toast";
 import { DensityLevel, DepthLevel, TextWeightLevel, useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -103,6 +104,9 @@ export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const { prefs, setGoldIntensity, setDepth, setDensity, setTextWeight } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
+  const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   function handleAction(action: string) {
     Haptics.selectionAsync();
@@ -117,7 +121,8 @@ export default function SettingsScreen() {
         router.push("/(app)/smart-devices");
         break;
       default:
-        Alert.alert("Coming Soon", "This feature will be available in a future update.");
+        setToastMessage("Coming soon — available in a future update");
+        setToastVisible(true);
     }
   }
 
@@ -285,6 +290,15 @@ export default function SettingsScreen() {
           IbnCeena Health Ecosystem v2.0{"\n"}GDPR Compliant · HSE Approved Framework
         </Text>
       </ScrollView>
+
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+        iconName="clock-outline"
+        iconColor="#D4A017"
+        bottomOffset={bottomPad + 16}
+      />
     </View>
   );
 }
