@@ -2,6 +2,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import React, { useRef, useState } from "react";
 import {
@@ -180,6 +181,7 @@ export default function HealthCardScreen() {
   const [memberGrade, setMemberGrade] = useState<MemberGrade>("standard");
   const [selectedMed, setSelectedMed] = useState<KardexEntry | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const exportRef = useRef<View>(null);
   const deviceConnected = true;
 
@@ -230,6 +232,30 @@ export default function HealthCardScreen() {
       Alert.alert("Export failed", "Could not capture the health card. Please try again.");
     } finally {
       setSharing(false);
+    }
+  }
+
+  async function handleSaveToPhotos() {
+    if (!exportRef.current) return;
+    try {
+      setSaving(true);
+      Haptics.selectionAsync();
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "To save the Health Card to your photo library, please allow photo access in your device settings.",
+        );
+        return;
+      }
+      const uri = await captureRef(exportRef, { format: "png", quality: 1, result: "tmpfile" });
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Saved", "Health Card saved to your photo library.");
+    } catch {
+      Alert.alert("Save failed", "Could not save the health card. Please try again.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -351,22 +377,40 @@ export default function HealthCardScreen() {
           </View>
         </LinearGradient>
 
-        {/* Share Health Card Button */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={handleShareCard}
-          disabled={sharing}
-          style={[styles.shareBtn, { backgroundColor: colors.glassPrimary, borderColor: colors.glassPrimaryBorder, opacity: sharing ? 0.6 : 1 }]}
-        >
-          {sharing ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <MaterialCommunityIcons name="share-variant" size={18} color={colors.primary} />
-          )}
-          <Text style={[styles.shareBtnText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>
-            {sharing ? "Exporting…" : "Share Health Card"}
-          </Text>
-        </TouchableOpacity>
+        {/* Health Card Action Buttons */}
+        <View style={styles.cardActionsRow}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleShareCard}
+            disabled={sharing || saving}
+            style={[styles.shareBtn, { backgroundColor: colors.glassPrimary, borderColor: colors.glassPrimaryBorder, opacity: sharing ? 0.6 : 1 }]}
+          >
+            {sharing ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <MaterialCommunityIcons name="share-variant" size={18} color={colors.primary} />
+            )}
+            <Text style={[styles.shareBtnText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>
+              {sharing ? "Exporting…" : "Share"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleSaveToPhotos}
+            disabled={saving || sharing}
+            style={[styles.shareBtn, { backgroundColor: colors.glass, borderColor: colors.border, opacity: saving ? 0.6 : 1 }]}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color={colors.foreground} />
+            ) : (
+              <MaterialCommunityIcons name="download" size={18} color={colors.foreground} />
+            )}
+            <Text style={[styles.shareBtnText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+              {saving ? "Saving…" : "Save to Photos"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Membership Benefits */}
         <View style={[styles.benefitsCard, { backgroundColor: colors.card, borderColor: grade.color + "44" }]}>
@@ -692,8 +736,9 @@ const styles = StyleSheet.create({
   medPrescriber: { fontSize: 11 },
   doseBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
   doseText: { fontSize: 13 },
-  shareBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, borderWidth: 1, paddingVertical: 14 },
-  shareBtnText: { fontSize: 15 },
+  cardActionsRow: { flexDirection: "row", gap: 10 },
+  shareBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, borderWidth: 1, paddingVertical: 14 },
+  shareBtnText: { fontSize: 14 },
 });
 
 const xStyles = StyleSheet.create({
