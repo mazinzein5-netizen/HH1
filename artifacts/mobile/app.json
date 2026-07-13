@@ -28,7 +28,14 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-mail-composer",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "HIVE Intake uses your location to find pharmacies near you. Your coordinates are sent only to the OpenStreetMap lookup service to run the search, and are never stored or sent to HIVE servers."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

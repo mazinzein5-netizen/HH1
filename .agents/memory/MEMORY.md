@@ -1,2 +1,3 @@
 - [Mobile theming](mobile-theming.md) — light/dark palettes live in constants/colors.ts; useColors reads ThemeProvider; decorative gradient hexes in screens do NOT adapt.
+- [OSM lookups](osm-lookups.md) — Overpass/Nominatim need a User-Agent; any third-party lookup must be disclosed in permission string, in-app note, and privacy policy; never fabricate patient data in exports.
 - [Clean vs pilot mode gating](clean-vs-pilot-mode.md) — store build must stay clinical-wording-free; pilot behavior gated by pilot code validated server-side, never a client boolean.
