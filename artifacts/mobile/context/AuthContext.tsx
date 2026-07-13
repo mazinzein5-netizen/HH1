@@ -10,6 +10,7 @@ export interface User {
   dateOfBirth: string;
   bloodType: string;
   createdAt: string;
+  isGuest?: boolean;
 }
 
 const DEMO_USER: User = {
@@ -21,12 +22,14 @@ const DEMO_USER: User = {
   dateOfBirth: "12/04/1955",
   bloodType: "O+",
   createdAt: "2024-01-01T00:00:00.000Z",
+  isGuest: true,
 };
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginAsGuest: () => Promise<void>;
   register: (data: Omit<User, "id" | "createdAt">) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
@@ -89,13 +92,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function loginAsGuest() {
+    try {
+      await AsyncStorage.removeItem(CURRENT_USER_KEY);
+    } catch {}
+    setUser(DEMO_USER);
+  }
+
   async function logout() {
     await AsyncStorage.removeItem(CURRENT_USER_KEY);
     setUser(DEMO_USER);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginAsGuest, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

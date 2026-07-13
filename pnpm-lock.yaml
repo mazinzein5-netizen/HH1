@@ -170,6 +170,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/privacy-policy':
+        specifier: workspace:*
+        version: link:../../lib/privacy-policy
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -283,6 +286,9 @@ importers:
       '@workspace/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
+      '@workspace/privacy-policy':
+        specifier: workspace:*
+        version: link:../../lib/privacy-policy
       babel-plugin-react-compiler:
         specifier: ^19.0.0-beta-e993439-20250117
         version: 19.0.0-beta-ebf51a3-20250411
@@ -605,6 +611,8 @@ importers:
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.10
+
+  lib/privacy-policy: {}
 
   scripts:
     devDependencies:

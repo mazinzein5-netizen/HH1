@@ -153,7 +153,7 @@ export default function DashboardScreen() {
           onPress={() => hiveBot.open()}
           style={[styles.sectionCard, { borderColor: colors.gold + "44" }]}
         >
-          <LinearGradient colors={["#1a1200", "#2a1e00"]} style={StyleSheet.absoluteFillObject} borderRadius={18} />
+          <LinearGradient colors={["#1a1200", "#2a1e00"]} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
           <HiveCardBg gradientColors={["rgba(201,134,10,0.18)", "rgba(0,0,0,0.10)", "transparent"]} />
           <View style={[styles.sectionIcon, { backgroundColor: "rgba(201,134,10,0.18)", borderColor: "rgba(201,134,10,0.4)", borderWidth: 1 }]}>
             <MaterialCommunityIcons name="robot-happy" size={22} color={colors.gold} />
