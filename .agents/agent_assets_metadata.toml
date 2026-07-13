@@ -6,3 +6,15 @@ id = "sYo8kfYIz8UsHZCT5nwLb"
 uri = "file://artifacts/mobile/assets/images/icon.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "6rIhZDvi5EakRIIhfXuPO"
+uri = "file://artifacts/website/public/images/older-adults-phone.png"
+type = "image"
+title = "Older adults using phone"
+
+[[generated]]
+id = "j5voGUu1pj2Sa5g7kMiOv"
+uri = "file://artifacts/website/public/images/care-home.png"
+type = "image"
+title = "Care home setting"
