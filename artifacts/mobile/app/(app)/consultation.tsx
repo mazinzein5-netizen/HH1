@@ -169,6 +169,26 @@ export default function ConsultationScreen() {
             </TouchableOpacity>
           ))}
 
+          {/* Live interpreter entry point */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => { Haptics.selectionAsync(); router.push("/(app)/interpreter"); }}
+            style={[styles.interpreterCard, { backgroundColor: colors.card, borderColor: colors.gold + "44" }]}
+          >
+            <View style={[styles.interpreterIcon, { backgroundColor: colors.gold + "1e" }]}>
+              <MaterialCommunityIcons name="translate" size={24} color={colors.gold} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.interpreterTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                Book a Live Interpreter
+              </Text>
+              <Text style={[styles.interpreterSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                Professional, confidential interpreters for medical and legal consultations and appointments.
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.gold} />
+          </TouchableOpacity>
+
           {selectedType && (
             <TouchableOpacity activeOpacity={0.85} onPress={confirmBooking}>
               <LinearGradient colors={["#0a2818", "#22c55e"]} style={styles.confirmBtn}>
@@ -295,6 +315,10 @@ const styles = StyleSheet.create({
   consultSub: { fontSize: 12, marginTop: 2 },
   waitBadge: { alignItems: "flex-end" },
   waitText: { fontSize: 12 },
+  interpreterCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14, borderWidth: 1.5, padding: 14 },
+  interpreterIcon: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  interpreterTitle: { fontSize: 14 },
+  interpreterSub: { fontSize: 12, marginTop: 2, lineHeight: 17 },
   confirmBtn: { borderRadius: 14, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   confirmBtnText: { color: "#fff", fontSize: 15 },
   waitingScreen: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },

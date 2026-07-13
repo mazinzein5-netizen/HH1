@@ -53,6 +53,7 @@ const SECTIONS = [
       { icon: "clipboard-text-outline" as const, label: "Intake History", sub: "Past questionnaire summaries", action: "history" },
       { icon: "pill" as const, label: "Medication Kardex", sub: "Full prescriber and prescription records", action: "kardex" },
       { icon: "video-outline" as const, label: "Consultation History", sub: "Past video appointments", action: "consult-history" },
+      { icon: "translate" as const, label: "Live Interpreter", sub: "Book an interpreter for medical & legal appointments", action: "interpreter" },
     ],
   },
   {
@@ -68,8 +69,6 @@ const COMING_SOON: { icon: React.ComponentProps<typeof MaterialCommunityIcons>["
   { icon: "microphone-outline", title: "Voice Health Companion", body: "Talk to the app in your own language and keep your records up to date hands-free." },
   { icon: "watch-variant", title: "Wearable Wellness Alerts", body: "Connect your watch or ring for gentle wellness notifications for you and your family." },
   { icon: "video-outline", title: "Video Consultations", body: "Book and join video appointments with your care team, right from the app." },
-  { icon: "pill", title: "Pharmacy Document Sharing", body: "Send your medication list and documents straight to your chosen pharmacy." },
-  { icon: "translate", title: "Live Interpreter Booking", body: "Book a human interpreter for medical and legal appointments in your language." },
 ];
 
 export default function SettingsScreen() {
@@ -101,6 +100,9 @@ export default function SettingsScreen() {
         break;
       case "privacy":
         router.push("/(app)/privacy-policy");
+        break;
+      case "interpreter":
+        router.push("/(app)/interpreter");
         break;
       default:
         setToastMessage("Coming soon — available in a future update");

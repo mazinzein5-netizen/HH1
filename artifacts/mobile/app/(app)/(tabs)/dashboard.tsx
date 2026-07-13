@@ -248,6 +248,26 @@ export default function DashboardScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Live Interpreter */}
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push("/(app)/interpreter")}
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.gold + "33" }]}
+        >
+          <HiveCardBg gradientColors={["rgba(201,134,10,0.10)", "rgba(0,0,0,0.10)", "transparent"]} />
+          <View style={[styles.sectionIcon, { backgroundColor: "rgba(201,134,10,0.12)", borderColor: "rgba(201,134,10,0.3)", borderWidth: 1 }]}>
+            <MaterialCommunityIcons name="translate" size={22} color={colors.gold} />
+          </View>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Live Interpreter</Text>
+          <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Book a professional, confidential interpreter for medical and legal consultations and appointments — in your language.
+          </Text>
+          <View style={styles.sectionLink}>
+            <Text style={[styles.sectionLinkText, { color: colors.goldLight, fontFamily: "Inter_600SemiBold" }]}>Book an Interpreter</Text>
+            <Feather name="chevron-right" size={14} color={colors.goldLight} />
+          </View>
+        </TouchableOpacity>
+
         {/* Smart Devices shortcut */}
         <TouchableOpacity
           activeOpacity={0.88}
