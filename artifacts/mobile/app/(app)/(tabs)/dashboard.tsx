@@ -90,8 +90,8 @@ export default function DashboardScreen() {
             showText={false}
           />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>HEALTH HIVE</Text>
-            <Text style={[styles.appEco, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>HEALTH ECOSYSTEM</Text>
+            <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>HIVE INTAKE</Text>
+            <Text style={[styles.appEco, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>PATIENT PORTAL</Text>
           </View>
           <TouchableOpacity
             onPress={() => router.push("/(app)/settings")}
@@ -130,10 +130,10 @@ export default function DashboardScreen() {
               />
             </View>
             <View style={styles.heroContent}>
-              <Text style={[styles.heroTitle1, { fontFamily: "Inter_700Bold" }]}>Objective Triage.</Text>
+              <Text style={[styles.heroTitle1, { fontFamily: "Inter_700Bold" }]}>Organised Records.</Text>
               <Text style={[styles.heroTitle2, { color: colors.goldLight, fontFamily: "Inter_700Bold" }]}>Absolute Security.</Text>
               <Text style={[styles.heroBody, { fontFamily: "Inter_400Regular" }]}>
-                Bridging the gap between primary care and specialised treatment. Generating verified clinical metrics for MSK pathways and providing instant, life-saving data access for first responders.
+                Keep your health information organised, complete standardised questionnaires to share with your GP, and give first responders instant access to your emergency health card.
               </Text>
               <TouchableOpacity
                 activeOpacity={0.85}
@@ -141,7 +141,7 @@ export default function DashboardScreen() {
                 style={[styles.heroCta, { backgroundColor: "rgba(0,0,0,0.45)", borderColor: colors.gold + "55" }]}
               >
                 <MaterialCommunityIcons name="clipboard-text" size={17} color={colors.gold} />
-                <Text style={[styles.heroCtaText, { fontFamily: "Inter_600SemiBold", color: colors.goldLight }]}>Start Triage Flow</Text>
+                <Text style={[styles.heroCtaText, { fontFamily: "Inter_600SemiBold", color: colors.goldLight }]}>Start Health Questionnaire</Text>
               </TouchableOpacity>
             </View>
           </LinearGradient>
@@ -160,7 +160,7 @@ export default function DashboardScreen() {
           </View>
           <Text style={[styles.sectionTitle, { color: "#fff", fontFamily: "Inter_700Bold" }]}>HIVE Bot</Text>
           <Text style={[styles.sectionBody, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" }]}>
-            AI-powered symptom guide and clinical advisor. Checks against your health card, medications, and triage protocols.
+            Look up HSE and NICE health guideline information in plain English, any time.
           </Text>
           <View style={styles.sectionLink}>
             <View style={[styles.liveDot, { backgroundColor: colors.goldBright }]} />
@@ -188,7 +188,7 @@ export default function DashboardScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Health Hive Triage */}
+        {/* Health Questionnaires */}
         <TouchableOpacity
           activeOpacity={0.88}
           onPress={() => router.push("/(app)/(tabs)/triage")}
@@ -198,12 +198,12 @@ export default function DashboardScreen() {
           <View style={[styles.sectionIcon, { backgroundColor: colors.glassPrimary, borderColor: colors.glassPrimaryBorder, borderWidth: 1 }]}>
             <MaterialCommunityIcons name="waveform" size={22} color={colors.primary} />
           </View>
-          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Health Hive Triage</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Health Questionnaires</Text>
           <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Full NICE/HSE-validated clinical scoring — ODI (Lumbar), mJOA (Cervical), Oxford Hip & Knee Scores with GP referral packet.
+            Standardised questionnaires — ODI (Lumbar), mJOA (Cervical), Oxford Hip & Knee — with a summary you can share with your GP.
           </Text>
           <View style={styles.sectionLink}>
-            <Text style={[styles.sectionLinkText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>Explore Pathways</Text>
+            <Text style={[styles.sectionLinkText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>Open Questionnaires</Text>
             <Feather name="chevron-right" size={14} color={colors.primary} />
           </View>
         </TouchableOpacity>
@@ -283,12 +283,12 @@ export default function DashboardScreen() {
           <View style={[styles.sectionIcon, { backgroundColor: "rgba(167,139,250,0.12)", borderColor: "rgba(167,139,250,0.25)", borderWidth: 1 }]}>
             <MaterialCommunityIcons name="brain" size={22} color="#a78bfa" />
           </View>
-          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Geriatric & Cognitive Care</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Memory & Wellbeing</Text>
           <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Cognitive decline screening, STRATIFY falls risk assessment, and smart device monitoring for live vitals.
+            Memory and wellbeing check-ins, falls awareness questions, and smart device monitoring for live vitals.
           </Text>
           <View style={styles.sectionLink}>
-            <Text style={[styles.sectionLinkText, { color: "#a78bfa", fontFamily: "Inter_600SemiBold" }]}>Open Assessment</Text>
+            <Text style={[styles.sectionLinkText, { color: "#a78bfa", fontFamily: "Inter_600SemiBold" }]}>Open Check-In</Text>
             <Feather name="chevron-right" size={14} color="#a78bfa" />
           </View>
         </TouchableOpacity>

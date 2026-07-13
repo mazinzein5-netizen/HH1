@@ -44,11 +44,11 @@ export default function HiveLogo({
       : "Inter_700Bold";
 
   const hiveTextStyle = {
-    fontSize: size * 0.62,
-    letterSpacing: size * -0.02,
+    fontSize: size * 0.44,
+    letterSpacing: size * -0.012,
     color: "#FFFFFF",
     fontFamily,
-    lineHeight: size * 0.7,
+    lineHeight: size * 0.54,
   };
 
   const subTextStyle = {
@@ -178,8 +178,8 @@ export default function HiveLogo({
       {/* ── Text overlay ── */}
       {showText && (
         <View style={[styles.textBlock, { left: S * 1.02 }]}>
-          <Text style={subTextStyle} numberOfLines={1}>HEALTH HIVE ECOSYSTEM</Text>
-          <Text style={hiveTextStyle} numberOfLines={1}>HIVE</Text>
+          <Text style={subTextStyle} numberOfLines={1}>PATIENT PORTAL</Text>
+          <Text style={hiveTextStyle} numberOfLines={1}>HIVE INTAKE</Text>
           <Text style={companyTextStyle} numberOfLines={1}>IbnCeena Ltd.</Text>
         </View>
       )}

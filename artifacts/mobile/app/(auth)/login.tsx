@@ -83,7 +83,7 @@ export default function LoginScreen() {
             <Text style={{ color: colors.goldLight }}>Access Portal.</Text>
           </Text>
           <Text style={[styles.heroSub, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>
-            Clinical-grade triage · Emergency health card · Telemedicine
+            Health questionnaires · Emergency health card · Secure records
           </Text>
         </View>
 
@@ -167,7 +167,7 @@ export default function LoginScreen() {
         </View>
 
         <Text style={[styles.disclaimer, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          IbnCeena Health Ecosystem · GDPR Compliant · HSE Approved Framework
+          HIVE Intake · GDPR Compliant · Not a medical device — for information and administrative use only
         </Text>
       </ScrollView>
     </View>

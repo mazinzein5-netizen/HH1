@@ -13,7 +13,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import ConsentGate from "@/components/ConsentGate";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AppModeProvider, useAppMode } from "@/context/AppModeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { LogoThemeProvider } from "@/context/LogoThemeContext";
 import { PatientProvider } from "@/context/PatientContext";
@@ -25,6 +27,11 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const { consentAccepted } = useAppMode();
+
+  if (consentAccepted === null) return null;
+  if (!consentAccepted) return <ConsentGate />;
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -79,17 +86,19 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
-              <AuthProvider>
-                <PatientProvider>
-                  <ThemeProvider onReady={handleThemeReady}>
-                    <SmartDevicesProvider>
-                      <LogoThemeProvider onReady={handleLogoThemeReady}>
-                        <RootLayoutNav />
-                      </LogoThemeProvider>
-                    </SmartDevicesProvider>
-                  </ThemeProvider>
-                </PatientProvider>
-              </AuthProvider>
+              <AppModeProvider>
+                <AuthProvider>
+                  <PatientProvider>
+                    <ThemeProvider onReady={handleThemeReady}>
+                      <SmartDevicesProvider>
+                        <LogoThemeProvider onReady={handleLogoThemeReady}>
+                          <RootLayoutNav />
+                        </LogoThemeProvider>
+                      </SmartDevicesProvider>
+                    </ThemeProvider>
+                  </PatientProvider>
+                </AuthProvider>
+              </AppModeProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>

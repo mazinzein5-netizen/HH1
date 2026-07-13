@@ -122,13 +122,13 @@ export default function TriageScreen() {
     });
 
     return [
-      "CLINICAL REFERRAL PACKET",
+      "HEALTH QUESTIONNAIRE SUMMARY — FOR GP REVIEW",
       "",
       `Pathway: ${pathway.name}`,
-      `Assessment tool: ${pathway.scoreTool}`,
+      `Questionnaire: ${pathway.scoreTool}`,
       `Score: ${pathway.formatScore(total)} (${result.label})`,
-      `Recommendation: ${result.recommendation}`,
-      `Suggested referral: ${result.referral}`,
+      `What this score can mean: ${result.recommendation}`,
+      `Suggested next step to discuss with your GP: ${result.referral}`,
       "",
       flags.length
         ? `RED FLAGS PRESENT — urgent review required:\n${flags.map((f) => `  • ${f}`).join("\n")}`
@@ -145,8 +145,8 @@ export default function TriageScreen() {
     if (!pathway) return;
     const result = pathway.getResult(total);
     const seed = [
-      `I completed the ${pathway.name} ${pathway.scoreTool} assessment.`,
-      `My score was ${pathway.formatScore(total)} (${result.label}), and the suggested referral is: ${result.referral}.`,
+      `I completed the ${pathway.name} ${pathway.scoreTool} questionnaire.`,
+      `My score was ${pathway.formatScore(total)} (${result.label}), and the suggested next step is: ${result.referral}.`,
       hasRedFlag ? "I also reported red-flag symptoms during screening." : "",
       "Can you explain what this means and how I should prepare?",
     ]
@@ -181,9 +181,9 @@ export default function TriageScreen() {
         </View>
         <Text style={[styles.stepLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
           {step === "pathway" && "Select Anatomical Pathway"}
-          {step === "redflags" && "HSE / NICE Red Flag Screening"}
-          {step === "scoring" && (pathway?.scoreTool ?? "Clinical Scoring")}
-          {step === "results" && "Clinical Referral Packet"}
+          {step === "redflags" && "Important Safety Questions"}
+          {step === "scoring" && (pathway?.scoreTool ?? "Questionnaire Scoring")}
+          {step === "results" && "GP Summary Packet"}
         </Text>
 
         {/* ── STEP 1: Pathway ── */}
@@ -193,7 +193,7 @@ export default function TriageScreen() {
               Select Anatomical{"\n"}Pathway
             </Text>
             <Text style={[styles.subheading, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Choose the region of concern. A NICE/HSE-validated clinical scoring tool is applied per pathway.
+              Choose the region of concern. A standardised, internationally recognised questionnaire is used for each pathway.
             </Text>
             <View style={styles.pathwayGrid}>
               {PATHWAYS.map((p) => (
@@ -234,11 +234,11 @@ export default function TriageScreen() {
             <View style={[styles.alertBanner, { backgroundColor: "#2a1a08", borderColor: "#7c4a0a" }]}>
               <MaterialCommunityIcons name="flag" size={17} color="#f59e0b" />
               <Text style={[styles.alertText, { color: "#f59e0b", fontFamily: "Inter_500Medium" }]}>
-                Red Flag Screening — {pathway.name}
+                Safety Questions — {pathway.name}
               </Text>
             </View>
             <Text style={[styles.subheading, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Please answer all questions honestly. A positive response triggers an immediate urgent referral pathway per HSE/NICE guidelines.
+              Please answer all questions honestly. These are important safety questions — if you answer yes to any, please contact your GP urgently or call 112.
             </Text>
 
             {RED_FLAG_QUESTIONS.map((q, i) => (
@@ -274,7 +274,7 @@ export default function TriageScreen() {
                 <View style={[styles.alertBanner, { backgroundColor: "#2a0808", borderColor: colors.accent }]}>
                   <MaterialCommunityIcons name="alert-circle" size={17} color={colors.accent} />
                   <Text style={[styles.alertText, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>
-                    Red Flag Detected — Urgent GP or Emergency Department assessment is required before completing this questionnaire.
+                    Important — based on your answers, please contact your GP urgently or go to an Emergency Department before completing this questionnaire.
                   </Text>
                 </View>
                 <TouchableOpacity activeOpacity={0.85} onPress={callEmergencyServices} style={[styles.emergencyBtn, { backgroundColor: colors.emergency }]}>
@@ -289,7 +289,7 @@ export default function TriageScreen() {
             <TouchableOpacity activeOpacity={0.85} onPress={askHiveBotAboutPathway} style={[styles.botBtn, { borderColor: colors.glassGoldBorder, backgroundColor: colors.glassGold }]}>
               <MaterialCommunityIcons name="robot-happy" size={17} color={colors.gold} />
               <Text style={[styles.botBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
-                Ask HIVE Bot about these symptoms
+                Ask HIVE Bot about guideline information
               </Text>
             </TouchableOpacity>
 
@@ -300,7 +300,7 @@ export default function TriageScreen() {
             >
               <LinearGradient colors={["#1a2a8c", "#4F6EF7"]} style={styles.primaryBtn}>
                 <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>
-                  {hasRedFlag ? "Continue (Red Flag Noted)" : "Proceed to Clinical Scoring"}
+                  {hasRedFlag ? "Continue — Please Also Contact Your GP" : "Proceed to Questionnaire"}
                 </Text>
                 <Feather name="arrow-right" size={17} color="#fff" />
               </LinearGradient>
@@ -387,7 +387,7 @@ export default function TriageScreen() {
               <LinearGradient colors={["#1a2a8c", "#4F6EF7"]} style={styles.primaryBtn}>
                 <MaterialCommunityIcons name="file-document-edit" size={18} color="#fff" />
                 <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>
-                  Generate Referral Packet
+                  Create GP Summary Packet
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -409,7 +409,7 @@ export default function TriageScreen() {
           return (
             <View style={styles.section}>
               <LinearGradient colors={["#111a6e", "#1a268c"]} style={styles.resultsHero}>
-                <Text style={[styles.resultsTitle, { fontFamily: "Inter_700Bold" }]}>Referral Packet</Text>
+                <Text style={[styles.resultsTitle, { fontFamily: "Inter_700Bold" }]}>GP Summary Packet</Text>
                 <Text style={[styles.resultsPathway, { fontFamily: "Inter_400Regular" }]}>
                   {pathway.name} · {pathway.scoreTool.split("(")[0].trim()}
                 </Text>
@@ -430,7 +430,7 @@ export default function TriageScreen() {
                 <View style={[styles.alertBanner, { backgroundColor: "#2a0808", borderColor: colors.accent }]}>
                   <MaterialCommunityIcons name="alert" size={17} color={colors.accent} />
                   <Text style={[styles.alertText, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>
-                    Red Flag(s) Identified — Override to urgent pathway regardless of score.
+                    Important — based on your safety answers, please contact your GP urgently or call 112, regardless of your score.
                   </Text>
                 </View>
               )}
@@ -439,7 +439,7 @@ export default function TriageScreen() {
                 <View style={styles.resultCardHeader}>
                   <MaterialCommunityIcons name="medical-bag" size={20} color={colors.primary} />
                   <Text style={[styles.resultCardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                    Clinical Recommendation
+                    What Your Score Means
                   </Text>
                 </View>
                 <Text style={[styles.resultBodyText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
@@ -451,7 +451,7 @@ export default function TriageScreen() {
                 <View style={styles.resultCardHeader}>
                   <MaterialCommunityIcons name="send-check" size={20} color="#22c55e" />
                   <Text style={[styles.resultCardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                    Recommended Referral
+                    Suggested Next Step
                   </Text>
                 </View>
                 <Text style={[styles.referralText, { color: "#22c55e", fontFamily: "Inter_700Bold" }]}>
@@ -493,7 +493,7 @@ export default function TriageScreen() {
 
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => shareWithHealthServices(`Referral Packet — ${pathway.name}`, buildReferralSummary(total))}
+                onPress={() => shareWithHealthServices(`Questionnaire Summary — ${pathway.name}`, buildReferralSummary(total))}
               >
                 <LinearGradient colors={["#0f6b3a", "#1fa35c"]} style={styles.primaryBtn}>
                   <MaterialCommunityIcons name="send-check" size={18} color="#fff" />
@@ -504,14 +504,14 @@ export default function TriageScreen() {
               <TouchableOpacity activeOpacity={0.85} onPress={() => askHiveBotAboutResults(total)} style={[styles.botBtn, { borderColor: colors.glassGoldBorder, backgroundColor: colors.glassGold }]}>
                 <MaterialCommunityIcons name="robot-happy" size={17} color={colors.gold} />
                 <Text style={[styles.botBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
-                  Ask HIVE Bot about these results
+                  Ask HIVE Bot about guideline information
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity activeOpacity={0.85} onPress={reset}>
                 <LinearGradient colors={["#1a2a8c", "#4F6EF7"]} style={styles.primaryBtn}>
                   <MaterialCommunityIcons name="refresh" size={17} color="#fff" />
-                  <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>New Assessment</Text>
+                  <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>New Questionnaire</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>

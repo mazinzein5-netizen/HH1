@@ -56,7 +56,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="triage"
           options={{
-            title: "Health Hive",
+            title: "Questionnaires",
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="waveform" size={(size ?? 20) + 2} color={color} />
             ),

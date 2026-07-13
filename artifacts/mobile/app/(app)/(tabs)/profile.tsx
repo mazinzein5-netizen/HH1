@@ -51,14 +51,14 @@ const MEMBER_GRADES: { key: MemberGrade; label: string; color: string; gradient:
     label: "Standard",
     color: "#4F6EF7",
     gradient: ["#102060", "#1a3a9e", "#102060"],
-    benefits: ["Digital Health Card", "2 Triage Pathways", "QR Emergency Access", "Medication Record"],
+    benefits: ["Digital Health Card", "2 Health Questionnaires", "QR Emergency Access", "Medication Record"],
   },
   {
     key: "gold",
     label: "Gold Premium",
     color: "#D4A017",
     gradient: ["#2a1a00", "#6b4400", "#2a1a00"],
-    benefits: ["All Standard Features", "All 4 Triage Pathways", "Priority GP Referral", "Annual Health Review", "Physiotherapy Network Access"],
+    benefits: ["All Standard Features", "All 4 Health Questionnaires", "Priority GP Access", "Annual Health Review", "Physiotherapy Network Access"],
   },
   {
     key: "geriatric",
@@ -156,7 +156,7 @@ function MedDetailModal({ med, onClose }: { med: KardexEntry | null; onClose: ()
                 <View style={[mStyles.sectionHeader, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                   <MaterialCommunityIcons name="note-text" size={16} color={colors.mutedForeground} />
                   <Text style={[mStyles.sectionTitle, { color: colors.mutedForeground, fontFamily: "Inter_700Bold" }]}>
-                    CLINICAL NOTES
+                    CARE NOTES
                   </Text>
                 </View>
                 <View style={mStyles.notesBox}>
@@ -577,7 +577,7 @@ export default function HealthCardScreen() {
             >
               <MaterialCommunityIcons name="brain" size={18} color="#a78bfa" />
               <Text style={[styles.geriatricBtnText, { color: "#a78bfa", fontFamily: "Inter_600SemiBold" }]}>
-                Open Geriatric & Cognitive Assessment
+                Open Memory & Wellbeing Check-In
               </Text>
               <Feather name="chevron-right" size={14} color="#a78bfa" />
             </TouchableOpacity>
@@ -709,7 +709,7 @@ export default function HealthCardScreen() {
 
           {/* Footer */}
           <View style={xStyles.footer}>
-            <Text style={xStyles.footerText}>FOR EMERGENCY USE — Scan QR and enter PIN for full clinical record</Text>
+            <Text style={xStyles.footerText}>FOR EMERGENCY USE — Scan QR and enter PIN for full health record</Text>
             <Text style={xStyles.footerDate}>Exported {new Date().toLocaleDateString("en-IE", { day: "2-digit", month: "short", year: "numeric" })}</Text>
           </View>
         </LinearGradient>

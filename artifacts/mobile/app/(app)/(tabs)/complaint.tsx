@@ -15,6 +15,7 @@ import {
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { PILOT_ACTIVATION_CODE, useAppMode } from "@/context/AppModeContext";
 import { usePatient, type Complaint } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -41,6 +42,7 @@ export default function ComplaintScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { addComplaint } = usePatient();
+  const { pilotMode } = useAppMode();
 
   const [step, setStep] = useState<Step>("input");
   const [chiefComplaint, setChiefComplaint] = useState("");
@@ -72,7 +74,7 @@ export default function ComplaintScreen() {
       const res = await fetch(`https://${domain}/api/ai/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chiefComplaint: chiefComplaint.trim() }),
+        body: JSON.stringify({ chiefComplaint: chiefComplaint.trim(), pilotCode: pilotMode ? PILOT_ACTIVATION_CODE : undefined }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -105,7 +107,7 @@ export default function ComplaintScreen() {
           const res = await fetch(`https://${domain}/api/ai/summary`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chiefComplaint, qa: newQa }),
+            body: JSON.stringify({ chiefComplaint, qa: newQa, pilotCode: pilotMode ? PILOT_ACTIVATION_CODE : undefined }),
           });
           if (res.ok) {
             const data = await res.json();
@@ -168,8 +170,8 @@ export default function ComplaintScreen() {
             <MaterialCommunityIcons name="brain" size={22} color="#fff" />
           </View>
           <View>
-            <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>AI Clinical Intake</Text>
-            <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Intelligent symptom assessment</Text>
+            <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{pilotMode ? "AI Clinical Intake" : "Guided Intake"}</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{pilotMode ? "Intelligent symptom assessment" : "Organise your notes before a GP visit"}</Text>
           </View>
         </View>
 
@@ -200,7 +202,7 @@ export default function ComplaintScreen() {
                 style={[styles.btn, { backgroundColor: colors.primary, opacity: chiefComplaint.trim() ? 1 : 0.5 }]}
               >
                 <Feather name="arrow-right" size={18} color="#fff" />
-                <Text style={[styles.btnText, { fontFamily: "Inter_600SemiBold" }]}>Begin Assessment</Text>
+                <Text style={[styles.btnText, { fontFamily: "Inter_600SemiBold" }]}>{pilotMode ? "Begin Assessment" : "Start Questions"}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -210,7 +212,7 @@ export default function ComplaintScreen() {
             <View style={styles.loadingWrap}>
               <ActivityIndicator color={colors.primary} size="large" />
               <Text style={[styles.loadingText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                Generating clinical questions...
+                {pilotMode ? "Generating clinical questions..." : "Preparing your questions..."}
               </Text>
             </View>
           )}
@@ -265,7 +267,7 @@ export default function ComplaintScreen() {
                 style={[styles.btn, { backgroundColor: colors.primary, opacity: currentAnswer.trim() ? 1 : 0.5 }]}
               >
                 <Text style={[styles.btnText, { fontFamily: "Inter_600SemiBold" }]}>
-                  {currentQ + 1 < questions.length ? "Next Question" : "Get Assessment"}
+                  {currentQ + 1 < questions.length ? "Next Question" : pilotMode ? "Get Assessment" : "Get Summary"}
                 </Text>
                 <Feather name={currentQ + 1 < questions.length ? "arrow-right" : "check-circle"} size={18} color="#fff" />
               </TouchableOpacity>
@@ -290,7 +292,7 @@ export default function ComplaintScreen() {
             <View style={styles.loadingWrap}>
               <ActivityIndicator color={colors.primary} size="large" />
               <Text style={[styles.loadingText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                Analysing your responses...
+                {pilotMode ? "Analysing your responses..." : "Putting your summary together..."}
               </Text>
             </View>
           )}
@@ -298,10 +300,12 @@ export default function ComplaintScreen() {
           {/* STEP: Result */}
           {step === "result" && (
             <View style={styles.stepWrap}>
-              <Text style={[styles.stepLabel, { color: colors.mutedForeground }]}>STEP 3 OF 3 — ASSESSMENT COMPLETE</Text>
+              <Text style={[styles.stepLabel, { color: colors.mutedForeground }]}>
+                {pilotMode ? "STEP 3 OF 3 — ASSESSMENT COMPLETE" : "STEP 3 OF 3 — SUMMARY READY"}
+              </Text>
 
-              {/* Triage Result */}
-              {summary && recColor ? (
+              {/* Result */}
+              {summary && recColor && pilotMode ? (
                 <View style={[styles.resultCard, { backgroundColor: recColor.bg, borderColor: recColor.border }]}>
                   <View style={styles.resultHeader}>
                     <MaterialCommunityIcons name={recColor.icon as any} size={22} color={recColor.text} />
@@ -313,10 +317,21 @@ export default function ComplaintScreen() {
                     {summary.summary}
                   </Text>
                 </View>
+              ) : summary?.summary ? (
+                <View style={[styles.resultCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={[styles.resultSummary, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+                    {summary.summary}
+                  </Text>
+                  <Text style={[styles.resultSummary, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    This is a summary of what you entered — not medical advice. Please share it with your GP.
+                  </Text>
+                </View>
               ) : (
                 <View style={[styles.resultCard, { backgroundColor: colors.physioBg, borderColor: colors.physioBorder }]}>
                   <Text style={[styles.resultSummary, { color: colors.physio, fontFamily: "Inter_400Regular" }]}>
-                    Assessment complete. Please speak to a clinician for further evaluation.
+                    {pilotMode
+                      ? "Assessment complete. Please speak to a clinician for further evaluation."
+                      : "Your notes are saved below. Please share them with your GP at your next visit."}
                   </Text>
                 </View>
               )}

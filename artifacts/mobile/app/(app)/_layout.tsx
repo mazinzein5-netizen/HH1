@@ -22,6 +22,7 @@ export default function AppLayout() {
       <Stack.Screen name="consultation" options={{ headerShown: false }} />
       <Stack.Screen name="monitoring" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
+      <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
       <Stack.Screen name="smart-devices" options={{ headerShown: false }} />
     </Stack>
     </HiveBotProvider>

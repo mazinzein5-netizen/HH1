@@ -16,6 +16,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { PILOT_ACTIVATION_CODE, useAppMode } from "@/context/AppModeContext";
 import { usePatient } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
 import {
@@ -36,10 +37,16 @@ interface Props {
   seedContext?: string;
 }
 
-const GREETING: ChatMessage = {
+const PILOT_GREETING: ChatMessage = {
   role: "assistant",
   content:
     "Hello! I'm HIVE Bot, your AI pain and clinical guidance assistant.\n\nI can help you understand your symptoms, explain likely causes, walk you through self-care steps, and flag any signs that need urgent attention — all aligned with NICE and HSE clinical guidelines.\n\nTo get started, could you tell me where you're experiencing pain or discomfort?",
+};
+
+const CLEAN_GREETING: ChatMessage = {
+  role: "assistant",
+  content:
+    "Hello! I'm HIVE Bot. I can help you find and understand health guideline information from HSE and NICE, explained in plain English.\n\nI don't give medical advice or assess symptoms — for anything about your own health, please speak to your GP, or call 112 in an emergency.\n\nWhat health topic would you like to look up?",
 };
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -85,16 +92,26 @@ export default function ChatBot({ visible, onClose, seedContext }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { data: patient } = usePatient();
-  const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
+  const { pilotMode } = useAppMode();
+  const greeting = pilotMode ? PILOT_GREETING : CLEAN_GREETING;
+  const [messages, setMessages] = useState<ChatMessage[]>([greeting]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const seededRef = useRef<string | undefined>(undefined);
 
-  const hasRedFlag = messages.some(
-    (m) => m.role === "assistant" && (m.content.startsWith("⚠️") || m.content.includes("RED FLAG"))
-  );
+  // If pilot mode is toggled while the conversation is still fresh, swap greeting.
+  useEffect(() => {
+    setMessages((prev) => (prev.length <= 1 ? [greeting] : prev));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pilotMode]);
+
+  const hasRedFlag =
+    pilotMode &&
+    messages.some(
+      (m) => m.role === "assistant" && (m.content.startsWith("⚠️") || m.content.includes("RED FLAG"))
+    );
 
   useEffect(() => {
     if (visible) {
@@ -144,6 +161,7 @@ export default function ChatBot({ visible, onClose, seedContext }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: nextMessages.map(({ role, content }) => ({ role, content })),
+          pilotCode: pilotMode ? PILOT_ACTIVATION_CODE : undefined,
         }),
       });
       if (res.ok) {
@@ -176,23 +194,26 @@ export default function ChatBot({ visible, onClose, seedContext }: Props) {
 
   function handleShareToServices() {
     const transcript = messages
-      .filter((m) => m !== GREETING)
+      .slice(1)
       .map((m) => `${m.role === "user" ? "Patient" : "HIVE Bot"}: ${m.content}`)
       .join("\n\n");
 
     const body = [
       formatPatientCard(patient),
       "",
-      "PAIN ASSESSMENT CONVERSATION",
+      pilotMode ? "PAIN ASSESSMENT CONVERSATION" : "GUIDELINE INFORMATION CONVERSATION",
       "",
       transcript || "No conversation recorded yet.",
     ].join("\n");
 
-    shareWithHealthServices("HIVE Bot — Clinical Handover Summary", body);
+    shareWithHealthServices(
+      pilotMode ? "HIVE Bot — Clinical Handover Summary" : "HIVE Bot — Conversation Summary",
+      body,
+    );
   }
 
   function handleClear() {
-    setMessages([GREETING]);
+    setMessages([greeting]);
     setInput("");
     seededRef.current = undefined;
   }
@@ -225,7 +246,7 @@ export default function ChatBot({ visible, onClose, seedContext }: Props) {
                   HIVE Bot
                 </Text>
                 <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  Pain & Clinical Guidance
+                  {pilotMode ? "Pain & Clinical Guidance" : "Guideline Information"}
                 </Text>
               </View>
               <TouchableOpacity
@@ -279,7 +300,18 @@ export default function ChatBot({ visible, onClose, seedContext }: Props) {
               }
             />
 
-            {/* Urgent escalation banner when a red flag is detected */}
+            {/* Static safety notice in clean (store) mode */}
+            {!pilotMode && (
+              <View style={[styles.safetyNotice, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+                <MaterialCommunityIcons name="information-outline" size={15} color={colors.mutedForeground} />
+                <Text style={[styles.safetyNoticeText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  General guideline information only — not medical advice. If you are worried about your
+                  health, contact your GP or call {EMERGENCY_NUMBER}.
+                </Text>
+              </View>
+            )}
+
+            {/* Urgent escalation banner when a red flag is detected (pilot mode only) */}
             {hasRedFlag && (
               <TouchableOpacity
                 activeOpacity={0.85}
@@ -322,7 +354,7 @@ export default function ChatBot({ visible, onClose, seedContext }: Props) {
               <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <TextInput
                   style={[styles.textInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                  placeholder="Describe your pain or ask a question..."
+                  placeholder={pilotMode ? "Describe your pain or ask a question..." : "Ask about a health topic or guideline..."}
                   placeholderTextColor={colors.mutedForeground}
                   value={input}
                   onChangeText={setInput}
@@ -427,6 +459,22 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     padding: 4,
+  },
+  safetyNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 14,
+    marginBottom: 4,
+  },
+  safetyNoticeText: {
+    fontSize: 11,
+    lineHeight: 15,
+    flex: 1,
   },
   redFlagBanner: {
     flexDirection: "row",

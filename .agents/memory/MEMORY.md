@@ -1,1 +1,2 @@
 - [Mobile theming](mobile-theming.md) — light/dark palettes live in constants/colors.ts; useColors reads ThemeProvider; decorative gradient hexes in screens do NOT adapt.
+- [Clean vs pilot mode gating](clean-vs-pilot-mode.md) — store build must stay clinical-wording-free; pilot behavior gated by pilot code validated server-side, never a client boolean.

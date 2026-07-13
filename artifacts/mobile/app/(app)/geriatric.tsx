@@ -101,7 +101,7 @@ export default function GeriatricScreen() {
             Geriatric & Cognitive Care
           </Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Cognitive screen · Falls risk assessment
+            Memory check-in · Falls awareness
           </Text>
         </View>
         <MaterialCommunityIcons name="brain" size={26} color="#a78bfa" />
@@ -230,10 +230,10 @@ export default function GeriatricScreen() {
                   {cogScore} / 8
                 </Text>
                 <Text style={[styles.cogResultLabel, { fontFamily: "Inter_600SemiBold", color: cogScore >= 7 ? "#22c55e" : cogScore >= 5 ? "#f59e0b" : "#ef4444" }]}>
-                  {cogScore >= 7 ? "Normal Cognition" : cogScore >= 5 ? "Mild Impairment — GP Review" : "Significant Impairment — Urgent Referral"}
+                  {cogScore >= 7 ? "No Concerns Noted" : cogScore >= 5 ? "Some Concerns — Discuss With Your GP" : "Please See Your GP Urgently"}
                 </Text>
                 <Text style={[styles.cogResultSub, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>
-                  This is a screening tool only. Full neuropsychological assessment by a qualified clinician is required for diagnosis.
+                  This is a general wellbeing check-in, not a diagnosis. Please speak to a qualified clinician for a full evaluation.
                 </Text>
               </LinearGradient>
             )}

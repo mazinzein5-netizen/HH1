@@ -5,14 +5,17 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppMode } from "@/context/AppModeContext";
 import { useAuth } from "@/context/AuthContext";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import ThemedStatusBar from "@/components/ThemedStatusBar";
@@ -33,7 +36,7 @@ const SECTIONS = [
     items: [
       { icon: "account-circle" as const, label: "Patient Profile", sub: "Edit name, DOB, blood type", action: "profile" },
       { icon: "bell-outline" as const, label: "Notifications", sub: "Medication reminders, appointments", action: "notifications" },
-      { icon: "shield-lock-outline" as const, label: "Privacy & GDPR", sub: "Data storage and sharing preferences", action: "privacy" },
+      { icon: "shield-lock-outline" as const, label: "Privacy & GDPR", sub: "How your data is stored and protected", action: "privacy" },
     ],
   },
   {
@@ -41,24 +44,32 @@ const SECTIONS = [
     items: [
       { icon: "watch" as const, label: "Connected Devices", sub: "Manage wearables and health bands", action: "devices" },
       { icon: "chart-line" as const, label: "Health Monitoring", sub: "Full vitals, sleep, ECG, metabolism", action: "monitoring" },
-      { icon: "brain" as const, label: "Geriatric & Cognitive", sub: "Cognitive screen and falls risk", action: "geriatric" },
+      { icon: "brain" as const, label: "Memory & Wellbeing", sub: "Wellbeing check and falls awareness", action: "geriatric" },
     ],
   },
   {
-    title: "Clinical",
+    title: "My Records",
     items: [
-      { icon: "clipboard-text-outline" as const, label: "Triage History", sub: "Past assessment referral packets", action: "history" },
+      { icon: "clipboard-text-outline" as const, label: "Intake History", sub: "Past questionnaire summaries", action: "history" },
       { icon: "pill" as const, label: "Medication Kardex", sub: "Full prescriber and prescription records", action: "kardex" },
-      { icon: "video-outline" as const, label: "Consultation History", sub: "Past telemedicine appointments", action: "consult-history" },
+      { icon: "video-outline" as const, label: "Consultation History", sub: "Past video appointments", action: "consult-history" },
     ],
   },
   {
     title: "App",
     items: [
-      { icon: "information-outline" as const, label: "About IbnCeena", sub: "Version · Legal · Licensing", action: "about" },
-      { icon: "help-circle-outline" as const, label: "Help & Support", sub: "FAQs, clinical guidelines, contact", action: "help" },
+      { icon: "information-outline" as const, label: "About HIVE Intake", sub: "Version · Legal · Licensing", action: "about" },
+      { icon: "help-circle-outline" as const, label: "Help & Support", sub: "FAQs, health guides, contact", action: "help" },
     ],
   },
+];
+
+const COMING_SOON: { icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"]; title: string; body: string }[] = [
+  { icon: "microphone-outline", title: "Voice Health Companion", body: "Talk to the app in your own language and keep your records up to date hands-free." },
+  { icon: "watch-variant", title: "Wearable Wellness Alerts", body: "Connect your watch or ring for gentle wellness notifications for you and your family." },
+  { icon: "video-outline", title: "Video Consultations", body: "Book and join video appointments with your care team, right from the app." },
+  { icon: "pill", title: "Pharmacy Document Sharing", body: "Send your medication list and documents straight to your chosen pharmacy." },
+  { icon: "translate", title: "Live Interpreter Booking", body: "Book a human interpreter for medical and legal appointments in your language." },
 ];
 
 export default function SettingsScreen() {
@@ -67,10 +78,14 @@ export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const { prefs } = useLogoTheme();
   const { mode, setMode } = useTheme();
+  const { pilotMode, activatePilot, deactivatePilot, deleteAllData } = useAppMode();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [pilotModalVisible, setPilotModalVisible] = useState(false);
+  const [pilotCode, setPilotCode] = useState("");
+  const [pilotError, setPilotError] = useState("");
 
   function handleAction(action: string) {
     Haptics.selectionAsync();
@@ -83,6 +98,9 @@ export default function SettingsScreen() {
         break;
       case "devices":
         router.push("/(app)/smart-devices");
+        break;
+      case "privacy":
+        router.push("/(app)/privacy-policy");
         break;
       default:
         setToastMessage("Coming soon — available in a future update");
@@ -101,6 +119,61 @@ export default function SettingsScreen() {
         }
       },
     ]);
+  }
+
+  function handleDeleteAllData() {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Alert.alert(
+      "Delete All My Data",
+      "This permanently erases everything this app has stored on your device — profile, records, questionnaire history, and preferences. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Everything",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            await deleteAllData();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          },
+        },
+      ],
+    );
+  }
+
+  function handleVersionLongPress() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    if (pilotMode) {
+      Alert.alert("Pilot Programme", "Pilot programme access is active on this device.", [
+        { text: "Keep Active", style: "cancel" },
+        {
+          text: "Deactivate",
+          style: "destructive",
+          onPress: async () => {
+            await deactivatePilot();
+            setToastMessage("Pilot programme deactivated");
+            setToastVisible(true);
+          },
+        },
+      ]);
+    } else {
+      setPilotCode("");
+      setPilotError("");
+      setPilotModalVisible(true);
+    }
+  }
+
+  async function handlePilotSubmit() {
+    const ok = await activatePilot(pilotCode);
+    if (ok) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPilotModalVisible(false);
+      setToastMessage("Pilot programme activated");
+      setToastVisible(true);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setPilotError("Invalid access code");
+    }
   }
 
   return (
@@ -211,6 +284,55 @@ export default function SettingsScreen() {
           </View>
         ))}
 
+        {/* What's Coming */}
+        <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.goldBorder }]}>
+          <View style={styles.sectionTitleRow}>
+            <MaterialCommunityIcons name="rocket-launch-outline" size={18} color={colors.gold} />
+            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>What's Coming</Text>
+          </View>
+          <Text style={[styles.sectionSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            New features arriving in upcoming updates.
+          </Text>
+          {COMING_SOON.map((item, i) => (
+            <View
+              key={item.title}
+              style={[styles.comingRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: colors.glassGold }]}>
+                <MaterialCommunityIcons name={item.icon} size={18} color={colors.gold} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{item.title}</Text>
+                <Text style={[styles.settingSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{item.body}</Text>
+              </View>
+              <View style={[styles.soonBadge, { backgroundColor: colors.glassGold, borderColor: colors.goldBorder }]}>
+                <Text style={[styles.soonBadgeText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>SOON</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Data & Privacy */}
+        <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionGroupLabel, { color: colors.mutedForeground }]}>YOUR DATA</Text>
+          <View style={[styles.dataStatement, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+            <MaterialCommunityIcons name="cellphone-lock" size={17} color={colors.mutedForeground} />
+            <Text style={[styles.dataStatementText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              All of your health information is stored only on this device. Nothing is uploaded to a server.
+            </Text>
+          </View>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleDeleteAllData}
+            style={[styles.deleteBtn, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}
+          >
+            <MaterialCommunityIcons name="delete-forever" size={18} color={colors.emergency} />
+            <Text style={[styles.deleteBtnText, { color: colors.emergency, fontFamily: "Inter_600SemiBold" }]}>
+              Delete All My Data
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Sign Out */}
         <TouchableOpacity activeOpacity={0.8} onPress={handleLogout}
           style={[styles.logoutBtn, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}>
@@ -218,10 +340,63 @@ export default function SettingsScreen() {
           <Text style={[styles.logoutText, { color: colors.accent, fontFamily: "Inter_600SemiBold" }]}>Sign Out</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.versionText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          IbnCeena Health Ecosystem v2.0{"\n"}GDPR Compliant · HSE Approved Framework
-        </Text>
+        <TouchableOpacity activeOpacity={1} onLongPress={handleVersionLongPress} delayLongPress={1200}>
+          <Text style={[styles.versionText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            HIVE Intake : Patient Portal v2.0 · IbnCeena Ltd.{"\n"}
+            Not a medical device — for information and administrative use only.
+            {pilotMode ? "\nPilot programme active" : ""}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
+
+      {/* Hidden pilot activation modal */}
+      <Modal visible={pilotModalVisible} transparent animationType="fade" onRequestClose={() => setPilotModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <MaterialCommunityIcons name="key-variant" size={26} color={colors.gold} />
+            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              Pilot Programme Access
+            </Text>
+            <Text style={[styles.modalSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Enter the access code provided by your pilot site coordinator.
+            </Text>
+            <TextInput
+              style={[styles.modalInput, {
+                color: colors.foreground,
+                backgroundColor: colors.background,
+                borderColor: pilotError ? colors.emergency : colors.border,
+                fontFamily: "Inter_500Medium",
+              }]}
+              placeholder="Access code"
+              placeholderTextColor={colors.mutedForeground}
+              value={pilotCode}
+              onChangeText={(t) => { setPilotCode(t); setPilotError(""); }}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              onSubmitEditing={handlePilotSubmit}
+            />
+            {pilotError ? (
+              <Text style={[styles.modalError, { color: colors.emergency, fontFamily: "Inter_400Regular" }]}>{pilotError}</Text>
+            ) : null}
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setPilotModalVisible(false)}
+                style={[styles.modalBtn, { backgroundColor: colors.cardElevated, borderColor: colors.border }]}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handlePilotSubmit}
+                style={[styles.modalBtn, { backgroundColor: colors.glassGold, borderColor: colors.goldBorder }]}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>Activate</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Toast
         message={toastMessage}
@@ -259,7 +434,23 @@ const styles = StyleSheet.create({
   settingIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   settingLabel: { fontSize: 14 },
   settingSub: { fontSize: 12, marginTop: 1 },
+  comingRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
+  soonBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
+  soonBadgeText: { fontSize: 9, letterSpacing: 1 },
+  dataStatement: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, borderWidth: 1, padding: 12 },
+  dataStatementText: { fontSize: 12.5, lineHeight: 18, flex: 1 },
+  deleteBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12, borderWidth: 1, paddingVertical: 13 },
+  deleteBtnText: { fontSize: 14 },
   logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 14, borderWidth: 1, paddingVertical: 15 },
   logoutText: { fontSize: 15 },
   versionText: { fontSize: 11, textAlign: "center", lineHeight: 18 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: 24 },
+  modalCard: { width: "100%", maxWidth: 380, borderRadius: 18, borderWidth: 1, padding: 22, alignItems: "center", gap: 10 },
+  modalTitle: { fontSize: 17, letterSpacing: -0.3 },
+  modalSub: { fontSize: 13, lineHeight: 19, textAlign: "center" },
+  modalInput: { width: "100%", borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, textAlign: "center", letterSpacing: 1 },
+  modalError: { fontSize: 12 },
+  modalBtnRow: { flexDirection: "row", gap: 10, marginTop: 6, width: "100%" },
+  modalBtn: { flex: 1, borderRadius: 12, borderWidth: 1, paddingVertical: 13, alignItems: "center" },
+  modalBtnText: { fontSize: 14 },
 });

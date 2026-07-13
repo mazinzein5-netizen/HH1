@@ -11,6 +11,17 @@ function getOpenAI(): OpenAI | null {
   return new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
 }
 
+/**
+ * Pilot behavior is only served when the request carries the pilot access
+ * code (rotatable via PILOT_ACCESS_CODE env). A bare client boolean is never
+ * trusted for the clinical/pilot prompt set.
+ */
+function isPilotRequest(body: unknown): boolean {
+  const expected = (process.env["PILOT_ACCESS_CODE"] ?? "HIVE-PILOT-2026").trim().toUpperCase();
+  const code = (body as { pilotCode?: unknown } | null)?.pilotCode;
+  return typeof code === "string" && code.trim().toUpperCase() === expected;
+}
+
 router.post("/ai/questions", async (req, res) => {
   const openai = getOpenAI();
   if (!openai) {
@@ -19,10 +30,15 @@ router.post("/ai/questions", async (req, res) => {
   }
 
   const { chiefComplaint } = req.body as { chiefComplaint?: string };
+  const pilotMode = isPilotRequest(req.body);
   if (!chiefComplaint?.trim()) {
     res.status(400).json({ error: "chiefComplaint is required" });
     return;
   }
+
+  const questionsSystemPrompt = pilotMode
+    ? `You are a clinical intake assistant for a physiotherapy and musculoskeletal clinic. Generate exactly 5 focused, intelligent clinical questions to assess the patient's complaint. Questions should cover: onset/duration, severity/character, aggravating/relieving factors, associated symptoms, and relevant history. Return ONLY a valid JSON array of 5 question strings, nothing else. Example: ["Question 1?", "Question 2?", ...]`
+    : `You help people organise notes about a health concern before a GP visit. You do NOT assess, diagnose, or give medical advice. Generate exactly 5 simple, neutral questions that help the person describe their concern clearly for their doctor — for example when it started, how it affects daily life, what they have already tried, anything that changes it, and anything else they want the doctor to know. Use plain, friendly language. Return ONLY a valid JSON array of 5 question strings, nothing else. Example: ["Question 1?", "Question 2?", ...]`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -31,11 +47,13 @@ router.post("/ai/questions", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: `You are a clinical intake assistant for a physiotherapy and musculoskeletal clinic. Generate exactly 5 focused, intelligent clinical questions to assess the patient's complaint. Questions should cover: onset/duration, severity/character, aggravating/relieving factors, associated symptoms, and relevant history. Return ONLY a valid JSON array of 5 question strings, nothing else. Example: ["Question 1?", "Question 2?", ...]`,
+          content: questionsSystemPrompt,
         },
         {
           role: "user",
-          content: `Patient's chief complaint: "${chiefComplaint.trim()}". Generate 5 specific clinical questions tailored to this complaint.`,
+          content: pilotMode
+            ? `Patient's chief complaint: "${chiefComplaint.trim()}". Generate 5 specific clinical questions tailored to this complaint.`
+            : `The person's concern, in their own words: "${chiefComplaint.trim()}". Generate 5 note-taking questions tailored to this concern.`,
         },
       ],
     });
@@ -72,6 +90,7 @@ router.post("/ai/summary", async (req, res) => {
     chiefComplaint?: string;
     qa?: { question: string; answer: string }[];
   };
+  const pilotMode = isPilotRequest(req.body);
 
   if (!chiefComplaint || !Array.isArray(qa)) {
     res.status(400).json({ error: "chiefComplaint and qa are required" });
@@ -80,14 +99,8 @@ router.post("/ai/summary", async (req, res) => {
 
   const qaText = qa.map((item) => `Q: ${item.question}\nA: ${item.answer}`).join("\n\n");
 
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 600,
-      messages: [
-        {
-          role: "system",
-          content: `You are a clinical decision support tool for a physiotherapy and musculoskeletal clinic. Analyse the patient's complaint and symptom answers, then return a JSON object with exactly these fields:
+  const summarySystemPrompt = pilotMode
+    ? `You are a clinical decision support tool for a physiotherapy and musculoskeletal clinic. Analyse the patient's complaint and symptom answers, then return a JSON object with exactly these fields:
 - "summary": a concise 2-3 sentence clinical summary
 - "recommendation": one of "Emergency", "Fast Track", "Physiotherapy", or "Virtual"
 - "urgency": one of "high", "medium", or "low"
@@ -98,7 +111,20 @@ Triage guidelines:
 - Virtual: mild symptoms, chronic stable condition, follow-up
 - Physiotherapy: routine musculoskeletal complaints
 
-Return ONLY valid JSON. No extra text.`,
+Return ONLY valid JSON. No extra text.`
+    : `You help people organise notes about a health concern to share with their GP. You do NOT assess, triage, diagnose, recommend treatment, or judge urgency. Rewrite the person's answers into a clear, neutral 2-4 sentence summary written in the first person ("I have had...", "It started..."), so they can read it to their doctor. Do not add any interpretation, advice, or opinion — only reorganise what they said. Return a JSON object with exactly one field:
+- "summary": the neutral first-person summary
+
+Return ONLY valid JSON. No extra text.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_tokens: 600,
+      messages: [
+        {
+          role: "system",
+          content: summarySystemPrompt,
         },
         {
           role: "user",
@@ -114,6 +140,11 @@ Return ONLY valid JSON. No extra text.`,
     } catch {
       const match = content.match(/\{[\s\S]*\}/);
       if (match) result = JSON.parse(match[0]);
+    }
+
+    if (!pilotMode) {
+      res.json({ summary: result["summary"] ?? "" });
+      return;
     }
 
     res.json(result);
@@ -153,6 +184,18 @@ Style rules:
 - When giving self-care advice, use numbered steps for clarity.
 - End every substantive assessment message with: "⚠️ Disclaimer: This information is for guidance only and is not a substitute for professional medical advice. Always consult a qualified healthcare provider for diagnosis and treatment."`;
 
+const GUIDELINE_INFO_SYSTEM_PROMPT = `You are HIVE Bot, a friendly health information assistant. You help people find and understand publicly available health guideline information from HSE (Ireland) and NICE (UK), explained in plain English.
+
+Strict rules — you must follow all of these:
+- You provide GENERAL INFORMATION ONLY. You never assess, triage, or diagnose anyone, never estimate what condition someone might have, and never rate severity or urgency.
+- Do not ask questions about the user's personal symptoms. If the user describes their own symptoms, do not analyse them — briefly acknowledge, explain you can only share general guideline information, and suggest they speak to their GP (or call 112 in an emergency).
+- Cite guideline names inline using 【】 brackets when referencing them, e.g. 【NICE NG59 – Musculoskeletal Pain】.
+- Explain guideline content in plain, non-technical language.
+- Never open a message with "⚠️ RED FLAG:" or classify anything as a red flag.
+- End every substantive message with: "This is general information only, not medical advice. For anything about your own health, please talk to your GP."
+
+Tone: warm, clear, and concise.`;
+
 router.post("/ai/chat", async (req, res) => {
   const openai = getOpenAI();
   if (!openai) {
@@ -163,6 +206,7 @@ router.post("/ai/chat", async (req, res) => {
   const { messages } = req.body as {
     messages?: { role: "user" | "assistant"; content: string }[];
   };
+  const pilotMode = isPilotRequest(req.body);
 
   if (!Array.isArray(messages) || messages.length === 0) {
     res.status(400).json({ error: "messages array is required" });
@@ -174,12 +218,17 @@ router.post("/ai/chat", async (req, res) => {
       model: "gpt-4o-mini",
       max_tokens: 800,
       messages: [
-        { role: "system", content: PAIN_CHAT_SYSTEM_PROMPT },
+        { role: "system", content: pilotMode ? PAIN_CHAT_SYSTEM_PROMPT : GUIDELINE_INFO_SYSTEM_PROMPT },
         ...messages,
       ],
     });
 
-    const reply = completion.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response. Please try again.";
+    let reply = completion.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response. Please try again.";
+    if (!pilotMode) {
+      // Clean-mode guardrail: never surface red-flag classification, even if
+      // the model ignores its instructions.
+      reply = reply.replace(/⚠️?\s*RED FLAG:?\s*/gi, "").trimStart();
+    }
     res.json({ message: reply });
   } catch (err) {
     logger.error({ err }, "AI chat error");

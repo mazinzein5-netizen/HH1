@@ -26,7 +26,7 @@ const CONSULT_TYPES: { key: ConsultType; label: string; subtitle: string; icon: 
   { key: "physio", label: "Physiotherapist", subtitle: "MSK & rehabilitation", icon: "human-handsup", color: "#22c55e", wait: "~8 min" },
   { key: "ortho", label: "Orthopaedic Specialist", subtitle: "Bone, joint & spine", icon: "bone", color: "#f59e0b", wait: "~25 min" },
   { key: "neuro", label: "Neurology", subtitle: "Cervical myelopathy & nerve pain", icon: "brain", color: "#a78bfa", wait: "~30 min" },
-  { key: "geriatric", label: "Geriatric Medicine", subtitle: "Elder care & cognitive assessment", icon: "human-cane", color: "#E5294E", wait: "~18 min" },
+  { key: "geriatric", label: "Geriatric Medicine", subtitle: "Elder care & memory support", icon: "human-cane", color: "#E5294E", wait: "~18 min" },
 ];
 
 const MOOD_OPTIONS = [

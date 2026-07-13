@@ -33,7 +33,7 @@ const CATEGORY_META: Record<Category, {
     description: "HRV, SpO₂ & skin temperature — early metabolic & dehydration signals",
   },
   watches: {
-    label: "CLINICAL WEARABLES",
+    label: "HEALTH WEARABLES",
     icon: "watch-variant",
     color: "#4F6EF7",
     description: "ECG, blood pressure & biometric monitoring",
@@ -89,7 +89,7 @@ export default function SmartDevicesScreen() {
           <MaterialCommunityIcons name="devices" size={36} color="#22c55e" />
           <Text style={[styles.heroTitle, { color: "#fff", fontFamily: "Inter_700Bold" }]}>Smart Device Hub</Text>
           <Text style={[styles.heroSub, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" }]}>
-            Clinical-grade wearables with real-time ECG,{"\n"}BP, glucose, and metabolic monitoring
+            Health wearables with real-time ECG,{"\n"}BP, glucose, and metabolic monitoring
           </Text>
           <View style={[styles.connectedBadge, { backgroundColor: "#22c55e22", borderColor: "#22c55e55" }]}>
             <Text style={[styles.connectedBadgeText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>
