@@ -146,6 +146,44 @@ export default function Home() {
 
         <TrustStrip />
 
+        {/* Section 1.5: Promo Video */}
+        <section id="film" className="py-24 relative">
+          <div className="container mx-auto px-6">
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              className="text-center max-w-3xl mx-auto mb-12"
+            >
+              <motion.div variants={fadeInUp} className="text-primary font-bold tracking-widest uppercase text-xs mb-4">
+                See It In Action
+              </motion.div>
+              <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold leading-tight text-foreground">
+                Health HIVE in under a minute
+              </motion.h2>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.7 }}
+              className="relative max-w-5xl mx-auto rounded-[2rem] overflow-hidden glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+            >
+              <div className="aspect-video bg-[#07070f]">
+                <iframe
+                  src="/promo-video/?embed=1"
+                  title="Health HIVE promo video"
+                  className="w-full h-full border-0 pointer-events-none"
+                  loading="lazy"
+                  tabIndex={-1}
+                  scrolling="no"
+                />
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
         {/* Section 2: Ecosystem Overview */}
         <section id="ecosystem" className="py-24 relative">
           <div className="container mx-auto px-6">

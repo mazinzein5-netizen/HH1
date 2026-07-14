@@ -120,6 +120,9 @@ function ControlBar({
 
 export default function VideoWithControls() {
   const isIframed = typeof window !== 'undefined' && window.self !== window.top;
+  const isEmbedded =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has('embed');
 
   const {
     sceneKeys, activeIndex, locked, mountKey, tick,
@@ -161,7 +164,7 @@ export default function VideoWithControls() {
 
   const barVisible = !collapsed || hovering || tapPinned;
 
-  if (!isIframed) return <VideoTemplate />;
+  if (!isIframed || isEmbedded) return <VideoTemplate />;
 
   return (
     <div className="relative w-full h-screen">
