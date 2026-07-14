@@ -2,9 +2,10 @@ import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHiveBot } from "@/context/HiveBotContext";
+import { useSmartDevices } from "@/context/SmartDevicesContext";
 import { useColors } from "@/hooks/useColors";
 
 export default function TabLayout() {
@@ -12,6 +13,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const isIOS = Platform.OS === "ios";
   const hiveBot = useHiveBot();
+  const { connectedCount } = useSmartDevices();
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const fabBottom = bottomPad + 64 + 14;
@@ -54,14 +56,23 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="triage"
+          name="live-hive"
           options={{
-            title: "Questionnaires",
+            title: "Live HIVE",
             tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="waveform" size={(size ?? 20) + 2} color={color} />
+              <View>
+                <MaterialCommunityIcons name="hexagon-multiple" size={(size ?? 20) + 2} color={color} />
+                <View
+                  style={[
+                    styles.deviceDot,
+                    { backgroundColor: connectedCount > 0 ? "#22c55e" : colors.mutedForeground },
+                  ]}
+                />
+              </View>
             ),
           }}
         />
+        <Tabs.Screen name="triage" options={{ href: null }} />
         <Tabs.Screen
           name="profile"
           options={{
@@ -77,13 +88,14 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      {/* Floating HIVE Bot button — visible across all tabs */}
+      {/* Floating Queen B bee — visible across all tabs */}
       <TouchableOpacity
         activeOpacity={0.88}
         onPress={() => hiveBot.open()}
         style={[styles.fab, { bottom: fabBottom, backgroundColor: "#C9860A", shadowColor: "#C9860A" }]}
       >
-        <MaterialCommunityIcons name="robot-happy" size={24} color="#fff" />
+        <MaterialCommunityIcons name="bee" size={26} color="#fff" />
+        <Text style={styles.fabLabel}>Ask{"\n"}Queen B</Text>
       </TouchableOpacity>
     </View>
   );
@@ -94,14 +106,29 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 20,
     zIndex: 50,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 7,
+    borderRadius: 30,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.45,
     shadowRadius: 10,
     elevation: 12,
+  },
+  fabLabel: {
+    color: "#fff",
+    fontFamily: "Inter_700Bold",
+    fontSize: 12,
+    lineHeight: 14,
+  },
+  deviceDot: {
+    position: "absolute",
+    top: -1,
+    right: -3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });

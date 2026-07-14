@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Speech from "expo-speech";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -35,19 +36,37 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   seedContext?: string;
+  /** When true, Queen B focuses on helping the patient describe pain for health practitioners. */
+  painHelper?: boolean;
 }
 
 const PILOT_GREETING: ChatMessage = {
   role: "assistant",
   content:
-    "Hello! I'm HIVE Bot, your AI pain and clinical guidance assistant.\n\nI can help you understand your symptoms, explain likely causes, walk you through self-care steps, and flag any signs that need urgent attention — all aligned with NICE and HSE clinical guidelines.\n\nTo get started, could you tell me where you're experiencing pain or discomfort?",
+    "Hello! I'm Queen B, your AI pain and clinical guidance assistant.\n\nI can help you understand your symptoms, explain likely causes, walk you through self-care steps, and flag any signs that need urgent attention — all aligned with NICE and HSE clinical guidelines.\n\nTo get started, could you tell me where you're experiencing pain or discomfort?",
 };
 
 const CLEAN_GREETING: ChatMessage = {
   role: "assistant",
   content:
-    "Hello! I'm HIVE Bot. I can help you find and understand health guideline information from HSE and NICE, explained in plain English.\n\nI don't give medical advice or assess symptoms — for anything about your own health, please speak to your GP, or call 112 in an emergency.\n\nWhat health topic would you like to look up?",
+    "Hello! I'm Queen B. I can help you find and understand health guideline information from HSE and NICE, explained in plain English.\n\nI don't give medical advice or assess symptoms — for anything about your own health, please speak to your GP, or call 112 in an emergency.\n\nWhat health topic would you like to look up?",
 };
+
+const PAIN_HELPER_GREETING: ChatMessage = {
+  role: "assistant",
+  content:
+    "Hello! I'm Queen B. I'm here to help you put your pain into words your doctor or physiotherapist will understand.\n\nTell me about your pain in your own way, and I'll help you describe where it is, how it feels, when it started, and what makes it better or worse — so nothing important gets missed at your appointment.\n\nWhere is your pain?",
+};
+
+/** Strip markdown/emoji noise so text-to-speech sounds natural. */
+function toSpeakable(text: string): string {
+  return text
+    .replace(/【[^】]*】/g, "")
+    .replace(/[*_#`]/g, "")
+    .replace(/⚠️/g, "Warning. ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -88,24 +107,56 @@ function UserBubble({ content, colors }: { content: string; colors: ReturnType<t
   );
 }
 
-export default function ChatBot({ visible, onClose, seedContext }: Props) {
+export default function ChatBot({ visible, onClose, seedContext, painHelper }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { data: patient } = usePatient();
   const { pilotMode } = useAppMode();
-  const greeting = pilotMode ? PILOT_GREETING : CLEAN_GREETING;
+  const greeting = painHelper ? PAIN_HELPER_GREETING : pilotMode ? PILOT_GREETING : CLEAN_GREETING;
   const [messages, setMessages] = useState<ChatMessage[]>([greeting]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [voiceOn, setVoiceOn] = useState(true);
+  const voiceOnRef = useRef(voiceOn);
+  voiceOnRef.current = voiceOn;
+
+  function speak(text: string) {
+    if (!voiceOnRef.current) return;
+    try {
+      Speech.stop();
+      Speech.speak(toSpeakable(text), { language: "en-IE", rate: 0.95 });
+    } catch {
+      // Voice is best-effort; never block the chat on speech errors.
+    }
+  }
+
+  function toggleVoice() {
+    setVoiceOn((v) => {
+      if (v) {
+        try { Speech.stop(); } catch {}
+      }
+      return !v;
+    });
+  }
+
+  // Stop speaking when the sheet closes or unmounts.
+  useEffect(() => {
+    if (!visible) {
+      try { Speech.stop(); } catch {}
+    }
+    return () => {
+      try { Speech.stop(); } catch {}
+    };
+  }, [visible]);
   const flatListRef = useRef<FlatList>(null);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const seededRef = useRef<string | undefined>(undefined);
 
-  // If pilot mode is toggled while the conversation is still fresh, swap greeting.
+  // If pilot mode or pain-helper mode changes while the conversation is fresh, swap greeting.
   useEffect(() => {
     setMessages((prev) => (prev.length <= 1 ? [greeting] : prev));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pilotMode]);
+  }, [pilotMode, painHelper]);
 
   const hasRedFlag =
     pilotMode &&
@@ -162,12 +213,14 @@ export default function ChatBot({ visible, onClose, seedContext }: Props) {
         body: JSON.stringify({
           messages: nextMessages.map(({ role, content }) => ({ role, content })),
           pilotCode: pilotMode ? PILOT_ACTIVATION_CODE : undefined,
+          mode: painHelper ? "painDescribe" : undefined,
         }),
       });
       if (res.ok) {
         const data = await res.json();
         if (data.message) {
           setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
+          speak(data.message);
         }
       } else {
         setMessages((prev) => [
@@ -195,19 +248,19 @@ export default function ChatBot({ visible, onClose, seedContext }: Props) {
   function handleShareToServices() {
     const transcript = messages
       .slice(1)
-      .map((m) => `${m.role === "user" ? "Patient" : "HIVE Bot"}: ${m.content}`)
+      .map((m) => `${m.role === "user" ? "Patient" : "Queen B"}: ${m.content}`)
       .join("\n\n");
 
     const body = [
       formatPatientCard(patient),
       "",
-      pilotMode ? "PAIN ASSESSMENT CONVERSATION" : "GUIDELINE INFORMATION CONVERSATION",
+      painHelper ? "PAIN DESCRIPTION CONVERSATION" : pilotMode ? "PAIN ASSESSMENT CONVERSATION" : "GUIDELINE INFORMATION CONVERSATION",
       "",
       transcript || "No conversation recorded yet.",
     ].join("\n");
 
     shareWithHealthServices(
-      pilotMode ? "HIVE Bot — Clinical Handover Summary" : "HIVE Bot — Conversation Summary",
+      painHelper || pilotMode ? "Queen B — Clinical Handover Summary" : "Queen B — Conversation Summary",
       body,
     );
   }
@@ -239,16 +292,27 @@ export default function ChatBot({ visible, onClose, seedContext }: Props) {
             <View style={styles.dragHandle} />
             <View style={styles.headerRow}>
               <View style={[styles.botIcon, { backgroundColor: "rgba(201,134,10,0.18)", borderColor: "rgba(201,134,10,0.4)" }]}>
-                <MaterialCommunityIcons name="robot-happy" size={20} color="#C9860A" />
+                <MaterialCommunityIcons name="bee" size={20} color="#C9860A" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                  HIVE Bot
+                  Queen B
                 </Text>
                 <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  {pilotMode ? "Pain & Clinical Guidance" : "Guideline Information"}
+                  {painHelper ? "Helping You Describe Your Pain" : pilotMode ? "Pain & Clinical Guidance" : "Guideline Information"}
                 </Text>
               </View>
+              <TouchableOpacity
+                onPress={toggleVoice}
+                style={[styles.clearBtn, { borderColor: voiceOn ? "rgba(201,134,10,0.5)" : colors.border }]}
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons
+                  name={voiceOn ? "volume-high" : "volume-off"}
+                  size={16}
+                  color={voiceOn ? "#C9860A" : colors.mutedForeground}
+                />
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={callEmergencyServices}
                 style={[styles.emergencyPill, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}
@@ -354,7 +418,7 @@ export default function ChatBot({ visible, onClose, seedContext }: Props) {
               <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <TextInput
                   style={[styles.textInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                  placeholder={pilotMode ? "Describe your pain or ask a question..." : "Ask about a health topic or guideline..."}
+                  placeholder={painHelper || pilotMode ? "Describe your pain or ask a question..." : "Ask about a health topic or guideline..."}
                   placeholderTextColor={colors.mutedForeground}
                   value={input}
                   onChangeText={setInput}

@@ -19,7 +19,7 @@ export interface PrescriptionPatientInfo {
 }
 
 const FOOTER_NOTE =
-  "Issued via HIVE Intake : Patient Portal — for pharmacy information only. This document is not a legal prescription unless signed by a registered prescriber.";
+  "Issued via HIVE COMPANION : Patient Portal — for pharmacy information only. This document is not a legal prescription unless signed by a registered prescriber.";
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

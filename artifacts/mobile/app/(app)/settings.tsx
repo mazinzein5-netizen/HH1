@@ -59,7 +59,7 @@ const SECTIONS = [
   {
     title: "App",
     items: [
-      { icon: "information-outline" as const, label: "About HIVE Intake", sub: "Version · Legal · Licensing", action: "about" },
+      { icon: "information-outline" as const, label: "About HIVE COMPANION", sub: "Version · Legal · Licensing", action: "about" },
       { icon: "help-circle-outline" as const, label: "Help & Support", sub: "FAQs, health guides, contact", action: "help" },
     ],
   },
@@ -344,7 +344,7 @@ export default function SettingsScreen() {
 
         <TouchableOpacity activeOpacity={1} onLongPress={handleVersionLongPress} delayLongPress={1200}>
           <Text style={[styles.versionText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            HIVE Intake : Patient Portal v2.0 · IbnCeena Ltd.{"\n"}
+            HIVE COMPANION : Patient Portal v2.0 · IbnCeena Ltd.{"\n"}
             Not a medical device — for information and administrative use only.
             {pilotMode ? "\nPilot programme active" : ""}
           </Text>

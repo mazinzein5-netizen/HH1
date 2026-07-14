@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HiveCardBg from "@/components/HoneycombCardBg";
 import HiveLogo from "@/components/HiveLogo";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
-import { useHiveBot } from "@/context/HiveBotContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useSmartDevices } from "@/context/SmartDevicesContext";
 import { useColors } from "@/hooks/useColors";
@@ -27,7 +26,6 @@ export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
-  const hiveBot   = useHiveBot();
   const { connectedCount, devices } = useSmartDevices();
   const liveVitals = devices.filter((d) => d.connected).slice(0, 2);
   const topPad    = Platform.OS === "web" ? 67 : insets.top;
@@ -90,7 +88,7 @@ export default function DashboardScreen() {
             showText={false}
           />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>HIVE INTAKE</Text>
+            <Text style={[styles.appName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>HIVE COMPANION</Text>
             <Text style={[styles.appEco, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>PATIENT PORTAL</Text>
           </View>
           <TouchableOpacity
@@ -152,28 +150,6 @@ export default function DashboardScreen() {
           </LinearGradient>
         </View>
 
-        {/* HIVE Bot card */}
-        <TouchableOpacity
-          activeOpacity={0.88}
-          onPress={() => hiveBot.open()}
-          style={[styles.sectionCard, { borderColor: colors.gold + "44" }]}
-        >
-          <LinearGradient colors={["#1a1200", "#2a1e00"]} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
-          <HiveCardBg gradientColors={["rgba(201,134,10,0.18)", "rgba(0,0,0,0.10)", "transparent"]} />
-          <View style={[styles.sectionIcon, { backgroundColor: "rgba(201,134,10,0.18)", borderColor: "rgba(201,134,10,0.4)", borderWidth: 1 }]}>
-            <MaterialCommunityIcons name="robot-happy" size={22} color={colors.gold} />
-          </View>
-          <Text style={[styles.sectionTitle, { color: "#fff", fontFamily: "Inter_700Bold" }]}>HIVE Bot</Text>
-          <Text style={[styles.sectionBody, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" }]}>
-            Look up HSE and NICE health guideline information in plain English, any time.
-          </Text>
-          <View style={styles.sectionLink}>
-            <View style={[styles.liveDot, { backgroundColor: colors.goldBright }]} />
-            <Text style={[styles.sectionLinkText, { color: colors.goldLight, fontFamily: "Inter_600SemiBold" }]}>Ask HIVE Bot</Text>
-            <Feather name="chevron-right" size={14} color={colors.goldLight} />
-          </View>
-        </TouchableOpacity>
-
         {/* Live Consultation */}
         <TouchableOpacity activeOpacity={0.88} onPress={() => router.push("/(app)/consultation")}>
           <LinearGradient colors={["#071a10", "#0a2818"]} style={[styles.sectionCard, { borderColor: "#22c55e33" }]}>
@@ -191,26 +167,6 @@ export default function DashboardScreen() {
               <Feather name="chevron-right" size={14} color="#22c55e" />
             </View>
           </LinearGradient>
-        </TouchableOpacity>
-
-        {/* Health Questionnaires */}
-        <TouchableOpacity
-          activeOpacity={0.88}
-          onPress={() => router.push("/(app)/(tabs)/triage")}
-          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-        >
-          <HiveCardBg />
-          <View style={[styles.sectionIcon, { backgroundColor: colors.glassPrimary, borderColor: colors.glassPrimaryBorder, borderWidth: 1 }]}>
-            <MaterialCommunityIcons name="waveform" size={22} color={colors.primary} />
-          </View>
-          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Health Questionnaires</Text>
-          <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Standardised questionnaires — ODI (Lumbar), mJOA (Cervical), Oxford Hip & Knee — with a summary you can share with your GP.
-          </Text>
-          <View style={styles.sectionLink}>
-            <Text style={[styles.sectionLinkText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>Open Questionnaires</Text>
-            <Feather name="chevron-right" size={14} color={colors.primary} />
-          </View>
         </TouchableOpacity>
 
         {/* Health Card */}
@@ -233,7 +189,27 @@ export default function DashboardScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Documents & Pharmacy */}
+        {/* My Medical History */}
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push("/(app)/medical-history")}
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.gold + "33" }]}
+        >
+          <HiveCardBg gradientColors={["rgba(201,134,10,0.10)", "rgba(0,0,0,0.10)", "transparent"]} />
+          <View style={[styles.sectionIcon, { backgroundColor: "rgba(201,134,10,0.12)", borderColor: "rgba(201,134,10,0.3)", borderWidth: 1 }]}>
+            <MaterialCommunityIcons name="clipboard-pulse" size={22} color={colors.gold} />
+          </View>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>My Medical History</Text>
+          <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Your conditions, past treatments, and health records — all in one clear place.
+          </Text>
+          <View style={styles.sectionLink}>
+            <Text style={[styles.sectionLinkText, { color: colors.goldLight, fontFamily: "Inter_600SemiBold" }]}>Open Medical History</Text>
+            <Feather name="chevron-right" size={14} color={colors.goldLight} />
+          </View>
+        </TouchableOpacity>
+
+        {/* My Prescription Portal */}
         <TouchableOpacity
           activeOpacity={0.88}
           onPress={() => router.push("/(app)/documents")}
@@ -241,14 +217,14 @@ export default function DashboardScreen() {
         >
           <HiveCardBg gradientColors={["rgba(201,134,10,0.10)", "rgba(0,0,0,0.10)", "transparent"]} />
           <View style={[styles.sectionIcon, { backgroundColor: "rgba(201,134,10,0.12)", borderColor: "rgba(201,134,10,0.3)", borderWidth: 1 }]}>
-            <MaterialCommunityIcons name="file-document-multiple" size={22} color={colors.gold} />
+            <MaterialCommunityIcons name="pill" size={22} color={colors.gold} />
           </View>
-          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Documents & Pharmacy</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>My Prescription Portal</Text>
           <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Keep your medical reports and current prescription in one place — email, print, or hand them to a pharmacy, and find one nearby.
+            Your current prescription and reports — email, print, or hand them to a pharmacy, and find one nearby.
           </Text>
           <View style={styles.sectionLink}>
-            <Text style={[styles.sectionLinkText, { color: colors.goldLight, fontFamily: "Inter_600SemiBold" }]}>Open Documents</Text>
+            <Text style={[styles.sectionLinkText, { color: colors.goldLight, fontFamily: "Inter_600SemiBold" }]}>Open Prescription Portal</Text>
             <Feather name="chevron-right" size={14} color={colors.goldLight} />
           </View>
         </TouchableOpacity>
@@ -339,22 +315,6 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </Animated.ScrollView>
 
-      {/* ── HIVE Bot floating action button ── */}
-      <TouchableOpacity
-        activeOpacity={0.88}
-        onPress={() => hiveBot.open()}
-        style={[styles.fab, { bottom: bottomPad + 16 }]}
-      >
-        <LinearGradient
-          colors={["#C9860A", "#D4A017", "#8B5E00"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.fabGradient}
-        >
-          <MaterialCommunityIcons name="robot-happy" size={22} color="#fff" />
-          <Text style={[styles.fabLabel, { fontFamily: "Inter_700Bold" }]}>HIVE Bot</Text>
-        </LinearGradient>
-      </TouchableOpacity>
     </View>
   );
 }

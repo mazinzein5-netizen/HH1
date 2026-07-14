@@ -35,6 +35,9 @@ export default function MonitoringScreen() {
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
+  // Rendered both as a stack screen and inside the tab bar (Live HIVE tab),
+  // so always leave room for the tab bar + safe area at the bottom.
+  const bottomPad = (Platform.OS === "web" ? 34 : insets.bottom) + 64 + 20;
 
   const [deviceName] = useState<DeviceName>("Apple Watch");
   const batteryPct = 78;
@@ -46,12 +49,14 @@ export default function MonitoringScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <Feather name="arrow-left" size={20} color={colors.foreground} />
-        </TouchableOpacity>
+        {router.canGoBack() && (
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Feather name="arrow-left" size={20} color={colors.foreground} />
+          </TouchableOpacity>
+        )}
         <View style={{ flex: 1 }}>
           <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-            Health Monitoring
+            Live HIVE
           </Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
             {deviceName} · Battery {batteryPct}%
@@ -63,7 +68,7 @@ export default function MonitoringScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]} showsVerticalScrollIndicator={false}>
 
         {/* ── TOP METRICS ROW ── */}
         <View style={styles.topRow}>
@@ -313,7 +318,7 @@ const styles = StyleSheet.create({
   liveBadge: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#22c55e" },
   liveBadgeText: { fontSize: 11, letterSpacing: 0.5 },
-  scroll: { padding: 16, gap: 14, paddingBottom: 60 },
+  scroll: { padding: 16, gap: 14 },
   topRow: { flexDirection: "row", gap: 10 },
   topCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, gap: 2, alignItems: "center" },
   topValue: { fontSize: 30, lineHeight: 36 },

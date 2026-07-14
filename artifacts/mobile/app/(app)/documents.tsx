@@ -355,7 +355,7 @@ export default function DocumentsScreen() {
         )}
 
         <Text style={[styles.privacyNote, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          Documents are stored only on this device. Sending uses your own mail app or share sheet — nothing is uploaded by HIVE Intake.
+          Documents are stored only on this device. Sending uses your own mail app or share sheet — nothing is uploaded by HIVE COMPANION.
         </Text>
       </ScrollView>
     </View>

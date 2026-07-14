@@ -701,13 +701,13 @@ export default function BodyMapScreen() {
               onPress={() => {
                 const labels = ["What happened", "When it started", "Swelling", "Weight-bearing", "Locking or giving way"];
                 const seed = `I have a recent knee injury. ${ACUTE_KNEE_QUESTIONS.map((q, i) => `${labels[i]}: ${q.options[acuteAnswers[i] ?? 0]}`).join(". ")}. What should I do while I wait to speak to the pain doctor?`;
-                hiveBot.open(seed);
+                hiveBot.open(seed, { painHelper: true });
               }}
               style={[styles.secondaryCta, { borderColor: colors.border, backgroundColor: colors.card }]}
             >
-              <MaterialCommunityIcons name="robot-happy" size={20} color={colors.gold} />
+              <MaterialCommunityIcons name="bee" size={20} color={colors.gold} />
               <Text style={[styles.primaryCtaText, { fontFamily: "Inter_600SemiBold", color: colors.foreground }]}>
-                Ask HIVE Bot for Advice
+                Ask Queen B for Advice
               </Text>
             </TouchableOpacity>
           </View>

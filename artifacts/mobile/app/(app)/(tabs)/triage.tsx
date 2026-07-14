@@ -131,7 +131,7 @@ export default function TriageScreen() {
         : "I did not report any red-flag symptoms.",
       "Please help me understand my symptoms and what I should do next.",
     ].join(" ");
-    hiveBot.open(seed);
+    hiveBot.open(seed, { painHelper: true });
   }
 
   function buildReferralSummary(total: number) {
@@ -175,7 +175,7 @@ export default function TriageScreen() {
     ]
       .filter(Boolean)
       .join(" ");
-    hiveBot.open(seed);
+    hiveBot.open(seed, { painHelper: true });
   }
 
   return (
@@ -310,9 +310,9 @@ export default function TriageScreen() {
             )}
 
             <TouchableOpacity activeOpacity={0.85} onPress={askHiveBotAboutPathway} style={[styles.botBtn, { borderColor: colors.glassGoldBorder, backgroundColor: colors.glassGold }]}>
-              <MaterialCommunityIcons name="robot-happy" size={17} color={colors.gold} />
+              <MaterialCommunityIcons name="bee" size={17} color={colors.gold} />
               <Text style={[styles.botBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
-                Ask HIVE Bot about guideline information
+                Ask Queen B about guideline information
               </Text>
             </TouchableOpacity>
 
@@ -525,9 +525,9 @@ export default function TriageScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity activeOpacity={0.85} onPress={() => askHiveBotAboutResults(total)} style={[styles.botBtn, { borderColor: colors.glassGoldBorder, backgroundColor: colors.glassGold }]}>
-                <MaterialCommunityIcons name="robot-happy" size={17} color={colors.gold} />
+                <MaterialCommunityIcons name="bee" size={17} color={colors.gold} />
                 <Text style={[styles.botBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
-                  Ask HIVE Bot about guideline information
+                  Ask Queen B about guideline information
                 </Text>
               </TouchableOpacity>
 

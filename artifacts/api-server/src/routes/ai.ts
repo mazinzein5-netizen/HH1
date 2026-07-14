@@ -196,6 +196,17 @@ Strict rules — you must follow all of these:
 
 Tone: warm, clear, and concise.`;
 
+const PAIN_DESCRIBE_SYSTEM_PROMPT = `You are Queen B, a friendly assistant who helps people put their pain or health issue into clear words to share with their doctor, physiotherapist, or other health practitioner.
+
+Strict rules — you must follow all of these:
+- You do NOT assess, triage, diagnose, rate urgency, or suggest treatments. Your only job is to help the person DESCRIBE their pain or issue clearly.
+- Guide them, one or two gentle questions at a time, through the details a practitioner needs: where it is, how it feels (sharp, aching, burning, throbbing), how strong it is on a 0–10 scale, when it started, whether it is constant or comes and goes, what makes it better or worse, how it affects sleep and daily activities, and anything they have already tried.
+- Reflect their answers back in clear, simple language they could read out at an appointment.
+- When you have enough detail, offer a short first-person summary ("I have had a burning pain in my left shoulder for two weeks...") they can share with their practitioner.
+- If they describe anything that sounds like an emergency (chest pain with breathlessness or sweating, sudden severe headache, loss of bladder/bowel control with back pain, numbness in the saddle area), do not analyse it — tell them plainly to contact emergency services (112) right away.
+- Use warm, plain, non-technical language. Never add interpretation, opinions, or medical advice.
+- End substantive messages with: "This is to help you describe things to your health practitioner — it is not medical advice."`;
+
 router.post("/ai/chat", async (req, res) => {
   const openai = getOpenAI();
   if (!openai) {
@@ -203,10 +214,17 @@ router.post("/ai/chat", async (req, res) => {
     return;
   }
 
-  const { messages } = req.body as {
+  const { messages, mode } = req.body as {
     messages?: { role: "user" | "assistant"; content: string }[];
+    mode?: string;
   };
   const pilotMode = isPilotRequest(req.body);
+  // "painDescribe" is a NON-privileged, description-only prompt: it never
+  // assesses, diagnoses, or advises — same trust tier as the clean
+  // note-organising prompts in /ai/questions and /ai/summary, so it is
+  // intentionally available without the pilot code. The red-flag scrub
+  // below is also applied to it as a guardrail.
+  const painDescribe = mode === "painDescribe";
 
   if (!Array.isArray(messages) || messages.length === 0) {
     res.status(400).json({ error: "messages array is required" });
@@ -218,13 +236,20 @@ router.post("/ai/chat", async (req, res) => {
       model: "gpt-4o-mini",
       max_tokens: 800,
       messages: [
-        { role: "system", content: pilotMode ? PAIN_CHAT_SYSTEM_PROMPT : GUIDELINE_INFO_SYSTEM_PROMPT },
+        {
+          role: "system",
+          content: painDescribe
+            ? PAIN_DESCRIBE_SYSTEM_PROMPT
+            : pilotMode
+              ? PAIN_CHAT_SYSTEM_PROMPT
+              : GUIDELINE_INFO_SYSTEM_PROMPT,
+        },
         ...messages,
       ],
     });
 
     let reply = completion.choices[0]?.message?.content ?? "I'm sorry, I couldn't generate a response. Please try again.";
-    if (!pilotMode) {
+    if (!pilotMode || painDescribe) {
       // Clean-mode guardrail: never surface red-flag classification, even if
       // the model ignores its instructions.
       reply = reply.replace(/⚠️?\s*RED FLAG:?\s*/gi, "").trimStart();

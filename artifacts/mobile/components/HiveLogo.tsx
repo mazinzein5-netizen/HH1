@@ -179,7 +179,7 @@ export default function HiveLogo({
       {showText && (
         <View style={[styles.textBlock, { left: S * 1.02 }]}>
           <Text style={subTextStyle} numberOfLines={1}>PATIENT PORTAL</Text>
-          <Text style={hiveTextStyle} numberOfLines={1}>HIVE INTAKE</Text>
+          <Text style={hiveTextStyle} numberOfLines={1}>HIVE COMPANION</Text>
           <Text style={companyTextStyle} numberOfLines={1}>IbnCeena Ltd.</Text>
         </View>
       )}

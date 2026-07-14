@@ -167,7 +167,7 @@ export default function LoginScreen() {
         </View>
 
         <Text style={[styles.disclaimer, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          HIVE Intake · GDPR Compliant · Not a medical device — for information and administrative use only
+          HIVE COMPANION · GDPR Compliant · Not a medical device — for information and administrative use only
         </Text>
       </ScrollView>
     </View>
