@@ -16,6 +16,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useSmartDevices } from "@/context/SmartDevicesContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
+import { useAppMode } from "@/context/AppModeContext";
+import { useHealthMonitor } from "@/context/HealthMonitorContext";
+import { availabilityLabel, VENDOR_BRIDGES } from "@/utils/healthBridges";
 import { useColors } from "@/hooks/useColors";
 
 type Category = "rings" | "watches" | "cgm";
@@ -55,6 +58,16 @@ export default function SmartDevicesScreen() {
   const topPad = Platform.OS === "web" ? 0 : insets.top;
 
   const { devices, connectedCount, toggleDevice } = useSmartDevices();
+  const { pilotMode } = useAppMode();
+  const {
+    monitoringActive,
+    alertHistory,
+    bridgeStates,
+    connectBridge,
+    disconnectBridge,
+    triggerDemoFall,
+    clearHistory,
+  } = useHealthMonitor();
 
   const connected = devices.filter((d) => d.connected);
   const hrDevice = connected.find((d) => d.readingLabel === "HR bpm");
@@ -240,6 +253,136 @@ export default function SmartDevicesScreen() {
           </View>
         </View>
 
+        {/* ── Health Platform Monitoring — pilot mode only ─────────────────── */}
+        {pilotMode && (
+          <>
+            <Text style={[styles.groupLabel, { color: "#f59e0b", marginTop: 10 }]}>
+              HEALTH PLATFORM MONITORING · PILOT
+            </Text>
+
+            {/* Monitoring status */}
+            <View style={[styles.pilotCard, { backgroundColor: colors.card, borderColor: monitoringActive ? "#22c55e55" : colors.border }]}>
+              <MaterialCommunityIcons
+                name={monitoringActive ? "shield-check" : "shield-outline"}
+                size={22}
+                color={monitoringActive ? "#22c55e" : colors.mutedForeground}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.pilotCardTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                  {monitoringActive ? "Monitoring active" : "Monitoring paused"}
+                </Text>
+                <Text style={[styles.pilotCardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  {monitoringActive
+                    ? "Falls, heart rate, SpO₂, ECG changes and glucose are being watched. A full-screen alert appears if a danger signal is detected."
+                    : "Connect at least one device above to start watching for falls and dangerous vital changes."}
+                </Text>
+              </View>
+            </View>
+
+            {/* Platform bridges */}
+            {VENDOR_BRIDGES.map((b) => {
+              const avail = b.availability();
+              const ready = avail === "available";
+              const state = bridgeStates[b.id] ?? { connected: false, connecting: false, error: null };
+              return (
+                <View key={b.id} style={[styles.pilotCard, { backgroundColor: colors.card, borderColor: state.connected ? "#22c55e55" : colors.border }]}>
+                  <MaterialCommunityIcons
+                    name={b.icon as keyof typeof MaterialCommunityIcons.glyphMap}
+                    size={22}
+                    color={state.connected || ready ? "#22c55e" : colors.mutedForeground}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.pilotCardTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{b.name}</Text>
+                    <Text style={[styles.pilotCardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{b.description}</Text>
+                    <Text style={[styles.pilotSignals, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                      Signals: {b.signals.map((s) => s.label).join(" · ")}
+                    </Text>
+                    {state.error && (
+                      <Text style={[styles.pilotSignals, { color: "#f59e0b", fontFamily: "Inter_400Regular" }]}>
+                        {state.error}
+                      </Text>
+                    )}
+                  </View>
+                  {state.connected ? (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => { disconnectBridge(b.id).catch(() => {}); }}
+                      style={[styles.pilotBadge, { borderColor: "#22c55e55", backgroundColor: "#22c55e18" }]}
+                    >
+                      <Text style={[styles.pilotBadgeText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>
+                        Connected · Disconnect
+                      </Text>
+                    </TouchableOpacity>
+                  ) : ready ? (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      disabled={state.connecting}
+                      onPress={() => { connectBridge(b.id).catch(() => {}); }}
+                      style={[styles.pilotBadge, { borderColor: "#22c55e55", backgroundColor: "#22c55e18" }]}
+                    >
+                      <Text style={[styles.pilotBadgeText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>
+                        {state.connecting ? "Connecting…" : "Connect"}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={[styles.pilotBadge, { borderColor: colors.border, backgroundColor: "transparent" }]}>
+                      <Text style={[styles.pilotBadgeText, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
+                        {availabilityLabel(avail)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+
+            {/* Demo fall trigger */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                triggerDemoFall();
+              }}
+              style={[styles.demoBtn, { borderColor: "#ef444455", backgroundColor: "#ef44441a" }]}
+            >
+              <MaterialCommunityIcons name="human-handsdown" size={18} color="#ef4444" />
+              <Text style={[styles.demoBtnText, { color: "#ef4444", fontFamily: "Inter_600SemiBold" }]}>
+                Simulate a fall (demo)
+              </Text>
+            </TouchableOpacity>
+
+            {/* Recent alerts */}
+            {alertHistory.length > 0 && (
+              <>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+                  <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>RECENT ALERTS</Text>
+                  <TouchableOpacity onPress={clearHistory} activeOpacity={0.7}>
+                    <Text style={[styles.clearLink, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>Clear</Text>
+                  </TouchableOpacity>
+                </View>
+                {alertHistory.slice(0, 10).map((a) => (
+                  <View key={a.id} style={[styles.pilotCard, { backgroundColor: colors.card, borderColor: a.severity === "critical" ? "#ef444444" : "#f59e0b44" }]}>
+                    <MaterialCommunityIcons
+                      name={a.signal === "fall" ? "human-handsdown" : "heart-pulse"}
+                      size={20}
+                      color={a.severity === "critical" ? "#ef4444" : "#f59e0b"}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.pilotCardTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{a.title}</Text>
+                      <Text style={[styles.pilotCardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                        {a.aiExplanation ?? a.detail}
+                      </Text>
+                      <Text style={[styles.pilotSignals, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                        {new Date(a.ts).toLocaleString()} · {a.source} ·{" "}
+                        {a.status === "ok" ? "Marked OK" : a.status === "escalated" ? "Escalated" : "Active"}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
         <View style={{ height: 32 }} />
       </ScrollView>
     </View>
@@ -324,4 +467,20 @@ const styles = StyleSheet.create({
   },
   fallTitle: { fontSize: 14, marginBottom: 4 },
   fallSub: { fontSize: 12, lineHeight: 18 },
+
+  pilotCard: {
+    flexDirection: "row", alignItems: "flex-start", gap: 12,
+    borderRadius: 14, borderWidth: 1, padding: 14,
+  },
+  pilotCardTitle: { fontSize: 14 },
+  pilotCardBody: { fontSize: 12, lineHeight: 17, marginTop: 2 },
+  pilotSignals: { fontSize: 10.5, marginTop: 4 },
+  pilotBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
+  pilotBadgeText: { fontSize: 10 },
+  demoBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    borderRadius: 12, borderWidth: 1, paddingVertical: 13,
+  },
+  demoBtnText: { fontSize: 14 },
+  clearLink: { fontSize: 11 },
 });

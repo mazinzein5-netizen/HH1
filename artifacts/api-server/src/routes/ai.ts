@@ -5,7 +5,8 @@ import { logger } from "../lib/logger";
 const router: IRouter = Router();
 
 function getOpenAI(): OpenAI | null {
-  const apiKey = process.env["OPENAI_API_KEY"];
+  const apiKey =
+    process.env["OPENAI_API_KEY"] ?? process.env["AI_INTEGRATIONS_OPENAI_API_KEY"];
   if (!apiKey) return null;
   const baseURL = process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"];
   return new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
@@ -416,6 +417,92 @@ router.post("/ai/chat", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "AI chat error");
     res.status(500).json({ error: "Failed to generate chat response" });
+  }
+});
+
+/**
+ * POST /ai/health-alert
+ * Pilot-only AI assessment of a rule-triggered health incident (falls,
+ * vital / metabolic / cardiac danger signals). Takes the triggered rule and
+ * the recent readings, returns a severity confirmation plus a short
+ * plain-English explanation. Clients degrade gracefully to the rule-based
+ * alert if this endpoint fails or is unavailable.
+ */
+router.post("/ai/health-alert", async (req, res) => {
+  if (!isPilotRequest(req.body)) {
+    res.status(403).json({ error: "PILOT_REQUIRED" });
+    return;
+  }
+
+  const openai = getOpenAI();
+  if (!openai) {
+    res.status(503).json({ error: "AI_NOT_CONFIGURED" });
+    return;
+  }
+
+  const { rule, readings } = req.body as {
+    rule?: { id?: string; title?: string; detail?: string; severity?: string };
+    readings?: { signal?: string; value?: number; raw?: string; source?: string; ts?: number }[];
+  };
+
+  if (!rule?.title || !Array.isArray(readings)) {
+    res.status(400).json({ error: "rule and readings are required" });
+    return;
+  }
+
+  const readingsText = readings
+    .slice(-10)
+    .map((r) => `${r.ts ? new Date(r.ts).toISOString() : "?"} — ${r.signal}: ${r.raw ?? r.value} (${r.source ?? "unknown"})`)
+    .join("\n") || "none";
+
+  const systemPrompt = `You are a clinical monitoring triage assistant inside a patient safety app. A rule-based engine watching wearable data has fired a danger-signal alert. Your job:
+1. Confirm or adjust the severity based on the readings trend.
+2. Write a short, calm, plain-English explanation (2-3 sentences) a frightened patient can understand: what was detected, why it matters, and that help options are on screen.
+
+Return ONLY a JSON object with exactly these fields:
+- "severity": one of "critical", "warning", or "info"
+- "explanation": the plain-English explanation
+
+Never tell the patient not to seek help. Never diagnose. Do not add any text outside the JSON.`;
+
+  const userPrompt = `Triggered rule: ${rule.title} (${rule.id ?? "unknown"}, rule severity: ${rule.severity ?? "unknown"})
+Rule detail: ${rule.detail ?? ""}
+
+Recent readings (oldest first):
+${readingsText}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_tokens: 300,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    });
+
+    const content = completion.choices[0]?.message?.content ?? "{}";
+    let result: { severity?: string; explanation?: string } = {};
+    try {
+      result = JSON.parse(content);
+    } catch {
+      const match = content.match(/\{[\s\S]*\}/);
+      if (match) result = JSON.parse(match[0]);
+    }
+
+    if (!result.explanation) {
+      res.status(500).json({ error: "Failed to parse assessment" });
+      return;
+    }
+
+    const severity = ["critical", "warning", "info"].includes(result.severity ?? "")
+      ? result.severity
+      : rule.severity ?? "warning";
+
+    res.json({ severity, explanation: result.explanation });
+  } catch (err) {
+    logger.error({ err }, "AI health-alert error");
+    res.status(500).json({ error: "Failed to assess health alert" });
   }
 });
 
