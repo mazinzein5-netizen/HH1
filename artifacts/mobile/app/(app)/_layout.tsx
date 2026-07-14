@@ -29,6 +29,9 @@ export default function AppLayout() {
       <Stack.Screen name="membership" options={{ title: "Membership & Verification", headerShown: true }} />
       <Stack.Screen name="pharmacies" options={{ title: "Find a Pharmacy", headerShown: true }} />
       <Stack.Screen name="interpreter" options={{ title: "Live Interpreter", headerShown: true }} />
+      <Stack.Screen name="companion" options={{ headerShown: false }} />
+      <Stack.Screen name="companion-memory" options={{ headerShown: false }} />
+      <Stack.Screen name="translator" options={{ headerShown: false }} />
     </Stack>
     </HiveBotProvider>
   );

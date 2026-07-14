@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HiveCardBg from "@/components/HoneycombCardBg";
 import HiveLogo from "@/components/HiveLogo";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import { useAppMode } from "@/context/AppModeContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useSmartDevices } from "@/context/SmartDevicesContext";
 import { useColors } from "@/hooks/useColors";
@@ -26,6 +27,7 @@ export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
+  const { pilotMode } = useAppMode();
   const { connectedCount, devices } = useSmartDevices();
   const liveVitals = devices.filter((d) => d.connected).slice(0, 2);
   const topPad    = Platform.OS === "web" ? 67 : insets.top;
@@ -144,6 +146,27 @@ export default function DashboardScreen() {
             </View>
           </LinearGradient>
         </View>
+
+        {/* HIVE Companion — pilot only */}
+        {pilotMode && (
+          <TouchableOpacity activeOpacity={0.88} onPress={() => router.push("/(app)/companion")}>
+            <LinearGradient colors={["#1a1030", "#2a1a50"]} style={[styles.sectionCard, { borderColor: "#a78bfa44" }]}>
+              <HiveCardBg gradientColors={["rgba(167,139,250,0.12)", "rgba(0,0,0,0.22)", "transparent"]} />
+              <View style={[styles.sectionIcon, { backgroundColor: "rgba(167,139,250,0.16)", borderColor: "rgba(167,139,250,0.35)", borderWidth: 1 }]}>
+                <MaterialCommunityIcons name="account-voice" size={22} color="#a78bfa" />
+              </View>
+              <Text style={[styles.sectionTitle, { color: "#FFFFFF", fontFamily: "Inter_700Bold" }]}>HIVE Companion</Text>
+              <Text style={[styles.sectionBody, { color: "rgba(255,255,255,0.72)", fontFamily: "Inter_400Regular" }]}>
+                Talk with your voice companion. Ask about medicines, pain, and health — explained patiently in plain English. Includes the Clinician Translator.
+              </Text>
+              <View style={styles.sectionLink}>
+                <View style={[styles.liveDot, { backgroundColor: "#a78bfa" }]} />
+                <Text style={[styles.sectionLinkText, { color: "#a78bfa", fontFamily: "Inter_600SemiBold" }]}>Start Talking</Text>
+                <Feather name="chevron-right" size={14} color="#a78bfa" />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
 
         {/* Live Consultation */}
         <TouchableOpacity activeOpacity={0.88} onPress={() => router.push("/(app)/consultation")}>
