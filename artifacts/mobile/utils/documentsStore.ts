@@ -9,6 +9,9 @@ import { Platform } from "react-native";
  * directory; metadata is indexed in AsyncStorage. Nothing leaves the device.
  * ──────────────────────────────────────────────────────────────────────────── */
 
+export type DocCategory = "report" | "imaging" | "prescription";
+export type DocSource = "healthmail" | "gp" | "hospital" | "private" | "other";
+
 export interface StoredDocument {
   id: string;
   name: string;
@@ -16,7 +19,23 @@ export interface StoredDocument {
   mimeType?: string;
   sizeBytes?: number;
   addedAt: string; // ISO date
+  category?: DocCategory; // defaults to "report" for older imports
+  source?: DocSource; // where the document came from
 }
+
+export const CATEGORY_META: Record<DocCategory, { label: string; shortLabel: string; icon: string; hex: string }> = {
+  report:       { label: "Medical Report",  shortLabel: "Report",       icon: "file-document",  hex: "#1D4ED8" },
+  imaging:      { label: "Imaging Report",  shortLabel: "Imaging",      icon: "radiology-box",  hex: "#7C3AED" },
+  prescription: { label: "Prescription",    shortLabel: "Prescription", icon: "prescription",   hex: "#047857" },
+};
+
+export const SOURCE_META: Record<DocSource, { label: string; icon: string }> = {
+  healthmail: { label: "Healthmail",       icon: "email-lock" },
+  gp:         { label: "GP Surgery",       icon: "doctor" },
+  hospital:   { label: "Hospital",         icon: "hospital-building" },
+  private:    { label: "Private Practice", icon: "office-building" },
+  other:      { label: "Other",            icon: "dots-horizontal-circle-outline" },
+};
 
 const INDEX_KEY = "hive_documents_index";
 const DOCS_DIR = `${FileSystem.documentDirectory ?? ""}medical-documents/`;
@@ -44,7 +63,10 @@ async function saveIndex(docs: StoredDocument[]): Promise<void> {
  * Open the system document picker and import the chosen PDF/image into
  * on-device storage. Returns the stored document, or null if cancelled.
  */
-export async function importDocument(): Promise<StoredDocument | null> {
+export async function importDocument(meta?: {
+  category?: DocCategory;
+  source?: DocSource;
+}): Promise<StoredDocument | null> {
   const result = await DocumentPicker.getDocumentAsync({
     type: ["application/pdf", "image/*"],
     copyToCacheDirectory: true,
@@ -73,6 +95,8 @@ export async function importDocument(): Promise<StoredDocument | null> {
     mimeType: asset.mimeType,
     sizeBytes: asset.size ?? undefined,
     addedAt: new Date().toISOString(),
+    category: meta?.category ?? "report",
+    source: meta?.source,
   };
 
   const docs = await listDocuments();

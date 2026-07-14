@@ -85,7 +85,7 @@ export default function ConsentGate() {
             <Text style={[styles.disclaimerTitle, { color: colors.goldLight, fontFamily: "Inter_700Bold" }]}>
               Not a medical device
             </Text>
-            <Text style={[styles.disclaimerBody, { color: "rgba(255,255,255,0.75)", fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.disclaimerBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
               This app is for information and administrative use only. It does not diagnose or treat any
               condition and does not replace professional medical advice. If you are worried about your
               health, contact your GP — or call 112 in an emergency.
