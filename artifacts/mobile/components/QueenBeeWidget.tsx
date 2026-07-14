@@ -1,7 +1,8 @@
 /**
- * QueenBeeWidget — Pixar-style cartoon bee, draggable, always-on-top companion.
- * Drawn entirely with React Native Views (no images needed).
+ * QueenBeeWidget — small Pixar-style 3D cartoon bee, draggable.
+ * Uses expo-linear-gradient for sphere shading. No label.
  */
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -10,553 +11,529 @@ import {
   PanResponder,
   Platform,
   StyleSheet,
-  Text,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 
-const BEE_W = 68;
-const BEE_H = 86;
-const LABEL_H = 18;
-const WIDGET_H = BEE_H + LABEL_H + 4;
+// ── Size constants ─────────────────────────────────────────────────────────────
+const BEE_W = 44;   // total widget width
+const BEE_H = 54;   // total bee height (no label)
 
-// Bee colours
-const GOLD = "#F5C518";
-const GOLD_DARK = "#D4A017";
-const STRIPE = "#1a1a1a";
-const WHITE = "#FFFFFF";
-const EYE_IRIS = "#3B6EE8";
-const WING_COLOR = "rgba(190, 230, 255, 0.72)";
-const WING_BORDER = "rgba(160, 210, 255, 0.6)";
+// ── Colour palette ─────────────────────────────────────────────────────────────
+const G0  = "#FFF176"; // top highlight
+const G1  = "#FFCA28"; // golden yellow
+const G2  = "#F5A800"; // mid amber
+const G3  = "#C17900"; // deep shadow
+const BK  = "#1C1207"; // near-black stripe / outline
+const EW  = "#FFFFFF";  // eye white
+const EI  = "#1A56CC"; // iris blue
+const EP  = "#080808"; // pupil
+const WC  = "rgba(200,235,255,0.78)"; // wing fill
+const WB  = "rgba(140,205,255,0.55)"; // wing border
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function Wing({
-  side,
-  flutterAnim,
-}: {
-  side: "left" | "right";
-  flutterAnim: Animated.Value;
-}) {
-  const rotate = flutterAnim.interpolate({
+// ── Wing ──────────────────────────────────────────────────────────────────────
+function Wing({ side, anim }: { side: "L" | "R"; anim: Animated.Value }) {
+  const rot = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: side === "left" ? ["-30deg", "-40deg"] : ["30deg", "40deg"],
+    outputRange: side === "L" ? ["-28deg", "-42deg"] : ["28deg", "42deg"],
   });
-  const scaleY = flutterAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0.88],
-  });
-
+  const sy = anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.84] });
   return (
     <Animated.View
       style={[
-        styles.wing,
-        side === "left" ? styles.wingLeft : styles.wingRight,
-        { transform: [{ rotate }, { scaleY }] },
+        s.wing,
+        side === "L" ? s.wingL : s.wingR,
+        { transform: [{ rotate: rot }, { scaleY: sy }] },
       ]}
     />
   );
 }
 
-function Eye({ side }: { side: "left" | "right" }) {
+// ── Eye ───────────────────────────────────────────────────────────────────────
+function Eye() {
   return (
-    <View style={[styles.eyeOuter, side === "left" ? { marginRight: 5 } : { marginLeft: 5 }]}>
-      {/* White sclera */}
-      <View style={styles.eyeWhite}>
-        {/* Coloured iris */}
-        <View style={styles.eyeIris}>
-          {/* Pupil */}
-          <View style={styles.eyePupil} />
-        </View>
-        {/* Catchlight highlight */}
-        <View style={styles.eyeHighlight} />
+    <View style={s.eyeShell}>
+      {/* white sclera */}
+      <View style={s.eyeWhite}>
+        {/* gradient iris – deep blue sphere effect */}
+        <LinearGradient
+          colors={["#4a8bff", EI, "#0a2faa"]}
+          start={{ x: 0.25, y: 0.1 }}
+          end={{ x: 0.75, y: 1 }}
+          style={s.eyeIris}
+        >
+          <View style={s.pupil} />
+        </LinearGradient>
+        {/* catchlight */}
+        <View style={s.catchlight} />
       </View>
     </View>
   );
 }
 
-function BeeFace({ expression }: { expression: "happy" | "thinking" | "grabbed" }) {
-  const smileStyle = expression === "grabbed"
-    ? styles.mouthO
-    : styles.mouthSmile;
-
+// ── Face (eyes + expression) ──────────────────────────────────────────────────
+function Face({ grabbed }: { grabbed: boolean }) {
   return (
-    <View style={styles.face}>
-      <Eye side="left" />
-      <Eye side="right" />
-      <View style={smileStyle} />
+    <View style={s.face}>
+      <Eye />
+      <Eye />
+      <View style={grabbed ? s.mouthO : s.mouthSmile} />
     </View>
   );
 }
 
-function BeeBody() {
-  return (
-    <View style={styles.body}>
-      {/* Stripe 1 */}
-      <View style={[styles.stripe, { top: "22%", height: "18%" }]} />
-      {/* Stripe 2 */}
-      <View style={[styles.stripe, { top: "48%", height: "18%" }]} />
-      {/* Stripe 3 */}
-      <View style={[styles.stripe, { top: "74%", height: "12%" }]} />
-      {/* Belly sheen */}
-      <View style={styles.bellySheen} />
-    </View>
-  );
-}
-
+// ── Antennae ──────────────────────────────────────────────────────────────────
 function Antennae() {
   return (
-    <View style={styles.antennaeWrap}>
-      {/* Left antenna */}
-      <View style={styles.antennaLeft}>
-        <View style={styles.antennaStem} />
-        <View style={styles.antennaBall} />
-      </View>
-      {/* Right antenna */}
-      <View style={styles.antennaRight}>
-        <View style={styles.antennaStem} />
-        <View style={styles.antennaBall} />
-      </View>
+    <View style={s.antRow}>
+      {(["L", "R"] as const).map((side) => (
+        <View key={side} style={side === "L" ? s.antL : s.antR}>
+          <View style={s.antStem} />
+          <LinearGradient
+            colors={[G1, G3]}
+            style={s.antBall}
+          />
+        </View>
+      ))}
     </View>
   );
 }
 
+// ── Body ──────────────────────────────────────────────────────────────────────
+function Body() {
+  return (
+    <View style={s.bodyOuter}>
+      {/* 3D sphere gradient — light from top-left */}
+      <LinearGradient
+        colors={[G0, G1, G2, G3]}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.85, y: 1 }}
+        style={s.bodyGrad}
+      >
+        {/* Black stripes */}
+        <View style={[s.stripe, { top: "20%", height: "16%" }]} />
+        <View style={[s.stripe, { top: "44%", height: "16%" }]} />
+        <View style={[s.stripe, { top: "68%", height: "13%" }]} />
+        {/* top-left specular sheen */}
+        <View style={s.specular} />
+        {/* bottom rim shadow */}
+        <View style={s.rimShadow} />
+      </LinearGradient>
+    </View>
+  );
+}
+
+// ── Head ──────────────────────────────────────────────────────────────────────
+function Head({ grabbed }: { grabbed: boolean }) {
+  return (
+    <View style={s.headOuter}>
+      <LinearGradient
+        colors={[G0, G1, G2, G3]}
+        start={{ x: 0.15, y: 0.05 }}
+        end={{ x: 0.85, y: 1 }}
+        style={s.headGrad}
+      >
+        {/* top specular */}
+        <View style={s.headSpec} />
+        <Face grabbed={grabbed} />
+      </LinearGradient>
+    </View>
+  );
+}
+
+// ── Stinger ───────────────────────────────────────────────────────────────────
 function Stinger() {
   return (
-    <View style={styles.stingerWrap}>
-      <View style={styles.stinger} />
+    <View style={s.stingerWrap}>
+      <LinearGradient colors={[G2, BK]} style={s.stinger} />
     </View>
   );
 }
 
-// ── Main widget ───────────────────────────────────────────────────────────────
-
+// ── Main Widget ───────────────────────────────────────────────────────────────
 interface Props {
   onPress: () => void;
   initialBottom?: number;
   initialRight?: number;
 }
 
-export default function QueenBeeWidget({ onPress, initialBottom = 88, initialRight = 16 }: Props) {
-  // Position — start bottom-right
-  const posRef = useRef({
-    x: SW - BEE_W - initialRight,
-    y: SH - WIDGET_H - initialBottom,
-  });
-  const pan = useRef(new Animated.ValueXY({ x: posRef.current.x, y: posRef.current.y })).current;
+export default function QueenBeeWidget({
+  onPress,
+  initialBottom = 90,
+  initialRight = 18,
+}: Props) {
+  const startX = SW - BEE_W - initialRight;
+  const startY = SH - BEE_H - initialBottom;
 
-  // Bop / hover
-  const bobAnim = useRef(new Animated.Value(0)).current;
-  // Wings
+  const posRef = useRef({ x: startX, y: startY });
+  const pan = useRef(new Animated.ValueXY({ x: startX, y: startY })).current;
+
+  const bobAnim     = useRef(new Animated.Value(0)).current;
   const flutterAnim = useRef(new Animated.Value(0)).current;
-  // Shadow scale
-  const shadowAnim = useRef(new Animated.Value(1)).current;
+  const shadowAnim  = useRef(new Animated.Value(1)).current;
+  const scaleAnim   = useRef(new Animated.Value(1)).current;
 
-  const [expression, setExpression] = useState<"happy" | "thinking" | "grabbed">("happy");
-  const [isDragging, setIsDragging] = useState(false);
-  const bobLoopRef = useRef<Animated.CompositeAnimation | null>(null);
-  const flutterLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const [grabbed, setGrabbed] = useState(false);
+  const [tapped, setTapped]   = useState(false);
+  const bobRef     = useRef<Animated.CompositeAnimation | null>(null);
+  const flutterRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  // Bob animation
   const startBob = useCallback(() => {
     bobAnim.setValue(0);
-    bobLoopRef.current = Animated.loop(
+    bobRef.current = Animated.loop(
       Animated.sequence([
-        Animated.timing(bobAnim, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(bobAnim, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bobAnim, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bobAnim, { toValue: 0, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ])
     );
-    bobLoopRef.current.start();
+    bobRef.current.start();
   }, []);
 
   const stopBob = useCallback(() => {
-    bobLoopRef.current?.stop();
-    Animated.timing(bobAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
-  }, []);
-
-  // Wing flutter
-  const startFlutter = useCallback(() => {
-    flutterAnim.setValue(0);
-    flutterLoopRef.current = Animated.loop(
-      Animated.sequence([
-        Animated.timing(flutterAnim, { toValue: 1, duration: 180, easing: Easing.linear, useNativeDriver: true }),
-        Animated.timing(flutterAnim, { toValue: 0, duration: 180, easing: Easing.linear, useNativeDriver: true }),
-      ])
-    );
-    flutterLoopRef.current.start();
+    bobRef.current?.stop();
   }, []);
 
   useEffect(() => {
     startBob();
-    startFlutter();
-    return () => {
-      bobLoopRef.current?.stop();
-      flutterLoopRef.current?.stop();
-    };
+    flutterAnim.setValue(0);
+    flutterRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(flutterAnim, { toValue: 1, duration: 160, easing: Easing.linear, useNativeDriver: true }),
+        Animated.timing(flutterAnim, { toValue: 0, duration: 160, easing: Easing.linear, useNativeDriver: true }),
+      ])
+    );
+    flutterRef.current.start();
+    return () => { bobRef.current?.stop(); flutterRef.current?.stop(); };
   }, []);
 
-  const bobTranslate = bobAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -8],
-  });
+  const bobY = bobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -6] });
 
-  // PanResponder for drag
-  const panResponder = useRef(
+  const pr = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, g) =>
-        Math.abs(g.dx) > 4 || Math.abs(g.dy) > 4,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 3 || Math.abs(g.dy) > 3,
 
       onPanResponderGrant: () => {
-        setIsDragging(true);
-        setExpression("grabbed");
+        setGrabbed(true);
         stopBob();
-        // Lift shadow
-        Animated.spring(shadowAnim, { toValue: 1.5, useNativeDriver: true }).start();
-        // Fix pan offset from current position
+        Animated.parallel([
+          Animated.spring(shadowAnim, { toValue: 1.6, useNativeDriver: true }),
+          Animated.spring(scaleAnim,  { toValue: 1.12, useNativeDriver: true }),
+        ]).start();
         pan.setOffset({ x: posRef.current.x, y: posRef.current.y });
         pan.setValue({ x: 0, y: 0 });
       },
 
-      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
-        useNativeDriver: false,
-      }),
+      onPanResponderMove: Animated.event(
+        [null, { dx: pan.x, dy: pan.y }],
+        { useNativeDriver: false }
+      ),
 
       onPanResponderRelease: (_, g) => {
         pan.flattenOffset();
-        // Clamp inside screen
-        const rawX = posRef.current.x + g.dx;
-        const rawY = posRef.current.y + g.dy;
-        const clampedX = Math.max(0, Math.min(SW - BEE_W, rawX));
-        const clampedY = Math.max(60, Math.min(SH - WIDGET_H - 80, rawY));
-        posRef.current = { x: clampedX, y: clampedY };
+        const nx = Math.max(0, Math.min(SW - BEE_W, posRef.current.x + g.dx));
+        const ny = Math.max(60, Math.min(SH - BEE_H - 70, posRef.current.y + g.dy));
+        posRef.current = { x: nx, y: ny };
 
         Animated.spring(pan, {
-          toValue: { x: clampedX, y: clampedY },
+          toValue: { x: nx, y: ny },
           useNativeDriver: false,
-          tension: 80,
-          friction: 10,
+          tension: 90,
+          friction: 9,
         }).start();
 
-        setIsDragging(false);
-        setExpression("happy");
+        setGrabbed(false);
         startBob();
-        Animated.spring(shadowAnim, { toValue: 1, useNativeDriver: true }).start();
+        Animated.parallel([
+          Animated.spring(shadowAnim, { toValue: 1,  useNativeDriver: true }),
+          Animated.spring(scaleAnim,  { toValue: 1,  useNativeDriver: true }),
+        ]).start();
       },
 
       onPanResponderTerminate: () => {
-        setIsDragging(false);
-        setExpression("happy");
+        setGrabbed(false);
         startBob();
+        shadowAnim.setValue(1);
+        scaleAnim.setValue(1);
       },
     })
   ).current;
 
+  const handlePress = () => {
+    if (grabbed) return;
+    // Quick bounce feedback
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.88, duration: 80, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
+    ]).start();
+    onPress();
+  };
+
   return (
     <Animated.View
-      style={[
-        styles.container,
-        { left: pan.x, top: pan.y },
-      ]}
-      {...panResponder.panHandlers}
+      style={[s.container, { left: pan.x, top: pan.y }]}
+      {...pr.panHandlers}
     >
-      {/* Drop shadow underneath bee */}
+      {/* Ground shadow */}
       <Animated.View
-        style={[
-          styles.dropShadow,
-          { transform: [{ scaleX: shadowAnim }] },
-        ]}
+        style={[s.shadow, { transform: [{ scaleX: shadowAnim }, { scaleY: 0.4 }] }]}
       />
 
-      <TouchableWithoutFeedback
-        onPress={() => {
-          if (!isDragging) onPress();
-        }}
-      >
-        <Animated.View style={{ transform: [{ translateY: bobTranslate }] }}>
-          {/* Wings behind body */}
-          <View style={styles.wingsRow}>
-            <Wing side="left" flutterAnim={flutterAnim} />
-            <Wing side="right" flutterAnim={flutterAnim} />
+      <TouchableWithoutFeedback onPress={handlePress}>
+        <Animated.View style={{ transform: [{ translateY: bobY }, { scale: scaleAnim }] }}>
+          {/* Wings sit behind the body */}
+          <View style={s.wingsLayer}>
+            <Wing side="L" anim={flutterAnim} />
+            <Wing side="R" anim={flutterAnim} />
           </View>
 
-          {/* Bee body stack */}
-          <View style={styles.beeStack}>
+          <View style={s.beeCol}>
             <Antennae />
-            {/* Head */}
-            <View style={styles.head}>
-              <BeeFace expression={expression} />
-            </View>
-            {/* Body */}
-            <BeeBody />
+            <Head grabbed={grabbed} />
+            <Body />
             <Stinger />
           </View>
         </Animated.View>
       </TouchableWithoutFeedback>
-
-      {/* Label */}
-      <View style={styles.labelWrap}>
-        <View style={styles.labelBubble}>
-          <Text style={styles.labelText}>Queen B 🐝</Text>
-        </View>
-      </View>
     </Animated.View>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: {
     position: "absolute",
     width: BEE_W,
     alignItems: "center",
-    zIndex: 999,
+    zIndex: 9999,
   },
 
-  dropShadow: {
+  // Ground shadow blob
+  shadow: {
     position: "absolute",
-    bottom: LABEL_H + 2,
-    width: 44,
-    height: 10,
-    borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.25)",
+    bottom: 0,
+    width: 30,
+    height: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.22)",
     alignSelf: "center",
   },
 
-  // ── Wings ──
-  wingsRow: {
+  // Wings layer (absolutely positioned so body renders on top)
+  wingsLayer: {
     position: "absolute",
-    top: 22,
+    top: 14,
     left: 0,
     right: 0,
     flexDirection: "row",
     justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1,
+    zIndex: 0,
   },
   wing: {
-    width: 34,
-    height: 22,
-    borderRadius: 50,
-    backgroundColor: WING_COLOR,
-    borderWidth: 1.5,
-    borderColor: WING_BORDER,
+    width: 26,
+    height: 17,
+    borderRadius: 40,
+    backgroundColor: WC,
+    borderWidth: 1,
+    borderColor: WB,
     ...(Platform.OS !== "android" && {
-      shadowColor: "#aaddff",
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.8,
-      shadowRadius: 4,
-    }),
-  },
-  wingLeft: {
-    marginRight: -6,
-    transform: [{ rotate: "-35deg" }, { scaleX: 1.1 }],
-  },
-  wingRight: {
-    marginLeft: -6,
-    transform: [{ rotate: "35deg" }, { scaleX: 1.1 }],
-  },
-
-  // ── Body stack ──
-  beeStack: {
-    alignItems: "center",
-    zIndex: 2,
-  },
-
-  // ── Antennae ──
-  antennaeWrap: {
-    flexDirection: "row",
-    justifyContent: "center",
-    width: BEE_W,
-    height: 20,
-    paddingTop: 0,
-    marginBottom: -4,
-  },
-  antennaLeft: {
-    width: 14,
-    alignItems: "flex-end",
-    marginRight: 6,
-    transform: [{ rotate: "-22deg" }],
-  },
-  antennaRight: {
-    width: 14,
-    alignItems: "flex-start",
-    marginLeft: 6,
-    transform: [{ rotate: "22deg" }],
-  },
-  antennaStem: {
-    width: 2.5,
-    height: 14,
-    backgroundColor: STRIPE,
-    borderRadius: 2,
-    marginBottom: 2,
-  },
-  antennaBall: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: STRIPE,
-    marginLeft: -2,
-  },
-
-  // ── Head ──
-  head: {
-    width: 40,
-    height: 38,
-    borderRadius: 20,
-    backgroundColor: GOLD,
-    borderWidth: 1.5,
-    borderColor: GOLD_DARK,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 3,
-    marginBottom: -4,
-    ...(Platform.OS !== "android" && {
-      shadowColor: GOLD_DARK,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.5,
+      shadowColor: "#99ccff",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.9,
       shadowRadius: 3,
     }),
   },
+  wingL: { marginRight: -4, transform: [{ rotate: "-32deg" }, { scaleX: 1.05 }] },
+  wingR: { marginLeft: -4,  transform: [{ rotate:  "32deg" }, { scaleX: 1.05 }] },
 
-  // ── Face / eyes ──
+  // Main bee column
+  beeCol: { alignItems: "center", zIndex: 1 },
+
+  // ── Antennae ──
+  antRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    width: BEE_W,
+    height: 13,
+    marginBottom: -3,
+  },
+  antL: {
+    alignItems: "flex-end",
+    width: 12,
+    marginRight: 4,
+    transform: [{ rotate: "-20deg" }],
+  },
+  antR: {
+    alignItems: "flex-start",
+    width: 12,
+    marginLeft: 4,
+    transform: [{ rotate: "20deg" }],
+  },
+  antStem: {
+    width: 2,
+    height: 9,
+    backgroundColor: BK,
+    borderRadius: 1,
+  },
+  antBall: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    marginLeft: -1.5,
+  },
+
+  // ── Head ──
+  headOuter: {
+    width: 28,
+    height: 26,
+    borderRadius: 14,
+    overflow: "hidden",
+    marginBottom: -3,
+    zIndex: 3,
+    ...(Platform.OS !== "android" && {
+      shadowColor: G3,
+      shadowOffset: { width: -1, height: 2 },
+      shadowOpacity: 0.6,
+      shadowRadius: 4,
+    }),
+    elevation: 6,
+  },
+  headGrad: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headSpec: {
+    position: "absolute",
+    top: 3,
+    left: 4,
+    width: 9,
+    height: 6,
+    borderRadius: 5,
+    backgroundColor: "rgba(255,255,255,0.45)",
+    transform: [{ rotate: "-20deg" }],
+  },
+
+  // ── Face ──
   face: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 4,
+    marginTop: 3,
+    gap: 2,
   },
-  eyeOuter: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  eyeShell: { alignItems: "center" },
   eyeWhite: {
-    width: 13,
-    height: 15,
-    borderRadius: 8,
-    backgroundColor: WHITE,
-    borderWidth: 0.5,
-    borderColor: "#ccc",
+    width: 10,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: EW,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    borderWidth: 0.5,
+    borderColor: "#ddd",
   },
   eyeIris: {
-    width: 9,
-    height: 11,
-    borderRadius: 6,
-    backgroundColor: EYE_IRIS,
+    width: 7,
+    height: 9,
+    borderRadius: 5,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 1,
   },
-  eyePupil: {
-    width: 5,
-    height: 6,
-    borderRadius: 4,
-    backgroundColor: "#0a0a0a",
+  pupil: {
+    width: 4,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: EP,
   },
-  eyeHighlight: {
+  catchlight: {
     position: "absolute",
     top: 2,
     left: 2,
-    width: 4,
-    height: 4,
+    width: 3,
+    height: 3,
     borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: "rgba(255,255,255,0.95)",
   },
   mouthSmile: {
     position: "absolute",
-    bottom: -14,
-    width: 14,
-    height: 7,
+    bottom: -13,
+    width: 11,
+    height: 6,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
-    borderWidth: 2.5,
-    borderColor: STRIPE,
+    borderWidth: 2,
+    borderColor: BK,
     borderTopWidth: 0,
     alignSelf: "center",
   },
   mouthO: {
     position: "absolute",
-    bottom: -14,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: STRIPE,
+    bottom: -13,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: BK,
     alignSelf: "center",
   },
 
   // ── Body ──
-  body: {
-    width: 44,
-    height: 46,
-    borderRadius: 22,
-    backgroundColor: GOLD,
-    borderWidth: 1.5,
-    borderColor: GOLD_DARK,
+  bodyOuter: {
+    width: 30,
+    height: 34,
+    borderRadius: 15,
     overflow: "hidden",
     zIndex: 2,
     ...(Platform.OS !== "android" && {
-      shadowColor: GOLD_DARK,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.4,
-      shadowRadius: 4,
+      shadowColor: G3,
+      shadowOffset: { width: -2, height: 4 },
+      shadowOpacity: 0.55,
+      shadowRadius: 5,
     }),
+    elevation: 8,
   },
+  bodyGrad: { flex: 1, overflow: "hidden" },
   stripe: {
     position: "absolute",
     left: 0,
     right: 0,
-    backgroundColor: STRIPE,
-    opacity: 0.88,
+    backgroundColor: BK,
+    opacity: 0.9,
   },
-  bellySheen: {
+  specular: {
     position: "absolute",
-    top: 6,
-    left: 8,
-    width: 12,
-    height: 20,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.22)",
-    transform: [{ rotate: "-10deg" }],
+    top: 5,
+    left: 5,
+    width: 8,
+    height: 14,
+    borderRadius: 6,
+    backgroundColor: "rgba(255,255,255,0.28)",
+    transform: [{ rotate: "-12deg" }],
+  },
+  rimShadow: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "30%",
+    backgroundColor: "rgba(0,0,0,0.18)",
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
   },
 
   // ── Stinger ──
-  stingerWrap: {
-    alignItems: "center",
-    marginTop: -2,
-  },
+  stingerWrap: { alignItems: "center", marginTop: -1, zIndex: 1 },
   stinger: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 4,
-    borderRightWidth: 4,
-    borderTopWidth: 8,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: STRIPE,
-  },
-
-  // ── Label ──
-  labelWrap: {
-    marginTop: 4,
-    alignItems: "center",
-  },
-  labelBubble: {
-    backgroundColor: "rgba(201,134,10,0.92)",
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  labelText: {
-    color: "#fff",
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 0.3,
+    width: 5,
+    height: 8,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+    borderTopLeftRadius: 1,
+    borderTopRightRadius: 1,
   },
 });
