@@ -35,6 +35,7 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 ## User preferences
 
 - Elderly-friendly UI: minimalist layouts, big text, large tap targets, high contrast throughout the mobile app.
+- "Not a medical device" fine print should stand out in dark orange (theme-conditional: #E8590C dark mode, #C2410C light mode for contrast).
 
 ## Gotchas
 

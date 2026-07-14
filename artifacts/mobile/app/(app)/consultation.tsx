@@ -136,7 +136,7 @@ export default function ConsultationScreen() {
                   }]}
                 >
                   <Text style={styles.moodEmoji}>{m.emoji}</Text>
-                  <Text style={[styles.moodLabel, { color: selectedMood === m.value ? colors.primary : colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
+                  <Text style={[styles.moodLabel, { color: selectedMood === m.value ? "#FFFFFF" : colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
                     {m.label}
                   </Text>
                 </TouchableOpacity>

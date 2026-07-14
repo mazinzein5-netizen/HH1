@@ -20,9 +20,11 @@ import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useAuth } from "@/context/AuthContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function LoginScreen() {
   const colors = useColors();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { login, loginAsGuest } = useAuth();
   const { prefs } = useLogoTheme();
@@ -78,11 +80,11 @@ export default function LoginScreen() {
               showText
             />
           </View>
-          <Text style={[styles.heroTagline, { color: "rgba(255,255,255,0.85)", fontFamily: "Inter_700Bold" }]}>
+          <Text style={[styles.heroTagline, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
             Secure Patient{"\n"}
             <Text style={{ color: colors.goldLight }}>Access Portal.</Text>
           </Text>
-          <Text style={[styles.heroSub, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>
+          <Text style={[styles.heroSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
             Health questionnaires · Emergency health card · Secure records
           </Text>
         </View>
@@ -166,7 +168,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.disclaimer, { color: "#E8590C", fontFamily: "Inter_500Medium" }]}>
+        <Text style={[styles.disclaimer, { color: isDark ? "#E8590C" : "#C2410C", fontFamily: "Inter_500Medium" }]}>
           HIVE COMPANION · GDPR Compliant · Not a medical device — for information and administrative use only
         </Text>
       </ScrollView>

@@ -76,7 +76,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { prefs } = useLogoTheme();
-  const { mode, setMode } = useTheme();
+  const { mode, setMode, isDark } = useTheme();
   const { pilotMode, activatePilot, deactivatePilot, deleteAllData } = useAppMode();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -342,7 +342,7 @@ export default function SettingsScreen() {
         <TouchableOpacity activeOpacity={1} onLongPress={handleVersionLongPress} delayLongPress={1200}>
           <Text style={[styles.versionText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
             HIVE COMPANION : Patient Portal v2.0 · IbnCeena Ltd.{"\n"}
-            <Text style={{ color: "#E8590C", fontFamily: "Inter_500Medium" }}>
+            <Text style={{ color: isDark ? "#E8590C" : "#C2410C", fontFamily: "Inter_500Medium" }}>
               Not a medical device — for information and administrative use only.
             </Text>
             {pilotMode ? "\nPilot programme active" : ""}

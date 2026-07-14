@@ -129,7 +129,7 @@ export default function DashboardScreen() {
             </View>
             <View style={styles.heroContent}>
               <Text style={[styles.heroTitle1, { fontFamily: "Inter_700Bold" }]}>Organised Records.</Text>
-              <Text style={[styles.heroTitle2, { color: colors.goldLight, fontFamily: "Inter_700Bold" }]}>Absolute Security.</Text>
+              <Text style={[styles.heroTitle2, { color: "#D4A017", fontFamily: "Inter_700Bold" }]}>Absolute Security.</Text>
               <Text style={[styles.heroBody, { fontFamily: "Inter_400Regular" }]}>
                 Keep your health information organised, complete standardised questionnaires to share with your GP, and give first responders instant access to your emergency health card.
               </Text>
@@ -139,7 +139,7 @@ export default function DashboardScreen() {
                 style={[styles.heroCta, { backgroundColor: "rgba(0,0,0,0.45)", borderColor: colors.gold + "55" }]}
               >
                 <MaterialCommunityIcons name="hand-heart" size={17} color={colors.gold} />
-                <Text style={[styles.heroCtaText, { fontFamily: "Inter_600SemiBold", color: colors.goldLight }]}>Do you have pain?</Text>
+                <Text style={[styles.heroCtaText, { fontFamily: "Inter_600SemiBold", color: "#D4A017" }]}>Do you have pain?</Text>
               </TouchableOpacity>
             </View>
           </LinearGradient>
@@ -152,8 +152,8 @@ export default function DashboardScreen() {
             <View style={[styles.sectionIcon, { backgroundColor: "rgba(34,197,94,0.15)", borderColor: "rgba(34,197,94,0.3)", borderWidth: 1 }]}>
               <MaterialCommunityIcons name="video" size={22} color="#22c55e" />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Live Consultation</Text>
-            <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.sectionTitle, { color: "#FFFFFF", fontFamily: "Inter_700Bold" }]}>Live Consultation</Text>
+            <Text style={[styles.sectionBody, { color: "rgba(255,255,255,0.72)", fontFamily: "Inter_400Regular" }]}>
               Book or join a HiEmotion telemedicine appointment with your GP, Physiotherapist, or Specialist.
             </Text>
             <View style={styles.sectionLink}>
@@ -255,8 +255,8 @@ export default function DashboardScreen() {
             <View style={[styles.sectionIcon, { backgroundColor: "rgba(34,197,94,0.12)", borderColor: "rgba(34,197,94,0.28)", borderWidth: 1 }]}>
               <MaterialCommunityIcons name="devices" size={22} color="#22c55e" />
             </View>
-            <View style={[styles.deviceBadge, { backgroundColor: connectedCount > 0 ? "#22c55e22" : "rgba(255,255,255,0.06)", borderColor: connectedCount > 0 ? "#22c55e55" : "rgba(255,255,255,0.12)" }]}>
-              <View style={[styles.deviceDot, { backgroundColor: connectedCount > 0 ? "#22c55e" : "rgba(255,255,255,0.25)" }]} />
+            <View style={[styles.deviceBadge, { backgroundColor: connectedCount > 0 ? "#22c55e22" : colors.background, borderColor: connectedCount > 0 ? "#22c55e55" : colors.border }]}>
+              <View style={[styles.deviceDot, { backgroundColor: connectedCount > 0 ? "#22c55e" : colors.mutedForeground }]} />
               <Text style={[styles.deviceBadgeText, { color: connectedCount > 0 ? "#22c55e" : colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
                 {connectedCount > 0 ? `${connectedCount} Connected` : "No Devices"}
               </Text>
