@@ -436,9 +436,9 @@ export default function Home() {
                   <Activity className="h-3 w-3 text-primary" />
                   Web App
                 </div>
-                <h2 className="text-4xl md:text-6xl font-bold mb-6 text-foreground leading-tight">HIVE Surgical Assistant</h2>
+                <h2 className="text-4xl md:text-6xl font-bold mb-6 text-foreground leading-tight">HIVE Hospital Surgical Assistant</h2>
                 <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light">
-                  An AI decision support companion designed specifically for on-call surgical teams and NCHDs.
+                  A similar solution for surgical clinical care: a digital patient file system tailored to the local healthcare system — safe, private and fully compliant with regulatory bodies.
                 </p>
                 
                 <ul className="space-y-6 mb-12">
@@ -447,8 +447,8 @@ export default function Home() {
                       <ArrowRight className="h-4 w-4" />
                     </div>
                     <div>
-                      <h4 className="text-foreground font-semibold text-lg mb-1">Instant Support</h4>
-                      <span className="text-muted-foreground">Access critical guidance during demanding on-call shifts.</span>
+                      <h4 className="text-foreground font-semibold text-lg mb-1">Fast Documentation</h4>
+                      <span className="text-muted-foreground">Photo recognition turns captured data into organised, structured patient records in seconds.</span>
                     </div>
                   </li>
                   <li className="flex items-start gap-4 p-4 rounded-2xl glass-panel border-transparent hover:border-primary/30 transition-colors">
@@ -456,8 +456,8 @@ export default function Home() {
                       <ArrowRight className="h-4 w-4" />
                     </div>
                     <div>
-                      <h4 className="text-foreground font-semibold text-lg mb-1">Streamlined Workflows</h4>
-                      <span className="text-muted-foreground">Tailored for non-consultant hospital doctors to improve efficiency.</span>
+                      <h4 className="text-foreground font-semibold text-lg mb-1">Built for Clinical Teams</h4>
+                      <span className="text-muted-foreground">Organise patient files and collaborate seamlessly with your clinical unit or team.</span>
                     </div>
                   </li>
                 </ul>
