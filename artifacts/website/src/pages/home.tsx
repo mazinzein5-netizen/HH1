@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { HiveLogo } from "@/components/HiveLogo";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { TrustStrip } from "@/components/TrustStrip";
 import { 
   ArrowRight, ShieldCheck, FileText, Smartphone, 
   Stethoscope, Mail, ExternalLink, Activity,
-  Lock, BookOpen, AlertCircle, Building2, Heart, Shield,
+  AlertCircle, Heart, Shield,
   MapPin, Pill, Video, Users
 } from "lucide-react";
 
@@ -146,44 +145,6 @@ export default function Home() {
 
         <TrustStrip />
 
-        {/* Section 1.5: Promo Video */}
-        <section id="film" className="py-24 relative">
-          <div className="container mx-auto px-6">
-            <motion.div
-              variants={staggerContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-100px" }}
-              className="text-center max-w-3xl mx-auto mb-12"
-            >
-              <motion.div variants={fadeInUp} className="text-primary font-bold tracking-widest uppercase text-xs mb-4">
-                See It In Action
-              </motion.div>
-              <motion.h2 variants={fadeInUp} className="text-3xl md:text-5xl font-bold leading-tight text-foreground">
-                Health HIVE in under a minute
-              </motion.h2>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.7 }}
-              className="relative max-w-5xl mx-auto rounded-[2rem] overflow-hidden glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
-            >
-              <div className="aspect-video bg-[#07070f]">
-                <iframe
-                  src="/promo-video/?embed=1"
-                  title="Health HIVE promo video"
-                  className="w-full h-full border-0 pointer-events-none"
-                  loading="lazy"
-                  tabIndex={-1}
-                  scrolling="no"
-                />
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
         {/* Section 2: Ecosystem Overview */}
         <section id="ecosystem" className="py-24 relative">
           <div className="container mx-auto px-6">
@@ -276,6 +237,26 @@ export default function Home() {
               <p className="text-xl md:text-2xl text-muted-foreground font-light glass-panel px-6 py-3 rounded-2xl inline-block">
                 A steady hand on your shoulder. Your health story, already organised.
               </p>
+            </motion.div>
+
+            {/* Companion Promo Video */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.7 }}
+              className="relative max-w-5xl mx-auto mb-16 rounded-[2rem] overflow-hidden glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+            >
+              <div className="aspect-video bg-[#07070f]">
+                <iframe
+                  src="/promo-video/?embed=1"
+                  title="HIVE Companion promo video"
+                  className="w-full h-full border-0 pointer-events-none"
+                  loading="lazy"
+                  tabIndex={-1}
+                  scrolling="no"
+                />
+              </div>
             </motion.div>
 
             {/* Targeted Marketing Split */}
@@ -439,21 +420,23 @@ export default function Home() {
                 variants={fadeInUp}
                 className="order-2 lg:order-1 relative"
               >
-                <div className="relative rounded-3xl overflow-hidden glass-panel aspect-[4/3] flex flex-col group">
-                   {/* Abstract representation of the web app */}
+                <div className="relative rounded-3xl overflow-hidden glass-panel flex flex-col group">
+                   {/* Browser chrome */}
                    <div className="h-12 bg-background/50 border-b border-border flex items-center px-4 gap-2">
                      <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
                      <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                      <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                      <div className="ml-4 h-6 w-1/2 bg-muted/50 rounded-md"></div>
                    </div>
-                   <div className="flex-1 relative overflow-hidden flex items-center justify-center p-8 bg-gradient-to-br from-card/30 to-background/30">
-                     <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,hsl(45_93%_47%/0.25),transparent_70%)] filter blur-xl group-hover:blur-md transition-all duration-700"></div>
-                     <div className="relative z-10 text-center p-10 glass-panel-heavy rounded-3xl transform group-hover:scale-105 transition-transform duration-500">
-                       <HiveLogo size={72} className="mx-auto mb-6" />
-                       <div className="text-2xl font-bold text-foreground mb-2">Surgical Assistant</div>
-                       <div className="text-sm text-primary uppercase tracking-widest font-semibold">Clinician Portal</div>
-                     </div>
+                   <div className="aspect-video bg-[#07070f]">
+                     <iframe
+                       src="/surgical-video/?embed=1"
+                       title="HIVE Hospital Surgical Assistant video"
+                       className="w-full h-full border-0 pointer-events-none"
+                       loading="lazy"
+                       tabIndex={-1}
+                       scrolling="no"
+                     />
                    </div>
                 </div>
                 
