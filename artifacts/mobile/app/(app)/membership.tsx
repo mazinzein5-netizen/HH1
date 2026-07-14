@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { AllowanceSummary, getAllowanceSummary } from "@/utils/entitlements";
 import {
   IdentityRecord,
   STATUS_META,
@@ -25,12 +26,15 @@ import {
   verificationStatus,
 } from "@/utils/identityStore";
 import {
+  BillingCycle,
+  GOLD_PRICING,
   InsuranceDetails,
   METHOD_META,
-  MembershipPlan,
   MembershipRecord,
   PLAN_META,
   PaymentMethod,
+  PlanTier,
+  deleteMembership,
   getMembership,
   getTrialInfo,
   makeReference,
@@ -43,11 +47,13 @@ export default function MembershipScreen() {
 
   const [identity, setIdentity] = useState<IdentityRecord | null>(null);
   const [membership, setMembership] = useState<MembershipRecord | null>(null);
+  const [usage, setUsage] = useState<AllowanceSummary | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [busy, setBusy] = useState<"selfie" | "id" | "confirm" | null>(null);
+  const [busy, setBusy] = useState<"selfie" | "id" | "confirm" | "downgrade" | null>(null);
   const [editing, setEditing] = useState(false);
 
-  const [plan, setPlan] = useState<MembershipPlan>("essential");
+  const [tier, setTier] = useState<PlanTier>("gold");
+  const [billing, setBilling] = useState<BillingCycle>("monthly");
   const [method, setMethod] = useState<PaymentMethod>("online");
   const [insurer, setInsurer] = useState("");
   const [policyNumber, setPolicyNumber] = useState("");
@@ -62,11 +68,17 @@ export default function MembershipScreen() {
   const statusMeta = STATUS_META[vStatus];
 
   const refresh = useCallback(async () => {
-    const [idRec, mem] = await Promise.all([getIdentity(userId), getMembership(userId)]);
+    const [idRec, mem, summary] = await Promise.all([
+      getIdentity(userId),
+      getMembership(userId),
+      getAllowanceSummary(userId),
+    ]);
     setIdentity(idRec);
     setMembership(mem);
+    setUsage(summary);
     if (mem) {
-      setPlan(mem.plan);
+      setTier("gold");
+      setBilling(mem.billing);
       setMethod(mem.method);
       setInsurer(mem.insurance?.provider ?? "");
       setPolicyNumber(mem.insurance?.policyNumber ?? "");
@@ -111,7 +123,7 @@ export default function MembershipScreen() {
     }
   }
 
-  async function handleConfirm() {
+  async function handleConfirmGold() {
     setError("");
     if (!verified) {
       setError("Please complete identity verification (Step 1) first.");
@@ -134,22 +146,52 @@ export default function MembershipScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const rec: MembershipRecord = {
         userId,
-        plan,
+        plan: "gold",
+        billing,
         method,
         insurance,
         reference: membership?.reference ?? makeReference(),
-        status: "pending",
+        status: membership?.status ?? "pending",
         chosenAt: new Date().toISOString(),
       };
       await saveMembership(rec);
-      setMembership(rec);
       setEditing(false);
+      await refresh();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
       setError("Could not save your membership choice. Please try again.");
     } finally {
       setBusy(null);
     }
+  }
+
+  async function doDowngrade() {
+    try {
+      setBusy("downgrade");
+      await deleteMembership(userId);
+      setEditing(false);
+      setTier("blue");
+      await refresh();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      setError("Could not switch your card. Please try again.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function handleDowngrade() {
+    const message =
+      "Switch back to the free Blue Card? You'll go back to 2 pain complaints a month, and consultations and interpreter sessions will be at the standard rate.";
+    if (Platform.OS === "web") {
+      // Alert with buttons is not supported on web
+      if (window.confirm(message)) doDowngrade();
+      return;
+    }
+    Alert.alert("Switch to Blue Card?", message, [
+      { text: "Keep Gold", style: "cancel" },
+      { text: "Switch to Blue", style: "destructive", onPress: () => doDowngrade() },
+    ]);
   }
 
   function paymentInstructions(rec: MembershipRecord): string {
@@ -180,43 +222,74 @@ export default function MembershipScreen() {
     );
   }
 
+  const onGold = !!membership;
   const showChooser = !membership || editing;
+  const currentMeta = onGold ? PLAN_META.gold : PLAN_META.blue;
+
+  const usageRows = usage
+    ? [
+        {
+          icon: "clipboard-pulse-outline" as const,
+          label: "Pain complaints",
+          value: `${usage.painComplaints.used} of ${usage.painComplaints.limit} used`,
+          warn: usage.painComplaints.remaining === 0,
+        },
+        {
+          icon: "video-outline" as const,
+          label: "Video consultations",
+          value:
+            usage.tier === "gold"
+              ? `${usage.consultations.used} of ${usage.consultations.limit} free used`
+              : "Standard rate",
+          warn: usage.tier === "gold" && usage.consultations.remaining === 0,
+        },
+        {
+          icon: "translate" as const,
+          label: "Interpreter sessions",
+          value:
+            usage.tier === "gold"
+              ? `${usage.interpreter.used} of ${usage.interpreter.limit} free used`
+              : "Standard rate",
+          warn: usage.tier === "gold" && usage.interpreter.remaining === 0,
+        },
+      ]
+    : [];
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Status card */}
         <LinearGradient
-          colors={["#1F2937", "#111827"]}
+          colors={onGold ? ["#3B2F0B", "#1F2937"] : ["#1E3A8A", "#111827"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.statusCard}
         >
           <View style={styles.statusTop}>
             <MaterialCommunityIcons
-              name={membership ? (PLAN_META[membership.plan].icon as any) : "gift-outline"}
+              name={currentMeta.icon as any}
               size={26}
-              color="#D4A017"
+              color={onGold ? "#D4A017" : "#93C5FD"}
             />
             <View style={{ flex: 1 }}>
               <Text style={[styles.statusTitle, { fontFamily: "Inter_700Bold" }]}>
                 {isGuest
                   ? "Demo account"
-                  : membership
-                    ? PLAN_META[membership.plan].label
+                  : onGold
+                    ? "Gold Card"
                     : trial.expired
-                      ? "Free trial ended"
-                      : "Free Trial"}
+                      ? "Blue Card — trial ended"
+                      : "Blue Card — Free Trial"}
               </Text>
               <Text style={[styles.statusSub, { fontFamily: "Inter_400Regular" }]}>
                 {isGuest
-                  ? "Create your own account to start a free trial."
-                  : membership
-                    ? membership.status === "active"
-                      ? "Membership active"
-                      : `Awaiting payment · ${METHOD_META[membership.method].label}`
+                  ? "Create your own account to start your free Blue Card trial."
+                  : onGold
+                    ? membership!.status === "active"
+                      ? `${GOLD_PRICING[membership!.billing].price} · Membership active`
+                      : `${GOLD_PRICING[membership!.billing].price} · Awaiting payment · ${METHOD_META[membership!.method].label}`
                     : trial.expired
-                      ? "Choose a membership below to keep full access."
+                      ? "Your free trial period has ended — your Blue Card benefits continue. Upgrade to Gold for more each month."
                       : `${trial.daysLeft} day${trial.daysLeft === 1 ? "" : "s"} left — every account starts free.`}
               </Text>
             </View>
@@ -232,6 +305,40 @@ export default function MembershipScreen() {
           ) : null}
         </LinearGradient>
 
+        {/* This month's usage */}
+        {!isGuest && usage ? (
+          <View style={[styles.card, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+            <View style={styles.vStatusRow}>
+              <MaterialCommunityIcons name="calendar-month-outline" size={18} color={colors.primary} />
+              <Text style={[styles.vStatusText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                This month with your {currentMeta.label}
+              </Text>
+            </View>
+            {usageRows.map((row) => (
+              <View key={row.label} style={styles.usageRow}>
+                <MaterialCommunityIcons name={row.icon as any} size={20} color={colors.mutedForeground} />
+                <Text style={[styles.usageLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+                  {row.label}
+                </Text>
+                <Text
+                  style={[
+                    styles.usageValue,
+                    { color: row.warn ? "#DC2626" : colors.mutedForeground, fontFamily: "Inter_600SemiBold" },
+                  ]}
+                >
+                  {row.value}
+                </Text>
+              </View>
+            ))}
+            <View style={styles.vStatusRow}>
+              <MaterialCommunityIcons name="calendar-refresh-outline" size={14} color={colors.mutedForeground} />
+              <Text style={[styles.usageHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                Allowances reset on the 1st of every month.
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         {isGuest ? (
           <View style={[styles.card, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <View style={styles.vStatusRow}>
@@ -242,7 +349,7 @@ export default function MembershipScreen() {
             </View>
             <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
               Identity verification and membership are personal to your own account. Create one to start your
-              free 30-day trial — then add your selfie and photo ID and choose how you'd like to pay.
+              free Blue Card trial — then add your selfie and photo ID if you'd like to upgrade to Gold.
             </Text>
             <TouchableOpacity
               activeOpacity={0.85}
@@ -265,8 +372,9 @@ export default function MembershipScreen() {
             </Text>
           </View>
           <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Membership needs identity verification: add a selfie and a photo ID (passport, driving licence or
-            public services card). Both stay on this device — staff verify them in person at your HIVE node.
+            Upgrading to Gold needs identity verification: add a selfie and a photo ID (passport, driving
+            licence or public services card). Both stay on this device — staff verify them in person at your
+            HIVE node.
           </Text>
 
           <View style={styles.vRow}>
@@ -320,120 +428,226 @@ export default function MembershipScreen() {
           </View>
         </View>
 
-        {/* Step 2 — membership */}
-        {sectionTitle("2", "Choose your membership")}
-        {!verified ? (
-          <View style={[styles.lockCard, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
-            <MaterialCommunityIcons name="lock-outline" size={18} color={colors.mutedForeground} />
-            <Text style={[styles.lockText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Complete Step 1 first — membership needs identity verification. Your free trial keeps working in the meantime.
-            </Text>
-          </View>
-        ) : showChooser ? (
+        {/* Step 2 — choose your card */}
+        {sectionTitle("2", "Choose your card")}
+        {showChooser ? (
           <View style={{ gap: 10 }}>
-            {(Object.keys(PLAN_META) as MembershipPlan[]).map((p) => {
-              const meta = PLAN_META[p];
-              const active = plan === p;
+            {(["blue", "gold"] as PlanTier[]).map((t) => {
+              const meta = PLAN_META[t];
+              const active = tier === t;
+              const isCurrent = t === (onGold ? "gold" : "blue");
               return (
                 <TouchableOpacity
-                  key={p}
+                  key={t}
                   activeOpacity={0.8}
-                  onPress={() => { Haptics.selectionAsync(); setPlan(p); }}
+                  onPress={() => { Haptics.selectionAsync(); setTier(t); setError(""); }}
                   style={[styles.planCard, {
                     backgroundColor: active ? colors.glassPrimary : colors.glass,
-                    borderColor: active ? colors.primary : colors.glassBorder,
+                    borderColor: active ? meta.accent : colors.glassBorder,
                     borderWidth: active ? 1.5 : 1,
                   }]}
                 >
-                  <MaterialCommunityIcons name={meta.icon as any} size={24} color={active ? colors.primary : colors.mutedForeground} />
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.planTop}>
-                      <Text style={[styles.planName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{meta.label}</Text>
-                      <Text style={[styles.planPrice, { color: active ? colors.primary : colors.mutedForeground, fontFamily: "Inter_700Bold" }]}>{meta.price}</Text>
+                  <View style={styles.planHead}>
+                    <MaterialCommunityIcons name={meta.icon as any} size={24} color={meta.accent} />
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.planTop}>
+                        <Text style={[styles.planName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                          {meta.label}
+                        </Text>
+                        <Text style={[styles.planPrice, { color: meta.accent, fontFamily: "Inter_700Bold" }]}>
+                          {t === "blue" ? "Free" : GOLD_PRICING[billing].price}
+                        </Text>
+                      </View>
+                      <Text style={[styles.planBlurb, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                        {meta.tagline}
+                      </Text>
                     </View>
-                    <Text style={[styles.planBlurb, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{meta.blurb}</Text>
+                    <MaterialCommunityIcons
+                      name={active ? "radiobox-marked" : "radiobox-blank"}
+                      size={20}
+                      color={active ? meta.accent : colors.mutedForeground}
+                    />
+                  </View>
+                  {isCurrent ? (
+                    <View style={[styles.currentPill, { backgroundColor: meta.accent + "22", borderColor: meta.accent + "55" }]}>
+                      <Text style={[styles.currentPillText, { color: meta.accent, fontFamily: "Inter_600SemiBold" }]}>
+                        YOUR CURRENT CARD
+                      </Text>
+                    </View>
+                  ) : null}
+                  <View style={{ gap: 6 }}>
+                    {meta.features.map((f) => (
+                      <View key={f} style={styles.featureRow}>
+                        <MaterialCommunityIcons name="check-circle" size={15} color={meta.accent} />
+                        <Text style={[styles.featureText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+                          {f}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 </TouchableOpacity>
               );
             })}
 
-            <Text style={[styles.payLabel, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>HOW WOULD YOU LIKE TO PAY?</Text>
-            {(Object.keys(METHOD_META) as PaymentMethod[]).map((m) => {
-              const meta = METHOD_META[m];
-              const active = method === m;
-              return (
+            {tier === "gold" ? (
+              <>
+                <Text style={[styles.payLabel, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
+                  HOW OFTEN WOULD YOU LIKE TO PAY?
+                </Text>
+                <View style={styles.billingRow}>
+                  {(["monthly", "yearly"] as BillingCycle[]).map((b) => {
+                    const active = billing === b;
+                    const meta = GOLD_PRICING[b];
+                    return (
+                      <TouchableOpacity
+                        key={b}
+                        activeOpacity={0.8}
+                        onPress={() => { Haptics.selectionAsync(); setBilling(b); }}
+                        style={[styles.billingCard, {
+                          backgroundColor: active ? colors.glassPrimary : colors.glass,
+                          borderColor: active ? "#D4A017" : colors.glassBorder,
+                          borderWidth: active ? 1.5 : 1,
+                        }]}
+                      >
+                        <Text style={[styles.billingLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                          {meta.label}
+                        </Text>
+                        <Text style={[styles.billingPrice, { color: active ? "#D4A017" : colors.mutedForeground, fontFamily: "Inter_700Bold" }]}>
+                          {meta.price}
+                        </Text>
+                        {meta.note ? (
+                          <Text style={[styles.billingNote, { color: "#047857", fontFamily: "Inter_600SemiBold" }]}>
+                            {meta.note}
+                          </Text>
+                        ) : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {!verified ? (
+                  <View style={[styles.lockCard, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+                    <MaterialCommunityIcons name="lock-outline" size={18} color={colors.mutedForeground} />
+                    <Text style={[styles.lockText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                      Complete Step 1 first — upgrading to Gold needs identity verification. Your Blue Card keeps
+                      working in the meantime.
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={[styles.payLabel, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
+                      HOW WOULD YOU LIKE TO PAY?
+                    </Text>
+                    {(Object.keys(METHOD_META) as PaymentMethod[]).map((m) => {
+                      const meta = METHOD_META[m];
+                      const active = method === m;
+                      return (
+                        <TouchableOpacity
+                          key={m}
+                          activeOpacity={0.8}
+                          onPress={() => { Haptics.selectionAsync(); setMethod(m); setError(""); }}
+                          style={[styles.methodCard, {
+                            backgroundColor: active ? colors.glassPrimary : colors.glass,
+                            borderColor: active ? colors.primary : colors.glassBorder,
+                            borderWidth: active ? 1.5 : 1,
+                          }]}
+                        >
+                          <MaterialCommunityIcons name={meta.icon as any} size={22} color={active ? colors.primary : colors.mutedForeground} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.methodName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{meta.label}</Text>
+                            <Text style={[styles.methodBlurb, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{meta.blurb}</Text>
+                          </View>
+                          <MaterialCommunityIcons
+                            name={active ? "radiobox-marked" : "radiobox-blank"}
+                            size={20}
+                            color={active ? colors.primary : colors.mutedForeground}
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
+
+                    {method === "insurance" ? (
+                      <View style={[styles.card, { backgroundColor: colors.glass, borderColor: colors.glassBorder, gap: 10 }]}>
+                        <Text style={[styles.methodName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Insurance details</Text>
+                        <TextInput
+                          style={[styles.input, { color: colors.foreground, borderColor: colors.glassBorder, fontFamily: "Inter_400Regular" }]}
+                          placeholder="Insurer (e.g. VHI, Laya, Irish Life Health)"
+                          placeholderTextColor={colors.mutedForeground}
+                          value={insurer}
+                          onChangeText={(t) => { setInsurer(t); setError(""); }}
+                        />
+                        <TextInput
+                          style={[styles.input, { color: colors.foreground, borderColor: colors.glassBorder, fontFamily: "Inter_400Regular" }]}
+                          placeholder="Policy number"
+                          placeholderTextColor={colors.mutedForeground}
+                          value={policyNumber}
+                          onChangeText={(t) => { setPolicyNumber(t); setError(""); }}
+                          autoCapitalize="characters"
+                        />
+                        <TextInput
+                          style={[styles.input, { color: colors.foreground, borderColor: colors.glassBorder, fontFamily: "Inter_400Regular" }]}
+                          placeholder="Member ID (optional)"
+                          placeholderTextColor={colors.mutedForeground}
+                          value={memberId}
+                          onChangeText={setMemberId}
+                          autoCapitalize="characters"
+                        />
+                        <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                          Saved only on this device. Your HIVE node confirms cover with your insurer.
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    {error ? (
+                      <View style={[styles.errorBox, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}>
+                        <MaterialCommunityIcons name="alert-circle-outline" size={16} color={colors.emergency} />
+                        <Text style={[styles.errorText, { color: colors.emergency, fontFamily: "Inter_400Regular" }]}>{error}</Text>
+                      </View>
+                    ) : null}
+
+                    <TouchableOpacity activeOpacity={0.85} onPress={handleConfirmGold} disabled={busy !== null}>
+                      <LinearGradient colors={["#C9860A", "#D4A017", "#C9860A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.confirmBtn}>
+                        {busy === "confirm"
+                          ? <ActivityIndicator color="#fff" />
+                          : <Text style={[styles.confirmText, { fontFamily: "Inter_700Bold" }]}>
+                              {onGold ? "Update Gold Membership" : "Upgrade to Gold Card"}
+                            </Text>}
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </>
+            ) : onGold ? (
+              <>
+                {error ? (
+                  <View style={[styles.errorBox, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}>
+                    <MaterialCommunityIcons name="alert-circle-outline" size={16} color={colors.emergency} />
+                    <Text style={[styles.errorText, { color: colors.emergency, fontFamily: "Inter_400Regular" }]}>{error}</Text>
+                  </View>
+                ) : null}
                 <TouchableOpacity
-                  key={m}
-                  activeOpacity={0.8}
-                  onPress={() => { Haptics.selectionAsync(); setMethod(m); setError(""); }}
-                  style={[styles.methodCard, {
-                    backgroundColor: active ? colors.glassPrimary : colors.glass,
-                    borderColor: active ? colors.primary : colors.glassBorder,
-                    borderWidth: active ? 1.5 : 1,
-                  }]}
+                  activeOpacity={0.85}
+                  onPress={handleDowngrade}
+                  disabled={busy !== null}
+                  style={[styles.downgradeBtn, { borderColor: "#2563EB" }]}
                 >
-                  <MaterialCommunityIcons name={meta.icon as any} size={22} color={active ? colors.primary : colors.mutedForeground} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.methodName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{meta.label}</Text>
-                    <Text style={[styles.methodBlurb, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{meta.blurb}</Text>
-                  </View>
-                  <MaterialCommunityIcons
-                    name={active ? "radiobox-marked" : "radiobox-blank"}
-                    size={20}
-                    color={active ? colors.primary : colors.mutedForeground}
-                  />
+                  {busy === "downgrade"
+                    ? <ActivityIndicator color="#2563EB" />
+                    : <Text style={[styles.downgradeText, { color: "#2563EB", fontFamily: "Inter_700Bold" }]}>
+                        Switch back to Blue Card
+                      </Text>}
                 </TouchableOpacity>
-              );
-            })}
-
-            {method === "insurance" ? (
-              <View style={[styles.card, { backgroundColor: colors.glass, borderColor: colors.glassBorder, gap: 10 }]}>
-                <Text style={[styles.methodName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Insurance details</Text>
-                <TextInput
-                  style={[styles.input, { color: colors.foreground, borderColor: colors.glassBorder, fontFamily: "Inter_400Regular" }]}
-                  placeholder="Insurer (e.g. VHI, Laya, Irish Life Health)"
-                  placeholderTextColor={colors.mutedForeground}
-                  value={insurer}
-                  onChangeText={(t) => { setInsurer(t); setError(""); }}
-                />
-                <TextInput
-                  style={[styles.input, { color: colors.foreground, borderColor: colors.glassBorder, fontFamily: "Inter_400Regular" }]}
-                  placeholder="Policy number"
-                  placeholderTextColor={colors.mutedForeground}
-                  value={policyNumber}
-                  onChangeText={(t) => { setPolicyNumber(t); setError(""); }}
-                  autoCapitalize="characters"
-                />
-                <TextInput
-                  style={[styles.input, { color: colors.foreground, borderColor: colors.glassBorder, fontFamily: "Inter_400Regular" }]}
-                  placeholder="Member ID (optional)"
-                  placeholderTextColor={colors.mutedForeground}
-                  value={memberId}
-                  onChangeText={setMemberId}
-                  autoCapitalize="characters"
-                />
-                <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  Saved only on this device. Your HIVE node confirms cover with your insurer.
+              </>
+            ) : (
+              <View style={[styles.lockCard, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+                <MaterialCommunityIcons name="check-circle-outline" size={18} color="#2563EB" />
+                <Text style={[styles.lockText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  The Blue Card is your current card — there's nothing to pay. Select the Gold Card above if
+                  you'd like more each month.
                 </Text>
               </View>
-            ) : null}
+            )}
 
-            {error ? (
-              <View style={[styles.errorBox, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}>
-                <MaterialCommunityIcons name="alert-circle-outline" size={16} color={colors.emergency} />
-                <Text style={[styles.errorText, { color: colors.emergency, fontFamily: "Inter_400Regular" }]}>{error}</Text>
-              </View>
-            ) : null}
-
-            <TouchableOpacity activeOpacity={0.85} onPress={handleConfirm} disabled={busy !== null}>
-              <LinearGradient colors={["#C9860A", "#D4A017", "#C9860A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.confirmBtn}>
-                {busy === "confirm"
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={[styles.confirmText, { fontFamily: "Inter_700Bold" }]}>
-                      {membership ? "Update Membership" : "Confirm Membership"}
-                    </Text>}
-              </LinearGradient>
-            </TouchableOpacity>
             {editing ? (
               <TouchableOpacity onPress={() => { setEditing(false); refresh(); }} style={styles.cancelLink}>
                 <Text style={[styles.cancelText, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>Cancel</Text>
@@ -443,13 +657,13 @@ export default function MembershipScreen() {
         ) : (
           <View style={[styles.card, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              {PLAN_META[membership!.plan].label} · {PLAN_META[membership!.plan].price} · {METHOD_META[membership!.method].label}
+              Gold Card · {GOLD_PRICING[membership!.billing].price} · {METHOD_META[membership!.method].label}
             </Text>
             <TouchableOpacity
               onPress={() => { Haptics.selectionAsync(); setEditing(true); }}
               style={[styles.vBtn, { backgroundColor: colors.glassPrimary, borderColor: colors.primary, alignSelf: "flex-start" }]}
             >
-              <Text style={[styles.vBtnText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>Change plan or payment</Text>
+              <Text style={[styles.vBtnText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>Change card or payment</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -487,6 +701,10 @@ const styles = StyleSheet.create({
   cardBody: { fontSize: 13, lineHeight: 19 },
   vStatusRow: { flexDirection: "row", alignItems: "center", gap: 7 },
   vStatusText: { fontSize: 13 },
+  usageRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  usageLabel: { flex: 1, fontSize: 14 },
+  usageValue: { fontSize: 13 },
+  usageHint: { flex: 1, fontSize: 11.5, lineHeight: 16 },
   vRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   vRowTitle: { fontSize: 15 },
   vRowSub: { fontSize: 12.5, marginTop: 1 },
@@ -494,11 +712,21 @@ const styles = StyleSheet.create({
   vBtnText: { fontSize: 13 },
   lockCard: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 16, borderWidth: 1, padding: 14 },
   lockText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  planCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, padding: 14 },
+  planCard: { borderRadius: 16, padding: 14, gap: 12 },
+  planHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   planTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  planName: { fontSize: 15.5 },
-  planPrice: { fontSize: 13.5 },
+  planName: { fontSize: 16 },
+  planPrice: { fontSize: 14 },
   planBlurb: { fontSize: 12.5, lineHeight: 17, marginTop: 2 },
+  currentPill: { alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
+  currentPillText: { fontSize: 10, letterSpacing: 1 },
+  featureRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  featureText: { flex: 1, fontSize: 13.5, lineHeight: 19 },
+  billingRow: { flexDirection: "row", gap: 10 },
+  billingCard: { flex: 1, borderRadius: 16, padding: 14, gap: 4, alignItems: "center" },
+  billingLabel: { fontSize: 13 },
+  billingPrice: { fontSize: 15 },
+  billingNote: { fontSize: 11 },
   payLabel: { fontSize: 10.5, letterSpacing: 1.3, marginTop: 8 },
   methodCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, padding: 14 },
   methodName: { fontSize: 14.5 },
@@ -508,6 +736,8 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 13, flex: 1 },
   confirmBtn: { borderRadius: 14, paddingVertical: 16, alignItems: "center", marginTop: 4 },
   confirmText: { color: "#fff", fontSize: 16 },
+  downgradeBtn: { borderRadius: 14, borderWidth: 1.5, paddingVertical: 15, alignItems: "center", marginTop: 4 },
+  downgradeText: { fontSize: 15 },
   cancelLink: { alignItems: "center", paddingVertical: 8 },
   cancelText: { fontSize: 14 },
   privacyRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingHorizontal: 4, marginTop: 4 },

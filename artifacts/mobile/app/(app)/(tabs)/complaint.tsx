@@ -1,6 +1,7 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -16,8 +17,10 @@ import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PILOT_ACTIVATION_CODE, useAppMode } from "@/context/AppModeContext";
+import { useAuth } from "@/context/AuthContext";
 import { usePatient, type Complaint } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
+import { Allowance, getAllowance, recordUsage } from "@/utils/entitlements";
 
 const FALLBACK_QUESTIONS = [
   "How long have you had this symptom?",
@@ -43,7 +46,10 @@ export default function ComplaintScreen() {
   const insets = useSafeAreaInsets();
   const { addComplaint } = usePatient();
   const { pilotMode } = useAppMode();
+  const { user } = useAuth();
+  const userId = user?.id ?? "unknown";
 
+  const [allowance, setAllowance] = useState<Allowance | null>(null);
   const [step, setStep] = useState<Step>("input");
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [questions, setQuestions] = useState<string[]>([]);
@@ -57,6 +63,16 @@ export default function ComplaintScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 + 84 : insets.bottom + 84;
 
+  const loadAllowance = useCallback(async () => {
+    setAllowance(await getAllowance(userId, "painComplaints"));
+  }, [userId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAllowance();
+    }, [loadAllowance])
+  );
+
   function fade(cb: () => void) {
     Animated.timing(fadeAnim, { toValue: 0, duration: 180, useNativeDriver: true }).start(() => {
       cb();
@@ -66,8 +82,15 @@ export default function ComplaintScreen() {
 
   async function handleStartComplaint() {
     if (!chiefComplaint.trim()) return;
+    if (allowance && allowance.remaining <= 0) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setStep("loading-questions");
+
+    // Count this intake against the monthly allowance for the patient's card.
+    try {
+      await recordUsage(userId, "painComplaints");
+      loadAllowance();
+    } catch {}
 
     try {
       const domain = process.env.EXPO_PUBLIC_DOMAIN;
@@ -144,6 +167,7 @@ export default function ComplaintScreen() {
     setSummary(null);
     setSaved(false);
     fadeAnim.setValue(1);
+    loadAllowance();
   }
 
   const recColor = summary?.recommendation
@@ -176,10 +200,51 @@ export default function ComplaintScreen() {
         </View>
 
         <Animated.View style={{ opacity: fadeAnim }}>
-          {/* STEP: Input chief complaint */}
-          {step === "input" && (
+          {/* STEP: Input chief complaint — blocked when the monthly allowance is used up */}
+          {step === "input" && allowance && allowance.remaining <= 0 && (
+            <View style={[styles.limitCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <MaterialCommunityIcons name="calendar-month-outline" size={34} color={allowance.tier === "gold" ? "#D4A017" : "#2563EB"} />
+              <Text style={[styles.limitTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                Monthly limit reached
+              </Text>
+              <Text style={[styles.limitBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                You've used all {allowance.limit} pain complaints included with your{" "}
+                {allowance.tier === "gold" ? "Gold Card" : "Blue Card"} this month. Your allowance resets on the
+                1st of next month.
+              </Text>
+              {allowance.tier === "blue" ? (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => { Haptics.selectionAsync(); router.push("/(app)/membership"); }}
+                  style={[styles.btn, { backgroundColor: "#D4A017", alignSelf: "stretch" }]}
+                >
+                  <MaterialCommunityIcons name="crown-outline" size={18} color="#fff" />
+                  <Text style={[styles.btnText, { fontFamily: "Inter_600SemiBold" }]}>
+                    Upgrade to Gold — 30 pain complaints a month
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              <Text style={[styles.limitBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                If something feels seriously wrong, don't wait — call 112 or contact your GP.
+              </Text>
+            </View>
+          )}
+
+          {step === "input" && !(allowance && allowance.remaining <= 0) && (
             <View style={styles.stepWrap}>
               <Text style={[styles.stepLabel, { color: colors.mutedForeground }]}>STEP 1 OF 3 — COMPLAINT</Text>
+              {allowance ? (
+                <View style={[styles.allowanceChip, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                  <MaterialCommunityIcons
+                    name={allowance.tier === "gold" ? "crown-outline" : "card-account-details-star-outline"}
+                    size={14}
+                    color={allowance.tier === "gold" ? "#D4A017" : "#2563EB"}
+                  />
+                  <Text style={[styles.allowanceChipText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    {allowance.used} of {allowance.limit} pain complaints used this month
+                  </Text>
+                </View>
+              ) : null}
               <Text style={[styles.questionText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
                 What brings you in today?
               </Text>
@@ -390,6 +455,11 @@ const styles = StyleSheet.create({
   progressFill: { height: 4, borderRadius: 2 },
   complaintChip: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
   complaintChipText: { fontSize: 13, flex: 1 },
+  allowanceChip: { flexDirection: "row", alignItems: "center", gap: 7, borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, alignSelf: "flex-start" },
+  allowanceChipText: { fontSize: 12.5 },
+  limitCard: { borderRadius: 16, borderWidth: 1, padding: 20, gap: 12, alignItems: "center" },
+  limitTitle: { fontSize: 18, textAlign: "center" },
+  limitBody: { fontSize: 13.5, lineHeight: 20, textAlign: "center" },
   questionText: { fontSize: 18, lineHeight: 26, letterSpacing: -0.2 },
   inputWrap: { borderRadius: 14, borderWidth: 1, padding: 14 },
   input: { fontSize: 15, lineHeight: 22, minHeight: 80 },

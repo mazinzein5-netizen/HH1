@@ -1,7 +1,8 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Modal,
@@ -17,6 +18,7 @@ import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useAuth } from "@/context/AuthContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
+import { Allowance, getAllowance, recordUsage } from "@/utils/entitlements";
 import {
   addBooking,
   cancelBooking,
@@ -67,14 +69,21 @@ export default function InterpreterScreen() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [bookings, setBookings] = useState<InterpreterBooking[]>([]);
+  const [allowance, setAllowance] = useState<Allowance | null>(null);
+
+  const userId = user?.id ?? "unknown";
 
   const refresh = useCallback(async () => {
-    setBookings(await listBookings());
-  }, []);
+    const [list, allw] = await Promise.all([listBookings(), getAllowance(userId, "interpreter")]);
+    setBookings(list);
+    setAllowance(allw);
+  }, [userId]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   const canSubmit = !!language && !!service && dayIndex !== null && !!time;
 
@@ -88,6 +97,9 @@ export default function InterpreterScreen() {
       const dateTime = new Date(day);
       dateTime.setHours(hh, mm, 0, 0);
 
+      // Covered by the Gold Card's monthly allowance?
+      const covered = allowance?.tier === "gold" && allowance.remaining > 0;
+
       const booking = await addBooking({
         language: language!,
         service: service!,
@@ -95,6 +107,9 @@ export default function InterpreterScreen() {
         mode,
         notes: notes.trim() || undefined,
       });
+      if (covered) {
+        try { await recordUsage(userId, "interpreter"); } catch {}
+      }
       await refresh();
       await sendBookingRequestEmail(booking, user?.fullName);
 
@@ -321,6 +336,27 @@ export default function InterpreterScreen() {
           }]}
         />
 
+        {/* Coverage note */}
+        {allowance ? (
+          <View style={[styles.coverageRow, {
+            backgroundColor: allowance.tier === "gold" && allowance.remaining > 0 ? "#D4A0171a" : colors.card,
+            borderColor: allowance.tier === "gold" && allowance.remaining > 0 ? "#D4A01755" : colors.border,
+          }]}>
+            <MaterialCommunityIcons
+              name={allowance.tier === "gold" ? "crown-outline" : "card-account-details-star-outline"}
+              size={18}
+              color={allowance.tier === "gold" ? "#D4A017" : "#2563EB"}
+            />
+            <Text style={[styles.coverageText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              {allowance.tier === "gold"
+                ? allowance.remaining > 0
+                  ? `Covered by your Gold Card — ${allowance.used} of ${allowance.limit} free sessions used this month.`
+                  : `You've used your ${allowance.limit} free Gold sessions this month — this booking is at the standard rate, settled at your HIVE node.`
+                : "On the Blue Card, interpreter sessions are at the standard rate, settled at your HIVE node. The Gold Card includes 3 free sessions a month."}
+            </Text>
+          </View>
+        ) : null}
+
         {/* Submit */}
         <TouchableOpacity activeOpacity={0.85} onPress={submit} disabled={!canSubmit || submitting}>
           <LinearGradient
@@ -491,6 +527,8 @@ const styles = StyleSheet.create({
   notesInput: { borderRadius: 14, borderWidth: 1, padding: 14, minHeight: 80, fontSize: 14, textAlignVertical: "top" },
   submitBtn: { borderRadius: 14, paddingVertical: 17, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 4 },
   submitText: { color: "#fff", fontSize: 15.5 },
+  coverageRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 12, borderWidth: 1, padding: 12, marginTop: 12 },
+  coverageText: { flex: 1, fontSize: 12.5, lineHeight: 18 },
   zeroServerNote: { fontSize: 11, lineHeight: 16, textAlign: "center", paddingHorizontal: 10 },
   emptyCard: { borderRadius: 14, borderWidth: 1, padding: 22, alignItems: "center", gap: 8 },
   emptyText: { fontSize: 12.5, textAlign: "center" },

@@ -1,8 +1,8 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
   Alert,
   Platform,
@@ -15,8 +15,10 @@ import {
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import { useAuth } from "@/context/AuthContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
+import { Allowance, getAllowance, recordUsage } from "@/utils/entitlements";
 
 type ConsultState = "booking" | "waiting" | "call";
 type ConsultType = "gp" | "physio" | "ortho" | "neuro" | "geriatric";
@@ -42,11 +44,25 @@ export default function ConsultationScreen() {
   const { prefs } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
 
+  const { user } = useAuth();
+  const userId = user?.id ?? "unknown";
+
   const [state, setState] = useState<ConsultState>("booking");
   const [selectedType, setSelectedType] = useState<ConsultType | null>(null);
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
+  const [allowance, setAllowance] = useState<Allowance | null>(null);
+
+  const loadAllowance = useCallback(async () => {
+    setAllowance(await getAllowance(userId, "consultations"));
+  }, [userId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAllowance();
+    }, [loadAllowance])
+  );
 
   const consult = CONSULT_TYPES.find((c) => c.key === selectedType);
 
@@ -55,9 +71,16 @@ export default function ConsultationScreen() {
     setSelectedType(type);
   }
 
-  function confirmBooking() {
+  async function confirmBooking() {
     if (!selectedType) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Count against the Gold Card's free monthly consultations when covered.
+    if (allowance?.tier === "gold" && allowance.remaining > 0) {
+      try {
+        await recordUsage(userId, "consultations");
+        loadAllowance();
+      } catch {}
+    }
     setState("waiting");
     setTimeout(() => {
       setState("call");
@@ -188,6 +211,27 @@ export default function ConsultationScreen() {
             </View>
             <Feather name="chevron-right" size={18} color={colors.gold} />
           </TouchableOpacity>
+
+          {/* Coverage note */}
+          {allowance ? (
+            <View style={[styles.coverageRow, {
+              backgroundColor: allowance.tier === "gold" && allowance.remaining > 0 ? "#D4A0171a" : colors.card,
+              borderColor: allowance.tier === "gold" && allowance.remaining > 0 ? "#D4A01755" : colors.border,
+            }]}>
+              <MaterialCommunityIcons
+                name={allowance.tier === "gold" ? "crown-outline" : "card-account-details-star-outline"}
+                size={18}
+                color={allowance.tier === "gold" ? "#D4A017" : "#2563EB"}
+              />
+              <Text style={[styles.coverageText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                {allowance.tier === "gold"
+                  ? allowance.remaining > 0
+                    ? `Covered by your Gold Card — ${allowance.used} of ${allowance.limit} free consultations used this month.`
+                    : `You've used your ${allowance.limit} free Gold consultations this month — this appointment is at the standard rate, settled at your HIVE node.`
+                  : "On the Blue Card, consultations are at the standard rate, settled at your HIVE node. The Gold Card includes 3 free consultations a month."}
+              </Text>
+            </View>
+          ) : null}
 
           {selectedType && (
             <TouchableOpacity activeOpacity={0.85} onPress={confirmBooking}>
@@ -321,6 +365,8 @@ const styles = StyleSheet.create({
   interpreterSub: { fontSize: 12, marginTop: 2, lineHeight: 17 },
   confirmBtn: { borderRadius: 14, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   confirmBtnText: { color: "#fff", fontSize: 15 },
+  coverageRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 12, borderWidth: 1, padding: 12 },
+  coverageText: { flex: 1, fontSize: 12.5, lineHeight: 18 },
   waitingScreen: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
   waitingCard: { borderRadius: 24, padding: 40, alignItems: "center", gap: 16, width: "100%" },
   avatarRing: { padding: 8, borderRadius: 70, borderWidth: 2, borderColor: "rgba(255,255,255,0.1)" },

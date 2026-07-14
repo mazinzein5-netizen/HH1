@@ -3,14 +3,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 /* ────────────────────────────────────────────────────────────────────────────
  * On-device membership & payment store (Zero-Server framework).
  *
- * The patient chooses a plan and how they want to pay. Nothing is charged
- * from inside the app — every choice generates a human-readable payment
- * reference (HIVE-XXXX-XXXX) that is settled online (pilot programme),
- * through the patient's insurer, or in cash at a partner HIVE node.
- * All details stay on this device.
+ * Two cards:
+ *   • Blue Card — the free trial card every account starts on.
+ *   • Gold Card — €90 / month or €700 / year, chosen in the app.
+ *
+ * Nothing is charged from inside the app — upgrading to Gold generates a
+ * human-readable payment reference (HIVE-XXXX-XXXX) that is settled online
+ * (pilot programme), through the patient's insurer, or in cash at a partner
+ * HIVE node. All details stay on this device.
  * ──────────────────────────────────────────────────────────────────────────── */
 
-export type MembershipPlan = "essential" | "plus" | "family";
+/** The two cards. "blue" is the default — a saved membership record is only
+ *  created when the patient upgrades to Gold. */
+export type PlanTier = "blue" | "gold";
+export type BillingCycle = "monthly" | "yearly";
 export type PaymentMethod = "online" | "insurance" | "cash";
 
 export interface InsuranceDetails {
@@ -21,7 +27,9 @@ export interface InsuranceDetails {
 
 export interface MembershipRecord {
   userId: string;
-  plan: MembershipPlan;
+  /** Paid card — currently always "gold". */
+  plan: "gold";
+  billing: BillingCycle;
   method: PaymentMethod;
   /** Human-readable payment reference, e.g. HIVE-4KT9-XE2M */
   reference: string;
@@ -32,27 +40,42 @@ export interface MembershipRecord {
 }
 
 export const PLAN_META: Record<
-  MembershipPlan,
-  { label: string; price: string; blurb: string; icon: string }
+  PlanTier,
+  { label: string; tagline: string; icon: string; accent: string; features: string[] }
 > = {
-  essential: {
-    label: "HIVE Essential",
-    price: "€9.99 / month",
-    blurb: "Health records, reminders and triage for one person.",
-    icon: "hexagon-outline",
+  blue: {
+    label: "Blue Card",
+    tagline: "Free trial — every account starts here",
+    icon: "card-account-details-star-outline",
+    accent: "#2563EB",
+    features: [
+      "2 pain complaints per month",
+      "Prescription services included",
+      "Medical history included",
+      "Bee chat bot included",
+    ],
   },
-  plus: {
-    label: "HIVE Plus",
-    price: "€19.99 / month",
-    blurb: "Adds consultations, smart-device monitoring and priority support.",
-    icon: "hexagon-slice-4",
+  gold: {
+    label: "Gold Card",
+    tagline: "Full HIVE membership",
+    icon: "crown-outline",
+    accent: "#D4A017",
+    features: [
+      "30 pain complaints per month",
+      "Prescription services & medical history included",
+      "Bee chat bot included",
+      "3 free video consultations per month — more at standard rates",
+      "3 free interpreter sessions per month — more at standard rates",
+    ],
   },
-  family: {
-    label: "HIVE Family",
-    price: "€29.99 / month",
-    blurb: "Everything in Plus for up to four family members.",
-    icon: "hexagon-multiple",
-  },
+};
+
+export const GOLD_PRICING: Record<
+  BillingCycle,
+  { label: string; price: string; note?: string }
+> = {
+  monthly: { label: "Monthly", price: "€90 / month" },
+  yearly: { label: "Yearly", price: "€700 / year", note: "Save €380 a year" },
 };
 
 export const METHOD_META: Record<
@@ -78,7 +101,7 @@ export const METHOD_META: Record<
 
 const KEY_PREFIX = "hive_membership_v1_";
 
-/** Every new account starts with a free trial — no payment at registration. */
+/** Every new account starts on the Blue Card free trial — no payment at registration. */
 export const TRIAL_DAYS = 30;
 
 export interface TrialInfo {
@@ -108,7 +131,13 @@ export function makeReference(): string {
 export async function getMembership(userId: string): Promise<MembershipRecord | null> {
   try {
     const raw = await AsyncStorage.getItem(`${KEY_PREFIX}${userId}`);
-    return raw ? (JSON.parse(raw) as MembershipRecord) : null;
+    if (!raw) return null;
+    const rec = JSON.parse(raw) as MembershipRecord & { plan: string };
+    // Records saved before the Blue/Gold pricing (essential/plus/family)
+    // are treated as Gold monthly memberships.
+    if (rec.plan !== "gold") rec.plan = "gold";
+    if (rec.billing !== "monthly" && rec.billing !== "yearly") rec.billing = "monthly";
+    return rec as MembershipRecord;
   } catch {
     return null;
   }
