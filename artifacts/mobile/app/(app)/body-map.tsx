@@ -14,6 +14,9 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle, Ellipse, Path, Rect } from "react-native-svg";
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
@@ -150,6 +153,22 @@ export default function BodyMapScreen() {
   const [nsAnswers, setNsAnswers] = useState<(number | null)[]>(new Array(NECK_SHOULDER_QUESTIONS.length).fill(null));
 
   const zoom = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: false }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.85] });
+  const glowWidth = pulse.interpolate({ inputRange: [0, 1], outputRange: [4, 9] });
+  const dotGlowR = pulse.interpolate({ inputRange: [0, 1], outputRange: [9, 14] });
 
   function pickRegion(r: Region) {
     Haptics.selectionAsync();
@@ -277,8 +296,8 @@ export default function BodyMapScreen() {
                 : REGION_META[region!].blurb}
             </Text>
 
-            {/* Body figure */}
-            <View style={styles.figureWrap}>
+            {/* Body figures */}
+            <View style={[styles.figureWrap, { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 }]}>
               <Animated.View style={{ transform: [{ translateY }, { scale }] }}>
                 <Svg width={230} height={340} viewBox="0 0 200 300">
                   {/* figure outline */}
@@ -311,12 +330,55 @@ export default function BodyMapScreen() {
                     <>
                       <Circle cx={58} cy={92} r={7} fill={colors.gold} onPress={() => pickRegion("upperLimb")} />
                       <Circle cx={142} cy={92} r={7} fill={colors.gold} onPress={() => pickRegion("upperLimb")} />
-                      <Circle cx={100} cy={90} r={7} fill={colors.gold} onPress={() => pickRegion("spine")} />
+                      <Circle cx={100} cy={48} r={7} fill={colors.gold} onPress={() => pickRegion("spine")} />
                       <Circle cx={100} cy={200} r={7} fill={colors.gold} onPress={() => pickRegion("leg")} />
                     </>
                   )}
                 </Svg>
               </Animated.View>
+
+              {/* Sagittal (side) view with radiating pain glow */}
+              {step === "map" && (
+                <Svg width={130} height={340} viewBox="0 0 120 300">
+                  {/* head (profile) */}
+                  <Circle cx={58} cy={26} r={18} stroke={outline} strokeWidth={2.5} fill={fillIdle} />
+                  {/* neck */}
+                  <Path d="M52 43 L50 54 L66 54 L62 42" stroke={outline} strokeWidth={2.5} fill={fillIdle} />
+                  {/* torso profile: chest front (left), spine curve at back (right) */}
+                  <Path
+                    d="M50 54 Q38 80 42 104 Q44 120 50 132 L74 132 Q80 116 76 96 Q73 76 66 54 Z"
+                    stroke={outline}
+                    strokeWidth={2.5}
+                    fill={fillIdle}
+                  />
+                  {/* arm hint */}
+                  <Path d="M58 62 Q52 92 56 122" stroke={outline} strokeWidth={2} fill="none" opacity={0.55} />
+                  {/* leg (side): thigh, knee, calf, foot forward */}
+                  <Path
+                    d="M50 132 Q46 180 52 212 Q56 236 50 262 L38 266 Q34 272 42 274 L60 272 Q66 250 64 216 Q74 178 74 132 Z"
+                    stroke={outline}
+                    strokeWidth={2.5}
+                    fill={fillIdle}
+                  />
+
+                  {/* radiating pain glow: lumbar down the back of the leg */}
+                  <AnimatedPath
+                    d="M72 114 Q78 150 68 190 Q60 230 56 264"
+                    stroke={colors.gold}
+                    strokeWidth={glowWidth as any}
+                    strokeOpacity={glowOpacity as any}
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+
+                  {/* neck dot + pulsing halo */}
+                  <AnimatedCircle cx={58} cy={48} r={dotGlowR as any} fill={colors.gold} opacity={glowOpacity as any} />
+                  <Circle cx={58} cy={48} r={7} fill={colors.gold} onPress={() => pickRegion("spine")} />
+                  {/* lumbar dot + pulsing halo */}
+                  <AnimatedCircle cx={70} cy={114} r={dotGlowR as any} fill={colors.gold} opacity={glowOpacity as any} />
+                  <Circle cx={70} cy={114} r={7} fill={colors.gold} onPress={() => pickRegion("spine")} />
+                </Svg>
+              )}
             </View>
 
             {step === "map" && (
