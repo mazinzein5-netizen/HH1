@@ -12,6 +12,16 @@ function isWebPreview(): boolean {
   );
 }
 
+/** Web-only: dev preview frames pass ?pilot=1 to preview pilot-gated screens (never persisted). */
+function isWebPilotPreview(): boolean {
+  return (
+    __DEV__ &&
+    Platform.OS === "web" &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("pilot") === "1"
+  );
+}
+
 const CONSENT_KEY = "@hive_consent_v1";
 const PILOT_KEY = "@hive_pilot_mode";
 export const PILOT_ACTIVATION_CODE = "HIVE-PILOT-2026";
@@ -48,7 +58,7 @@ export function AppModeProvider({
           AsyncStorage.getItem(PILOT_KEY),
         ]);
         setConsentAccepted(!!consent || isWebPreview());
-        setPilotMode(pilot === "true");
+        setPilotMode(pilot === "true" || isWebPilotPreview());
       } catch {
         setConsentAccepted(isWebPreview());
       } finally {

@@ -168,20 +168,29 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Live Consultation */}
-        <TouchableOpacity activeOpacity={0.88} onPress={() => router.push("/(app)/consultation")}>
+        {/* Consultations — full telemedicine portal in pilot, teaser in clean build */}
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push(pilotMode ? "/(app)/telemedicine" : "/(app)/consultation")}
+        >
           <LinearGradient colors={["#071a10", "#0a2818"]} style={[styles.sectionCard, { borderColor: "#22c55e33" }]}>
             <HiveCardBg gradientColors={["rgba(139,94,0,0.14)", "rgba(0,0,0,0.22)", "transparent"]} />
             <View style={[styles.sectionIcon, { backgroundColor: "rgba(34,197,94,0.15)", borderColor: "rgba(34,197,94,0.3)", borderWidth: 1 }]}>
               <MaterialCommunityIcons name="video" size={22} color="#22c55e" />
             </View>
-            <Text style={[styles.sectionTitle, { color: "#FFFFFF", fontFamily: "Inter_700Bold" }]}>Live Consultation</Text>
+            <Text style={[styles.sectionTitle, { color: "#FFFFFF", fontFamily: "Inter_700Bold" }]}>
+              {pilotMode ? "Telemedicine Portal" : "Consultations"}
+            </Text>
             <Text style={[styles.sectionBody, { color: "rgba(255,255,255,0.72)", fontFamily: "Inter_400Regular" }]}>
-              Book or join a HiEmotion telemedicine appointment with your GP, Physiotherapist, or Specialist.
+              {pilotMode
+                ? "Book a video consultation, prepare your handover pack, and join your session with your GP, Physiotherapist, or Specialist."
+                : "Video consultations are coming soon. Arrange interpreter support for your appointments in the meantime."}
             </Text>
             <View style={styles.sectionLink}>
               <View style={[styles.liveDot, { backgroundColor: "#22c55e" }]} />
-              <Text style={[styles.sectionLinkText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>Book Now</Text>
+              <Text style={[styles.sectionLinkText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>
+                {pilotMode ? "Open Portal" : "Learn More"}
+              </Text>
               <Feather name="chevron-right" size={14} color="#22c55e" />
             </View>
           </LinearGradient>

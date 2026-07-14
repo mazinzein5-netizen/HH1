@@ -105,6 +105,48 @@ export async function importDocument(meta?: {
   return doc;
 }
 
+/**
+ * Save an app-generated text note (e.g. a post-consultation summary) as a
+ * document. On native the text is written to a .txt file in the private
+ * documents directory; on web the content is kept as a data URI.
+ */
+export async function saveGeneratedTextDocument(
+  name: string,
+  content: string,
+  meta?: { category?: DocCategory; source?: DocSource }
+): Promise<StoredDocument> {
+  const id = makeId();
+  const safeName = name.replace(/[^\w.\- ]+/g, "_");
+  let storedUri: string;
+
+  if (Platform.OS !== "web" && FileSystem.documentDirectory) {
+    const dirInfo = await FileSystem.getInfoAsync(DOCS_DIR);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(DOCS_DIR, { intermediates: true });
+    }
+    storedUri = `${DOCS_DIR}${id}-${safeName}.txt`;
+    await FileSystem.writeAsStringAsync(storedUri, content);
+  } else {
+    storedUri = `data:text/plain;charset=utf-8,${encodeURIComponent(content)}`;
+  }
+
+  const doc: StoredDocument = {
+    id,
+    name: `${name}.txt`,
+    uri: storedUri,
+    mimeType: "text/plain",
+    sizeBytes: content.length,
+    addedAt: new Date().toISOString(),
+    category: meta?.category ?? "report",
+    source: meta?.source ?? "other",
+  };
+
+  const docs = await listDocuments();
+  docs.unshift(doc);
+  await saveIndex(docs);
+  return doc;
+}
+
 /** Remove a document from the index and delete its local file. */
 export async function deleteDocument(id: string): Promise<void> {
   const docs = await listDocuments();

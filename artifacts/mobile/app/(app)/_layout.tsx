@@ -21,6 +21,7 @@ export default function AppLayout() {
       <Stack.Screen name="medical-history" options={{ title: "Medical History", headerShown: true }} />
       <Stack.Screen name="geriatric" options={{ headerShown: false }} />
       <Stack.Screen name="consultation" options={{ headerShown: false }} />
+      <Stack.Screen name="telemedicine" options={{ headerShown: false }} />
       <Stack.Screen name="monitoring" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
