@@ -15,7 +15,9 @@ import {
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import { useHiveBot } from "@/context/HiveBotContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
+import { usePatient } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
 
 const ECG_HEIGHTS = [2, 2, 2, 3, 2, 2, 2, 14, 62, 5, 2, 20, 4, 2, 2, 2, 2, 2, 3, 2, 2, 2, 14, 62, 5, 2, 20, 4, 2, 2, 2];
@@ -135,11 +137,49 @@ export default function MonitoringScreen() {
   const [deviceName] = useState<DeviceName>("Apple Watch");
   const batteryPct = 78;
 
+  const { data: patient } = usePatient();
+  const { open: openBot } = useHiveBot();
+
+  const activeMeds = patient.kardex.filter((k) => k.status === "active");
+  const ANTICOAG_NAMES = ["apixaban","warfarin","rivaroxaban","dabigatran","edoxaban","heparin","tinzaparin","enoxaparin"];
+  const anticoagMeds = activeMeds.filter((m) =>
+    ANTICOAG_NAMES.some((n) => m.medication.toLowerCase().includes(n))
+  );
+
   // ── Live fluctuating vitals ──────────────────────────────────────────────
   const [hr, setHr] = useState(72);
   const [spo2, setSpo2] = useState(97);
   const [rr, setRr] = useState(14);
   const [hrBars, setHrBars] = useState(HR_HISTORY);
+
+  // ── Monitoring concern alert ─────────────────────────────────────────────
+  const [monitoringAlert, setMonitoringAlert] = useState<{ type: "spo2" | "hr"; value: number } | null>(null);
+  const [alertDismissed, setAlertDismissed] = useState(false);
+  const alertFiredRef = useRef(false);
+
+  useEffect(() => {
+    if (alertDismissed || alertFiredRef.current) return;
+    // Flag SpO₂ concern when patient is on anticoagulants (pulmonary embolism risk)
+    if (spo2 < 96 && anticoagMeds.length > 0) {
+      alertFiredRef.current = true;
+      setMonitoringAlert({ type: "spo2", value: spo2 });
+      return;
+    }
+    // Flag HR concern when patient is on any active medication
+    if ((hr > 100 || hr < 56) && activeMeds.length > 0) {
+      alertFiredRef.current = true;
+      setMonitoringAlert({ type: "hr", value: hr });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spo2, hr]);
+
+  function handleMonitoringAlertPress() {
+    const seedText =
+      monitoringAlert?.type === "spo2"
+        ? `My Live HIVE monitor just showed my SpO₂ dropping to ${monitoringAlert.value}%. I'm currently on ${anticoagMeds.map((m) => m.medication).join(" and ")}. Should I be worried about this reading?`
+        : `My Live HIVE monitor showed my heart rate at ${monitoringAlert?.value} bpm. I'm on ${activeMeds.map((m) => m.medication).join(", ")}. Is this something I should be concerned about with my medications?`;
+    openBot(seedText);
+  }
 
   useEffect(() => {
     const tick = () => {
@@ -217,6 +257,40 @@ export default function MonitoringScreen() {
             label="Resp Rate"
           />
         </View>
+
+        {/* ── Monitoring concern alert — shown when vitals trigger med-related flag ── */}
+        {monitoringAlert && !alertDismissed && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleMonitoringAlertPress}
+            style={[styles.monAlert, { backgroundColor: "rgba(217,119,6,0.08)", borderColor: "#d97706" }]}
+          >
+            <View style={[styles.monAlertIcon, { backgroundColor: "rgba(217,119,6,0.18)" }]}>
+              <MaterialCommunityIcons name="alert-circle" size={20} color="#d97706" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.monAlertTitle, { color: "#d97706", fontFamily: "Inter_700Bold" }]}>
+                {monitoringAlert.type === "spo2" ? "⚠️ SpO₂ Concern" : "⚠️ Heart Rate Concern"}
+              </Text>
+              <Text style={[styles.monAlertBody, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+                {monitoringAlert.type === "spo2"
+                  ? `SpO₂ reading of ${monitoringAlert.value}% noted — relevant given your blood thinner medication. Tap to ask Queen B.`
+                  : `Heart rate of ${monitoringAlert.value} bpm noted with your current medications. Tap to ask Queen B.`}
+              </Text>
+            </View>
+            <View style={styles.monAlertBeeCol}>
+              <MaterialCommunityIcons name="bee" size={20} color="#d97706" />
+              <Text style={[styles.monAlertAsk, { color: "#d97706", fontFamily: "Inter_600SemiBold" }]}>Ask Queen B</Text>
+            </View>
+            <TouchableOpacity
+              hitSlop={10}
+              style={{ padding: 4 }}
+              onPress={() => setAlertDismissed(true)}
+            >
+              <MaterialCommunityIcons name="close" size={15} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
 
         {/* ── HEART RATE GRAPH — live bars ── */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -550,4 +624,12 @@ const styles = StyleSheet.create({
   vitalLabel: { fontSize: 13 },
   vitalVal: { fontSize: 14 },
   vitalStatus: { fontSize: 11, marginTop: 1 },
+
+  // ── Monitoring concern alert ──
+  monAlert: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 14, borderWidth: 1.5, padding: 12 },
+  monAlertIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  monAlertTitle: { fontSize: 12.5, marginBottom: 2 },
+  monAlertBody: { fontSize: 12, lineHeight: 18 },
+  monAlertBeeCol: { alignItems: "center", gap: 3, paddingHorizontal: 6 },
+  monAlertAsk: { fontSize: 9.5 },
 });

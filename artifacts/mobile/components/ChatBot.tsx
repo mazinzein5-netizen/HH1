@@ -36,7 +36,6 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   seedContext?: string;
-  /** When true, Queen B focuses on helping the patient describe pain for health practitioners. */
   painHelper?: boolean;
 }
 
@@ -58,12 +57,12 @@ const PAIN_HELPER_GREETING: ChatMessage = {
     "Hi there 🐝 I'm Queen B. I can hear that something's not quite right, and I want to help.\n\nLet's take it gently. Tell me, in your own words — what's been bothering you? There's no rush, and nothing is too small to mention.",
 };
 
-/** Strip markdown/emoji noise so text-to-speech sounds natural. */
 function toSpeakable(text: string): string {
   return text
     .replace(/【[^】]*】/g, "")
     .replace(/[*_#`]/g, "")
     .replace(/⚠️/g, "Warning. ")
+    .replace(/CONTRAINDICATION:/gi, "Drug interaction alert.")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -84,15 +83,65 @@ function parseGuidelineChips(text: string): React.ReactNode[] {
   });
 }
 
-function BotBubble({ content, colors }: { content: string; colors: ReturnType<typeof useColors> }) {
-  const isRedFlag = content.startsWith("⚠️") || content.includes("RED FLAG");
-  const bubbleBg = isRedFlag ? colors.emergencyBg : colors.card;
-  const bubbleBorder = isRedFlag ? colors.emergencyBorder : colors.border;
-  const textColor = isRedFlag ? colors.emergency : colors.foreground;
+function isContraindictionMsg(content: string) {
+  return /^⚠️\s*CONTRAINDICATION:/i.test(content.trimStart());
+}
 
+function isRedFlagMsg(content: string) {
+  return (content.startsWith("⚠️") || content.includes("RED FLAG")) &&
+    !isContraindictionMsg(content);
+}
+
+// ── Contraindiction bubble (amber) ────────────────────────────────────────────
+
+function ContraindictionBubble({
+  content,
+  colors,
+}: {
+  content: string;
+  colors: ReturnType<typeof useColors>;
+}) {
+  const body = content.replace(/^⚠️\s*CONTRAINDICATION:\s*/i, "").trimStart();
   return (
-    <View style={[styles.botBubble, { backgroundColor: bubbleBg, borderColor: bubbleBorder }]}>
-      <Text style={[styles.bubbleText, { color: textColor, fontFamily: "Inter_400Regular" }]}>
+    <View style={[styles.contraindictionBubble, { borderColor: "#d97706", backgroundColor: "rgba(217,119,6,0.09)" }]}>
+      <View style={styles.contraindictionHeader}>
+        <View style={[styles.contraindictionIconBox, { backgroundColor: "rgba(217,119,6,0.18)" }]}>
+          <MaterialCommunityIcons name="alert-circle" size={16} color="#d97706" />
+        </View>
+        <Text style={[styles.contraindictionTitle, { color: "#d97706" }]}>
+          Drug Interaction Alert
+        </Text>
+      </View>
+      <Text style={[styles.bubbleText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+        {body}
+      </Text>
+      <View style={[styles.contraindictionFooter, { borderTopColor: "rgba(217,119,6,0.25)" }]}>
+        <MaterialCommunityIcons name="doctor" size={12} color="#d97706" />
+        <Text style={[styles.contraindictionNote, { color: "#d97706" }]}>
+          Contact your GP or pharmacist before taking any new medication.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Message bubbles ───────────────────────────────────────────────────────────
+
+function BotBubble({ content, colors }: { content: string; colors: ReturnType<typeof useColors> }) {
+  if (isContraindictionMsg(content)) {
+    return <ContraindictionBubble content={content} colors={colors} />;
+  }
+
+  const isRedFlag = isRedFlagMsg(content);
+  return (
+    <View style={[
+      styles.botBubble,
+      {
+        backgroundColor: isRedFlag ? colors.emergencyBg : colors.card,
+        borderColor: isRedFlag ? colors.emergencyBorder : colors.border,
+      },
+    ]}>
+      <Text style={[styles.bubbleText, { color: isRedFlag ? colors.emergency : colors.foreground, fontFamily: "Inter_400Regular" }]}>
         {parseGuidelineChips(content)}
       </Text>
     </View>
@@ -107,6 +156,8 @@ function UserBubble({ content, colors }: { content: string; colors: ReturnType<t
   );
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function ChatBot({ visible, onClose, seedContext, painHelper }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -120,81 +171,107 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
   const voiceOnRef = useRef(voiceOn);
   voiceOnRef.current = voiceOn;
 
+  const activeMeds = patient.kardex.filter((k) => k.status === "active");
+
+  // Refs to prevent duplicate proactive checks
+  const proactiveCheckedRef = useRef(false);
+  const seededRef = useRef<string | undefined>(undefined);
+
   function speak(text: string) {
     if (!voiceOnRef.current) return;
     try {
       Speech.stop();
       Speech.speak(toSpeakable(text), { language: "en-IE", rate: 0.95 });
-    } catch {
-      // Voice is best-effort; never block the chat on speech errors.
-    }
+    } catch {}
   }
 
   function toggleVoice() {
     setVoiceOn((v) => {
-      if (v) {
-        try { Speech.stop(); } catch {}
-      }
+      if (v) { try { Speech.stop(); } catch {} }
       return !v;
     });
   }
 
-  // Stop speaking when the sheet closes or unmounts.
   useEffect(() => {
-    if (!visible) {
-      try { Speech.stop(); } catch {}
-    }
-    return () => {
-      try { Speech.stop(); } catch {}
-    };
+    if (!visible) { try { Speech.stop(); } catch {} }
+    return () => { try { Speech.stop(); } catch {} };
   }, [visible]);
-  const flatListRef = useRef<FlatList>(null);
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-  const seededRef = useRef<string | undefined>(undefined);
 
-  // If pilot mode or pain-helper mode changes while the conversation is fresh, swap greeting.
+  const flatListRef = useRef<FlatList>(null);
+  const slideAnim  = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  // Swap greeting when mode changes (fresh conversation)
   useEffect(() => {
     setMessages((prev) => (prev.length <= 1 ? [greeting] : prev));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pilotMode, painHelper]);
 
-  const hasRedFlag =
-    pilotMode &&
-    messages.some(
-      (m) => m.role === "assistant" && (m.content.startsWith("⚠️") || m.content.includes("RED FLAG"))
-    );
-
+  // Slide animation
   useEffect(() => {
-    if (visible) {
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 340,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(slideAnim, {
-        toValue: SCREEN_HEIGHT,
-        duration: 280,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
+    Animated.timing(slideAnim, {
+      toValue: visible ? 0 : SCREEN_HEIGHT,
+      duration: visible ? 340 : 280,
+      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [visible]);
+
+  // ── Proactive contraindication check on first open ──────────────────────────
+  useEffect(() => {
+    if (!visible || proactiveCheckedRef.current) return;
+    if (!activeMeds.length && !patient.allergies.length) return;
+    proactiveCheckedRef.current = true;
+
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    if (!domain) return;
+
+    fetch(`https://${domain}/api/ai/contraindications`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        medications: activeMeds.map((m) => ({ name: m.medication, dose: m.dose, frequency: m.frequency })),
+        allergies: patient.allergies.map((a) => ({ drug: a.drug, reaction: a.reaction, severity: a.severity })),
+      }),
+    })
+      .then((r) => r.json())
+      .then((data: { flags?: { drugs: string[]; concern: string; action: string; severity: string }[] }) => {
+        if (!Array.isArray(data.flags) || data.flags.length === 0) return;
+        const flagMessages: ChatMessage[] = data.flags.map((f) => ({
+          role: "assistant",
+          content: `⚠️ CONTRAINDICATION: ${f.drugs.join(" + ")}\n\n${f.concern}\n\n${f.action}`,
+        }));
+        setMessages((prev) => [...prev, ...flagMessages]);
+        // Speak the first flag
+        if (flagMessages[0]) speak(flagMessages[0].content);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  // Reset proactive check when chat is closed (new session each open)
+  useEffect(() => {
+    if (!visible) {
+      proactiveCheckedRef.current = false;
     }
   }, [visible]);
 
-  // When opened from the pain pathway with clinical context, prime the bot.
-  // Waits for any in-flight request to finish before sending so the seed
-  // is never silently dropped on a rapid close/reopen.
+  // Seed the bot when opened from the pain pathway
   useEffect(() => {
     if (visible && seedContext && !loading && seededRef.current !== seedContext) {
       seededRef.current = seedContext;
       sendMessage(seedContext);
     }
-    if (!visible) {
-      seededRef.current = undefined;
-    }
+    if (!visible) { seededRef.current = undefined; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, seedContext, loading]);
+
+  const hasRedFlag = pilotMode && messages.some(
+    (m) => m.role === "assistant" && isRedFlagMsg(m.content)
+  );
+
+  const hasContraindiction = messages.some(
+    (m) => m.role === "assistant" && isContraindictionMsg(m.content)
+  );
 
   async function sendMessage(text: string) {
     const trimmed = text.trim();
@@ -214,8 +291,22 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
           messages: nextMessages.map(({ role, content }) => ({ role, content })),
           pilotCode: pilotMode ? PILOT_ACTIVATION_CODE : undefined,
           mode: painHelper ? "painDescribe" : undefined,
+          // Always send patient context so Queen B can detect interactions in real-time
+          patientContext: {
+            medications: activeMeds.map((m) => ({
+              name: m.medication,
+              dose: m.dose,
+              frequency: m.frequency,
+            })),
+            allergies: patient.allergies.map((a) => ({
+              drug: a.drug,
+              reaction: a.reaction,
+              severity: a.severity,
+            })),
+          },
         }),
       });
+
       if (res.ok) {
         const data = await res.json();
         if (data.message) {
@@ -269,18 +360,15 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
     setMessages([greeting]);
     setInput("");
     seededRef.current = undefined;
-  }
-
-  function handleClose() {
-    onClose();
+    proactiveCheckedRef.current = false;
   }
 
   const bottomPad = Platform.OS === "ios" ? insets.bottom : 8;
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
         <Animated.View
           style={[
             styles.sheet,
@@ -295,9 +383,17 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
                 <MaterialCommunityIcons name="bee" size={20} color="#C9860A" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                  Queen B
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                    Queen B
+                  </Text>
+                  {hasContraindiction && (
+                    <View style={styles.contraindictionHeaderBadge}>
+                      <MaterialCommunityIcons name="alert-circle" size={11} color="#fff" />
+                      <Text style={styles.contraindictionHeaderBadgeText}>Interaction flagged</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
                   {painHelper ? "Helping You Describe Your Pain" : pilotMode ? "Pain & Clinical Guidance" : "Guideline Information"}
                 </Text>
@@ -323,14 +419,10 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
                   {EMERGENCY_NUMBER}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleClear}
-                style={[styles.clearBtn, { borderColor: colors.border }]}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity onPress={handleClear} style={[styles.clearBtn, { borderColor: colors.border }]} activeOpacity={0.7}>
                 <MaterialCommunityIcons name="delete-sweep" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleClose} style={styles.closeBtn} activeOpacity={0.7}>
+              <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
                 <MaterialCommunityIcons name="close" size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
@@ -364,7 +456,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
               }
             />
 
-            {/* Static safety notice in clean (store) mode */}
+            {/* Safety notice — clean (store) mode */}
             {!pilotMode && (
               <View style={[styles.safetyNotice, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                 <MaterialCommunityIcons name="information-outline" size={15} color={colors.mutedForeground} />
@@ -375,7 +467,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
               </View>
             )}
 
-            {/* Urgent escalation banner when a red flag is detected (pilot mode only) */}
+            {/* Red flag escalation banner (pilot mode) */}
             {hasRedFlag && (
               <TouchableOpacity
                 activeOpacity={0.85}
@@ -389,7 +481,17 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
               </TouchableOpacity>
             )}
 
-            {/* Emergency + handover action toolbar */}
+            {/* Contraindication banner — shown whenever a flag is active */}
+            {hasContraindiction && (
+              <View style={[styles.contraindictionBanner, { backgroundColor: "rgba(217,119,6,0.08)", borderColor: "#d97706" }]}>
+                <MaterialCommunityIcons name="alert-circle" size={16} color="#d97706" />
+                <Text style={[styles.contraindictionBannerText, { color: "#d97706", fontFamily: "Inter_600SemiBold" }]}>
+                  Drug interaction flagged — review above and contact your GP or pharmacist.
+                </Text>
+              </View>
+            )}
+
+            {/* Action toolbar */}
             <View style={[styles.actionRow, { borderTopColor: colors.border }]}>
               <TouchableOpacity
                 activeOpacity={0.85}
@@ -397,9 +499,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
                 style={[styles.actionBtn, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}
               >
                 <MaterialCommunityIcons name="phone-alert" size={16} color={colors.emergency} />
-                <Text style={[styles.actionBtnText, { color: colors.emergency, fontFamily: "Inter_600SemiBold" }]}>
-                  Emergency
-                </Text>
+                <Text style={[styles.actionBtnText, { color: colors.emergency, fontFamily: "Inter_600SemiBold" }]}>Emergency</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.85}
@@ -407,9 +507,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
                 style={[styles.actionBtn, { backgroundColor: colors.glassGold, borderColor: colors.glassGoldBorder }]}
               >
                 <MaterialCommunityIcons name="share-variant" size={16} color={colors.gold} />
-                <Text style={[styles.actionBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
-                  Send to Health Services
-                </Text>
+                <Text style={[styles.actionBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>Send to Health Services</Text>
               </TouchableOpacity>
             </View>
 
@@ -418,7 +516,11 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
               <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <TextInput
                   style={[styles.textInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                  placeholder={painHelper || pilotMode ? "Describe your pain or ask a question..." : "Ask about a health topic or guideline..."}
+                  placeholder={
+                    painHelper || pilotMode
+                      ? "Describe your pain or ask a question..."
+                      : "Ask about a medication, guideline, or health topic..."
+                  }
                   placeholderTextColor={colors.mutedForeground}
                   value={input}
                   onChangeText={setInput}
@@ -452,14 +554,8 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
+  overlay:  { flex: 1, justifyContent: "flex-end" },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
   sheet: {
     height: SCREEN_HEIGHT * 0.85,
     borderTopLeftRadius: 24,
@@ -467,174 +563,66 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   dragHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: 40, height: 4, borderRadius: 2,
     backgroundColor: "rgba(255,255,255,0.2)",
     alignSelf: "center",
-    marginTop: 10,
-    marginBottom: 6,
+    marginTop: 10, marginBottom: 6,
   },
-  header: {
-    borderBottomWidth: 1,
-    paddingBottom: 14,
-    paddingHorizontal: 16,
+  header: { borderBottomWidth: 1, paddingBottom: 14, paddingHorizontal: 16 },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  botIcon: { width: 38, height: 38, borderRadius: 11, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 16, letterSpacing: -0.2 },
+  headerSub: { fontSize: 11, marginTop: 1 },
+
+  contraindictionHeaderBadge: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    backgroundColor: "#d97706", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+  contraindictionHeaderBadgeText: { color: "#fff", fontSize: 9.5, fontFamily: "Inter_700Bold" },
+
+  emergencyPill: { flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  emergencyPillText: { fontSize: 12, letterSpacing: 0.3 },
+  clearBtn: { alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 8, padding: 7 },
+  closeBtn: { padding: 4 },
+
+  safetyNotice: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 14, marginBottom: 4 },
+  safetyNoticeText: { fontSize: 11, lineHeight: 15, flex: 1 },
+
+  redFlagBanner: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginHorizontal: 14, marginBottom: 4 },
+  redFlagText: { fontSize: 13, lineHeight: 18, flex: 1 },
+
+  contraindictionBanner: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    borderWidth: 1, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 10,
+    marginHorizontal: 14, marginBottom: 4,
   },
-  botIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
+  contraindictionBannerText: { fontSize: 12.5, lineHeight: 18, flex: 1 },
+
+  actionRow: { flexDirection: "row", gap: 8, paddingHorizontal: 14, paddingTop: 10, borderTopWidth: 1 },
+  actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderRadius: 10, paddingVertical: 10 },
+  actionBtnText: { fontSize: 12.5 },
+
+  messageList: { paddingHorizontal: 14, paddingTop: 14, gap: 10 },
+  botBubble: { alignSelf: "flex-start", maxWidth: "88%", borderRadius: 16, borderTopLeftRadius: 4, borderWidth: 1, padding: 12 },
+  userBubble: { alignSelf: "flex-end", maxWidth: "80%", borderRadius: 16, borderBottomRightRadius: 4, padding: 12 },
+  bubbleText: { fontSize: 14, lineHeight: 21 },
+  guidelineChip: { backgroundColor: "rgba(201,134,10,0.15)", color: "#C9860A", fontFamily: "Inter_600SemiBold", fontSize: 12, borderRadius: 4, paddingHorizontal: 3 },
+
+  // Contraindiction bubble (amber, distinct from red-flag)
+  contraindictionBubble: {
+    alignSelf: "flex-start", maxWidth: "92%",
+    borderRadius: 16, borderTopLeftRadius: 4,
+    borderWidth: 1.5, padding: 12, gap: 8,
   },
-  headerTitle: {
-    fontSize: 16,
-    letterSpacing: -0.2,
-  },
-  headerSub: {
-    fontSize: 11,
-    marginTop: 1,
-  },
-  emergencyPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  emergencyPillText: {
-    fontSize: 12,
-    letterSpacing: 0.3,
-  },
-  clearBtn: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 7,
-  },
-  closeBtn: {
-    padding: 4,
-  },
-  safetyNotice: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 14,
-    marginBottom: 4,
-  },
-  safetyNoticeText: {
-    fontSize: 11,
-    lineHeight: 15,
-    flex: 1,
-  },
-  redFlagBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    marginHorizontal: 14,
-    marginBottom: 4,
-  },
-  redFlagText: {
-    fontSize: 13,
-    lineHeight: 18,
-    flex: 1,
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    borderTopWidth: 1,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-  },
-  actionBtnText: {
-    fontSize: 12.5,
-  },
-  messageList: {
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    gap: 10,
-  },
-  botBubble: {
-    alignSelf: "flex-start",
-    maxWidth: "88%",
-    borderRadius: 16,
-    borderTopLeftRadius: 4,
-    borderWidth: 1,
-    padding: 12,
-  },
-  userBubble: {
-    alignSelf: "flex-end",
-    maxWidth: "80%",
-    borderRadius: 16,
-    borderBottomRightRadius: 4,
-    padding: 12,
-  },
-  bubbleText: {
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  guidelineChip: {
-    backgroundColor: "rgba(201,134,10,0.15)",
-    color: "#C9860A",
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-    borderRadius: 4,
-    paddingHorizontal: 3,
-  },
-  inputBar: {
-    borderTopWidth: 1,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-  },
-  inputWrap: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingLeft: 14,
-    paddingRight: 6,
-    paddingVertical: 6,
-    gap: 8,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    maxHeight: 100,
-    paddingVertical: 4,
-  },
-  sendBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  contraindictionHeader: { flexDirection: "row", alignItems: "center", gap: 7 },
+  contraindictionIconBox: { width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  contraindictionTitle: { fontSize: 13, fontFamily: "Inter_700Bold", flex: 1 },
+  contraindictionFooter: { flexDirection: "row", alignItems: "flex-start", gap: 5, borderTopWidth: 1, paddingTop: 8 },
+  contraindictionNote: { fontSize: 11, fontFamily: "Inter_500Medium", flex: 1, lineHeight: 16 },
+
+  inputBar: { borderTopWidth: 1, paddingHorizontal: 14, paddingTop: 10 },
+  inputWrap: { flexDirection: "row", alignItems: "flex-end", borderRadius: 14, borderWidth: 1, paddingLeft: 14, paddingRight: 6, paddingVertical: 6, gap: 8 },
+  textInput: { flex: 1, fontSize: 14, lineHeight: 20, maxHeight: 100, paddingVertical: 4 },
+  sendBtn: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
 });
