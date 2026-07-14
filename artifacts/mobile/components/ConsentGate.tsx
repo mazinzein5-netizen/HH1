@@ -18,6 +18,7 @@ import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useAppMode } from "@/context/AppModeContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/context/ThemeContext";
 
 const CONSENT_POINTS = [
   {
@@ -39,6 +40,7 @@ const CONSENT_POINTS = [
 
 export default function ConsentGate() {
   const colors = useColors();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
   const { acceptConsent } = useAppMode();
@@ -82,10 +84,10 @@ export default function ConsentGate() {
         <View style={[styles.disclaimerCard, { backgroundColor: colors.goldBg, borderColor: colors.goldBorder }]}>
           <MaterialCommunityIcons name="information" size={20} color={colors.gold} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.disclaimerTitle, { color: colors.goldLight, fontFamily: "Inter_700Bold" }]}>
+            <Text style={[styles.disclaimerTitle, { color: isDark ? colors.goldLight : "#6B21A8", fontFamily: "Inter_700Bold" }]}>
               Not a medical device
             </Text>
-            <Text style={[styles.disclaimerBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.disclaimerBody, { color: isDark ? colors.mutedForeground : "#7E22CE", fontFamily: "Inter_400Regular" }]}>
               This app is for information and administrative use only. It does not diagnose or treat any
               condition and does not replace professional medical advice. If you are worried about your
               health, contact your GP — or call 112 in an emergency.
