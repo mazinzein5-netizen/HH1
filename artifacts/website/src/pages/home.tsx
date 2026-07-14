@@ -10,7 +10,7 @@ import {
   ArrowRight, ShieldCheck, FileText, Smartphone, 
   Stethoscope, Mail, ExternalLink, Activity,
   Lock, BookOpen, AlertCircle, Building2, Heart, Shield,
-  MapPin
+  MapPin, Pill, Video, Users
 } from "lucide-react";
 
 const fadeInUp = {
@@ -76,7 +76,7 @@ export default function Home() {
           </div>
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#ecosystem" className="hover:text-primary transition-colors">Ecosystem</a>
-            <a href="#intake" className="hover:text-primary transition-colors">Patient Portal</a>
+            <a href="#companion" className="hover:text-primary transition-colors">HIVE Companion</a>
             <a href="#surgical-assistant" className="hover:text-primary transition-colors">Surgical Assistant</a>
           </nav>
           <div className="flex items-center gap-4">
@@ -130,9 +130,9 @@ export default function Home() {
               transition={{ duration: 0.7, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-5"
             >
-              <a href="#intake" className="w-full sm:w-auto">
+              <a href="#companion" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
-                  Explore Patient Portal
+                  Explore HIVE Companion
                 </Button>
               </a>
               <a href="#surgical-assistant" className="w-full sm:w-auto">
@@ -188,7 +188,7 @@ export default function Home() {
                   <div className="glass-panel-heavy p-6 rounded-2xl transform -rotate-3 hover:rotate-0 transition-transform duration-500 hover:border-primary/50 group">
                     <div className="flex items-center gap-3 mb-6">
                       <Smartphone className="h-6 w-6 text-primary" />
-                      <span className="text-sm font-semibold tracking-wide text-foreground">HIVE Intake</span>
+                      <span className="text-sm font-semibold tracking-wide text-foreground">HIVE Companion</span>
                     </div>
                     <div className="space-y-3">
                       <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
@@ -220,8 +220,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Section 3: HIVE Intake Hero */}
-        <section id="intake" className="py-24 relative overflow-hidden">
+        {/* Section 3: HIVE Companion Hero */}
+        <section id="companion" className="py-24 relative overflow-hidden">
           <div className="container mx-auto px-6">
             <motion.div 
               initial="hidden"
@@ -234,9 +234,9 @@ export default function Home() {
                 <Smartphone className="h-3 w-3 text-primary" />
                 Mobile App
               </div>
-              <h2 className="text-4xl md:text-6xl font-bold mb-6 text-foreground">HIVE Intake</h2>
+              <h2 className="text-4xl md:text-6xl font-bold mb-6 text-foreground">HIVE Companion</h2>
               <p className="text-xl md:text-2xl text-muted-foreground font-light glass-panel px-6 py-3 rounded-2xl inline-block">
-                Your personal health record organiser, right in your pocket.
+                A steady hand on your shoulder. Your health story, already organised.
               </p>
             </motion.div>
 
@@ -257,13 +257,13 @@ export default function Home() {
                   <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent"></div>
                   <div className="absolute bottom-6 left-6 right-6">
                     <h3 className="text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
-                      <Heart className="h-6 w-6 text-primary" /> For You & Your Family
+                      <Heart className="h-6 w-6 text-primary" /> Walk into any appointment ready
                     </h3>
                   </div>
                 </div>
                 <div className="p-8 pt-2 flex-grow flex flex-col justify-center">
                   <p className="text-lg text-muted-foreground leading-relaxed">
-                    Designed with clarity and respect. Keep your medication list, complete standardised questionnaires before a GP visit, and hold an emergency health card that speaks for you when you need it most. Large text, clear buttons, and absolute privacy.
+                    Designed with clarity and respect. Complete standardised questionnaires before a GP visit, safely hold your private medication list, and keep an emergency health card that ensures the information is there when it matters most.
                   </p>
                 </div>
               </motion.div>
@@ -283,13 +283,13 @@ export default function Home() {
                   <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent"></div>
                   <div className="absolute bottom-6 left-6 right-6">
                     <h3 className="text-2xl font-bold text-foreground mb-2 flex items-center gap-2">
-                      <Building2 className="h-6 w-6 text-primary" /> For Care Facilities
+                      <Users className="h-6 w-6 text-primary" /> Connected care for your family
                     </h3>
                   </div>
                 </div>
                 <div className="p-8 pt-2 flex-grow flex flex-col justify-center">
                   <p className="text-lg text-muted-foreground leading-relaxed">
-                    Empower your residents and nursing staff. HIVE Intake acts as a unified health record organiser for admissions, consultant referrals, and routine care planning. It provides a secure, on-device standard that aligns with best-practice clinical governance.
+                    Our Geriatric Pack securely connects with health devices to keep a loved one's day-to-day health records together. It empowers families to stay closely connected without losing independence or privacy.
                   </p>
                 </div>
               </motion.div>
@@ -306,18 +306,33 @@ export default function Home() {
               {[
                 {
                   icon: <FileText className="h-6 w-6 text-primary" />,
-                  title: "GP Visit Preparation",
-                  desc: "Complete internationally recognised standardised questionnaires (ODI, mJOA, Oxford Hip & Knee) to prepare for your consultations effectively."
+                  title: "Hears your chronic pains",
+                  desc: "Build an objective record with standardised questionnaires (Oxford Hip & Knee, ODI) for osteoarthritis of the knee, hip and lower back."
+                },
+                {
+                  icon: <Pill className="h-6 w-6 text-primary" />,
+                  title: "Safe medication records",
+                  desc: "Maintain one comprehensive, up-to-date medication and prescription list, completely safe on your own device."
+                },
+                {
+                  icon: <Video className="h-6 w-6 text-primary" />,
+                  title: "Telehealth video calls",
+                  desc: "Video call your healthcare professional and share a clear, digital record of your health that is easy to understand."
                 },
                 {
                   icon: <AlertCircle className="h-6 w-6 text-primary" />,
-                  title: "Emergency Health Card",
-                  desc: "Generate an emergency card with a QR code and PIN for first responders. Keep your private medication, conditions, and allergies list secure."
+                  title: "Emergency health card",
+                  desc: "When a paramedic or doctor needs your story, generate an emergency card so the information is there when it matters."
                 },
                 {
-                  icon: <BookOpen className="h-6 w-6 text-primary" />,
-                  title: "Guideline Viewer & Interpreter",
-                  desc: "Access plain-English lookups of public HSE and NICE health guidelines. Share documents and prescriptions directly to your pharmacy."
+                  icon: <Activity className="h-6 w-6 text-primary" />,
+                  title: "Geriatric pack connections",
+                  desc: "Connects with health devices to keep a loved one's day-to-day health records together, ensuring the family stays closely connected."
+                },
+                {
+                  icon: <ShieldCheck className="h-6 w-6 text-primary" />,
+                  title: "Irish & EU standards",
+                  desc: "Built to stringent European data protection standards (GDPR). Your data stays entirely private and secure on your device."
                 }
               ].map((feature, idx) => (
                 <motion.div key={idx} variants={fadeInUp} className="glass-panel p-8 rounded-3xl hover:border-primary/40 transition-all duration-300 group">
@@ -367,7 +382,7 @@ export default function Home() {
 
                 <div className="text-sm font-medium glass-panel p-6 rounded-2xl text-left inline-block max-w-2xl mx-auto border-primary/20">
                   <span className="text-primary font-bold uppercase tracking-wider text-xs block mb-2">Compliance Notice</span>
-                  <span className="text-muted-foreground">HIVE Intake is a health record organiser. It is not a medical device, it does not diagnose or treat, and all personal data stays on your device.</span>
+                  <span className="text-muted-foreground">HIVE Companion is a health record organiser. It is not a medical device, it does not diagnose or treat, and all personal data stays on your device.</span>
                 </div>
               </div>
             </motion.div>
@@ -486,7 +501,7 @@ export default function Home() {
               <div>
                 <h4 className="font-semibold text-foreground mb-4">Ecosystem</h4>
                 <ul className="space-y-3 text-sm">
-                  <li><a href="#intake" className="text-muted-foreground hover:text-primary transition-colors">HIVE Intake App</a></li>
+                  <li><a href="#companion" className="text-muted-foreground hover:text-primary transition-colors">HIVE Companion App</a></li>
                   <li><a href="#surgical-assistant" className="text-muted-foreground hover:text-primary transition-colors">Surgical Assistant</a></li>
                 </ul>
               </div>
