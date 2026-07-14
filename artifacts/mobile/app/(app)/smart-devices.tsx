@@ -2,7 +2,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -58,6 +58,22 @@ export default function SmartDevicesScreen() {
   const topPad = Platform.OS === "web" ? 0 : insets.top;
 
   const { devices, connectedCount, toggleDevice } = useSmartDevices();
+  const scrollRef = useRef<ScrollView>(null);
+  const categoryYs = useRef<Partial<Record<Category, number>>>({});
+  const [highlightedCategory, setHighlightedCategory] = useState<Category | null>(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function goToCategory(cat: Category) {
+    Haptics.selectionAsync();
+    const y = categoryYs.current[cat];
+    if (y != null) {
+      scrollRef.current?.scrollTo({ y: Math.max(y - 12, 0), animated: true });
+    }
+    if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    setHighlightedCategory(cat);
+    highlightTimer.current = setTimeout(() => setHighlightedCategory(null), 2200);
+  }
+
   const { pilotMode } = useAppMode();
   const {
     monitoringActive,
@@ -75,34 +91,45 @@ export default function SmartDevicesScreen() {
   const cgmDevice = connected.find((d) => d.category === "cgm");
   const fallDevice = connected.find((d) => d.capabilities.includes("Fall Detection"));
 
-  const liveReadings = [
+  const liveReadings: {
+    label: string;
+    value: string;
+    unit: string;
+    icon: keyof typeof MaterialCommunityIcons.glyphMap;
+    color: string;
+    hint?: { text: string; category: Category };
+  }[] = [
     {
       label: "Heart Rate",
       value: hrDevice ? hrDevice.reading : "—",
       unit: hrDevice ? "bpm" : "no device",
-      icon: "heart-pulse" as const,
+      icon: "heart-pulse",
       color: "#ef4444",
+      hint: hrDevice ? undefined : { text: "Pair a smart ring", category: "rings" },
     },
     {
       label: "SpO₂",
       value: spo2Device ? spo2Device.reading : "—",
       unit: spo2Device ? "%" : "no device",
-      icon: "water-percent" as const,
+      icon: "water-percent",
       color: "#4F6EF7",
+      hint: spo2Device ? undefined : { text: "Pair a wearable", category: "watches" },
     },
     {
       label: "Blood Glucose",
       value: cgmDevice ? cgmDevice.reading : "—",
       unit: cgmDevice ? cgmDevice.readingLabel : "no device",
-      icon: "water-percent" as const,
+      icon: "water-percent",
       color: "#f59e0b",
+      hint: cgmDevice ? undefined : { text: "Pair a glucose monitor", category: "cgm" },
     },
     {
       label: "Falls Detected",
       value: fallDevice ? "0" : "—",
       unit: fallDevice ? "today" : "no device",
-      icon: "alert-circle" as const,
+      icon: "alert-circle",
       color: "#22c55e",
+      hint: fallDevice ? undefined : { text: "Pair a wearable", category: "watches" },
     },
   ];
 
@@ -132,7 +159,7 @@ export default function SmartDevicesScreen() {
         <MaterialCommunityIcons name="devices" size={26} color="#22c55e" />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Hero */}
         <LinearGradient colors={["#0a2818", "#0d0d1a"]} style={styles.hero}>
@@ -169,16 +196,35 @@ export default function SmartDevicesScreen() {
             <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>LIVE READINGS</Text>
             <View style={styles.readingsGrid}>
               {liveReadings.map((r) => (
-                <LinearGradient
+                <TouchableOpacity
                   key={r.label}
-                  colors={[r.color + "22", r.color + "11"]}
-                  style={[styles.readingCard, { borderColor: r.color + "44" }]}
+                  activeOpacity={r.hint ? 0.8 : 1}
+                  disabled={!r.hint}
+                  onPress={r.hint ? () => goToCategory(r.hint!.category) : undefined}
+                  style={styles.readingCardWrap}
                 >
-                  <MaterialCommunityIcons name={r.icon} size={22} color={r.color} />
-                  <Text style={[styles.readingValue, { color: r.color, fontFamily: "Inter_700Bold" }]}>{r.value}</Text>
-                  <Text style={[styles.readingUnit, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>{r.unit}</Text>
-                  <Text style={[styles.readingLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
-                </LinearGradient>
+                  <LinearGradient
+                    colors={[r.color + "22", r.color + "11"]}
+                    style={[styles.readingCard, { borderColor: r.color + "44" }]}
+                  >
+                    <MaterialCommunityIcons name={r.icon} size={22} color={r.color} />
+                    <Text style={[styles.readingValue, { color: r.color, fontFamily: "Inter_700Bold" }]}>{r.value}</Text>
+                    <Text style={[styles.readingUnit, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>{r.unit}</Text>
+                    <Text style={[styles.readingLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
+                    {r.hint && (
+                      <View style={[styles.hintPill, { borderColor: CATEGORY_META[r.hint.category].color + "66", backgroundColor: CATEGORY_META[r.hint.category].color + "1a" }]}>
+                        <MaterialCommunityIcons
+                          name={CATEGORY_META[r.hint.category].icon}
+                          size={11}
+                          color={CATEGORY_META[r.hint.category].color}
+                        />
+                        <Text style={[styles.hintText, { color: CATEGORY_META[r.hint.category].color, fontFamily: "Inter_600SemiBold" }]}>
+                          {r.hint.text}
+                        </Text>
+                      </View>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
               ))}
             </View>
           </>
@@ -188,9 +234,17 @@ export default function SmartDevicesScreen() {
         {CATEGORIES.map((cat) => {
           const meta = CATEGORY_META[cat];
           const group = devices.filter((d) => d.category === cat);
+          const highlighted = highlightedCategory === cat;
           return (
-            <View key={cat}>
-              <View style={[styles.categoryHeader, { borderColor: meta.color + "33", backgroundColor: meta.color + "0d" }]}>
+            <View
+              key={cat}
+              onLayout={(e) => { categoryYs.current[cat] = e.nativeEvent.layout.y; }}
+            >
+              <View style={[styles.categoryHeader, {
+                borderColor: highlighted ? meta.color : meta.color + "33",
+                backgroundColor: highlighted ? meta.color + "26" : meta.color + "0d",
+                borderWidth: highlighted ? 2 : 1,
+              }]}>
                 <MaterialCommunityIcons name={meta.icon} size={15} color={meta.color} />
                 <View style={{ flex: 1, marginLeft: 8 }}>
                   <Text style={[styles.groupLabel, { color: meta.color, marginBottom: 1 }]}>{meta.label}</Text>
@@ -435,10 +489,19 @@ const styles = StyleSheet.create({
   readingsGrid: {
     flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 8,
   },
+  readingCardWrap: {
+    flex: 1, minWidth: "44%",
+  },
   readingCard: {
-    flex: 1, minWidth: "44%", borderRadius: 14, borderWidth: 1,
+    flex: 1, borderRadius: 14, borderWidth: 1,
     padding: 14, alignItems: "center", gap: 4,
   },
+  hintPill: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 8, paddingVertical: 3, marginTop: 4,
+  },
+  hintText: { fontSize: 10 },
   readingValue: { fontSize: 22, letterSpacing: -0.5 },
   readingUnit: { fontSize: 11 },
   readingLabel: { fontSize: 11, textAlign: "center" },
