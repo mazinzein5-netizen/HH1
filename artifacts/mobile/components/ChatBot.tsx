@@ -3,6 +3,7 @@ import * as Speech from "expo-speech";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
   Easing,
@@ -17,6 +18,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import SignLanguageModal from "@/components/SignLanguageModal";
 import { PILOT_ACTIVATION_CODE, useAppMode } from "@/context/AppModeContext";
 import { usePatient } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
@@ -26,6 +28,14 @@ import {
   formatPatientCard,
   shareWithHealthServices,
 } from "@/utils/healthShare";
+import {
+  getMemoryPermission,
+  setMemoryPermission,
+  saveSession,
+  getLastSession,
+  relativeDate,
+  type MemorySession,
+} from "@/utils/chatMemory";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -171,6 +181,22 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
   const voiceOnRef = useRef(voiceOn);
   voiceOnRef.current = voiceOn;
 
+  // ── Voice input (Web Speech API) ──
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // ── Sign language camera ──
+  const [showSignLang, setShowSignLang] = useState(false);
+
+  // ── Conversation memory ──
+  const [showMemoryPrompt, setShowMemoryPrompt] = useState(false);
+  const [showRecallBanner, setShowRecallBanner] = useState(false);
+  const [lastSession, setLastSession]           = useState<MemorySession | null>(null);
+  const memoryAskedRef  = useRef(false);
+  const messagesRef     = useRef(messages);
+  messagesRef.current   = messages;
+  const topicRef        = useRef<string | undefined>(undefined);
+
   const activeMeds = patient.kardex.filter((k) => k.status === "active");
 
   // Refs to prevent duplicate proactive checks
@@ -192,9 +218,97 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
     });
   }
 
+  // ── Voice input (Web Speech API — live in web preview; native handled gracefully) ──
+  function toggleVoiceInput() {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+      return;
+    }
+
+    if (Platform.OS !== "web") {
+      Alert.alert(
+        "Voice Input",
+        "Speak clearly — voice input is fully available in the installed app. In this preview, please type or use sign language mode.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    const Win = window as any;
+    const SR  = Win.SpeechRecognition ?? Win.webkitSpeechRecognition;
+    if (!SR) {
+      Alert.alert("Not supported", "Your browser does not support voice input. Please type your message.");
+      return;
+    }
+
+    const recognition = new SR();
+    recognition.continuous     = false;
+    recognition.interimResults = true;
+    recognition.lang           = "en-IE";
+
+    recognition.onresult = (event: any) => {
+      const transcript = (Array.from(event.results) as any[])
+        .map((r: any) => r[0].transcript as string)
+        .join("");
+      setInput(transcript);
+    };
+    recognition.onend   = () => { setIsListening(false); recognitionRef.current = null; };
+    recognition.onerror = () => { setIsListening(false); recognitionRef.current = null; };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }
+
+  // ── Sign language submit ──
+  function handleSignSubmit(text: string) {
+    setShowSignLang(false);
+    if (text.trim()) sendMessage(text.trim());
+  }
+
   useEffect(() => {
-    if (!visible) { try { Speech.stop(); } catch {} }
+    if (!visible) {
+      try { Speech.stop(); } catch {}
+      // Stop voice recognition if active
+      if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} recognitionRef.current = null; setIsListening(false); }
+      // Save session to memory on close (if conversation happened)
+      const msgs = messagesRef.current;
+      if (msgs.length > 1) {
+        saveSession(
+          msgs.map((m) => ({ role: m.role, content: m.content })),
+          topicRef.current
+        );
+      }
+    }
     return () => { try { Speech.stop(); } catch {} };
+  }, [visible]);
+
+  // ── Memory: permission check + recall on open ───────────────────────────────
+  useEffect(() => {
+    if (!visible || memoryAskedRef.current) return;
+    memoryAskedRef.current = true;
+
+    (async () => {
+      const perm = await getMemoryPermission();
+      if (perm === null) {
+        // First time ever — ask permission
+        setShowMemoryPrompt(true);
+      } else if (perm === true) {
+        // Already permitted — check for a previous session to recall
+        const last = await getLastSession();
+        if (last && last.messages.filter((m) => m.role === "user").length > 0) {
+          setLastSession(last);
+          setShowRecallBanner(true);
+        }
+      }
+    })();
+  }, [visible]);
+
+  // Reset memory flag when closed (allow re-check on next open)
+  useEffect(() => {
+    if (!visible) { memoryAskedRef.current = false; setShowRecallBanner(false); setLastSession(null); }
   }, [visible]);
 
   const flatListRef = useRef<FlatList>(null);
@@ -255,13 +369,15 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
     }
   }, [visible]);
 
-  // Seed the bot when opened from the pain pathway
+  // Seed the bot when opened from the pain pathway / condition education
   useEffect(() => {
     if (visible && seedContext && !loading && seededRef.current !== seedContext) {
       seededRef.current = seedContext;
+      // Capture first ~40 chars as topic for memory
+      topicRef.current = seedContext.slice(0, 40);
       sendMessage(seedContext);
     }
-    if (!visible) { seededRef.current = undefined; }
+    if (!visible) { seededRef.current = undefined; topicRef.current = undefined; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, seedContext, loading]);
 
@@ -360,7 +476,24 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
     setMessages([greeting]);
     setInput("");
     seededRef.current = undefined;
+    topicRef.current  = undefined;
     proactiveCheckedRef.current = false;
+    setShowRecallBanner(false);
+  }
+
+  function handleRecallSession() {
+    if (!lastSession) return;
+    setShowRecallBanner(false);
+    // Inject last session messages (excluding greeting) after current greeting
+    const recalled = lastSession.messages.map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    }));
+    const recallNote: ChatMessage = {
+      role: "assistant",
+      content: `I remember we spoke ${relativeDate(lastSession.date)}. I've loaded our previous conversation so we can continue where we left off.`,
+    };
+    setMessages([greeting, recallNote, ...recalled]);
   }
 
   const bottomPad = Platform.OS === "ios" ? insets.bottom : 8;
@@ -456,6 +589,27 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
               }
             />
 
+            {/* Memory recall banner */}
+            {showRecallBanner && lastSession && (
+              <View style={[styles.recallBanner, { backgroundColor: "rgba(201,134,10,0.08)", borderColor: "rgba(201,134,10,0.35)" }]}>
+                <MaterialCommunityIcons name="brain" size={16} color="#C9860A" />
+                <Text style={[styles.recallText, { color: "#C9860A", fontFamily: "Inter_500Medium" }]}>
+                  I remember we spoke {relativeDate(lastSession.date)}
+                  {lastSession.topic ? ` about "${lastSession.topic}"` : ""}.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.recallBtn, { backgroundColor: "rgba(201,134,10,0.18)" }]}
+                  onPress={handleRecallSession}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.recallBtnText, { color: "#C9860A", fontFamily: "Inter_700Bold" }]}>Continue</Text>
+                </TouchableOpacity>
+                <TouchableOpacity hitSlop={10} onPress={() => setShowRecallBanner(false)}>
+                  <MaterialCommunityIcons name="close" size={14} color="#C9860A" />
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Safety notice — clean (store) mode */}
             {!pilotMode && (
               <View style={[styles.safetyNotice, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
@@ -513,15 +667,52 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
 
             {/* Input bar */}
             <View style={[styles.inputBar, { borderTopColor: colors.border, paddingBottom: bottomPad }]}>
-              <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {/* Accessory row: mic, sign language */}
+              <View style={styles.inputAccessRow}>
+                {/* Microphone — voice input */}
+                <TouchableOpacity
+                  onPress={toggleVoiceInput}
+                  activeOpacity={0.75}
+                  style={[
+                    styles.accessBtn,
+                    {
+                      backgroundColor: isListening ? "rgba(220,38,38,0.12)" : colors.card,
+                      borderColor: isListening ? "#dc2626" : colors.border,
+                    },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name={isListening ? "microphone" : "microphone-outline"}
+                    size={18}
+                    color={isListening ? "#dc2626" : colors.mutedForeground}
+                  />
+                  <Text style={[styles.accessBtnText, { color: isListening ? "#dc2626" : colors.mutedForeground, fontFamily: isListening ? "Inter_700Bold" : "Inter_400Regular" }]}>
+                    {isListening ? "Listening…" : "Voice"}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Sign language camera */}
+                <TouchableOpacity
+                  onPress={() => setShowSignLang(true)}
+                  activeOpacity={0.75}
+                  style={[styles.accessBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                >
+                  <MaterialCommunityIcons name="hand-wave-outline" size={18} color="#4f46e5" />
+                  <Text style={[styles.accessBtnText, { color: "#4f46e5", fontFamily: "Inter_500Medium" }]}>Sign Language</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: isListening ? "#dc2626" : colors.border }]}>
                 <TextInput
                   style={[styles.textInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
                   placeholder={
-                    painHelper || pilotMode
-                      ? "Describe your pain or ask a question..."
-                      : "Ask about a medication, guideline, or health topic..."
+                    isListening
+                      ? "Listening — speak now…"
+                      : painHelper || pilotMode
+                        ? "Describe your pain or ask a question…"
+                        : "Ask about a medication, guideline, or health topic…"
                   }
-                  placeholderTextColor={colors.mutedForeground}
+                  placeholderTextColor={isListening ? "#dc2626" : colors.mutedForeground}
                   value={input}
                   onChangeText={setInput}
                   multiline
@@ -549,6 +740,48 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
           </KeyboardAvoidingView>
         </Animated.View>
       </View>
+
+      {/* ── Sign Language Modal ──────────────────────────────────────────────── */}
+      <SignLanguageModal
+        visible={showSignLang}
+        onClose={() => setShowSignLang(false)}
+        onSubmit={handleSignSubmit}
+      />
+
+      {/* ── Memory permission prompt ─────────────────────────────────────────── */}
+      <Modal visible={showMemoryPrompt} transparent animationType="fade" onRequestClose={() => { setShowMemoryPrompt(false); setMemoryPermission(false); }}>
+        <View style={styles.promptOverlay}>
+          <View style={[styles.promptCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.promptIconBox, { backgroundColor: "rgba(201,134,10,0.12)" }]}>
+              <MaterialCommunityIcons name="brain" size={28} color="#C9860A" />
+            </View>
+            <Text style={[styles.promptTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              Remember Our Conversations?
+            </Text>
+            <Text style={[styles.promptBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Queen B can remember what we talk about so she can pick up where we left off next time.{"\n\n"}
+              Everything is stored only on your device — nothing is sent anywhere. You can turn this off at any time in Settings.
+            </Text>
+            <View style={styles.promptActions}>
+              <TouchableOpacity
+                style={[styles.promptBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+                onPress={() => { setMemoryPermission(false); setShowMemoryPrompt(false); }}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.promptBtnText, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>No Thanks</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.promptBtn, { backgroundColor: "#C9860A" }]}
+                onPress={() => { setMemoryPermission(true); setShowMemoryPrompt(false); }}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons name="check" size={16} color="#fff" />
+                <Text style={[styles.promptBtnText, { color: "#fff", fontFamily: "Inter_700Bold" }]}>Allow Memory</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -622,7 +855,26 @@ const styles = StyleSheet.create({
   contraindictionNote: { fontSize: 11, fontFamily: "Inter_500Medium", flex: 1, lineHeight: 16 },
 
   inputBar: { borderTopWidth: 1, paddingHorizontal: 14, paddingTop: 10 },
+  inputAccessRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
+  accessBtn: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 },
+  accessBtnText: { fontSize: 12.5 },
   inputWrap: { flexDirection: "row", alignItems: "flex-end", borderRadius: 14, borderWidth: 1, paddingLeft: 14, paddingRight: 6, paddingVertical: 6, gap: 8 },
   textInput: { flex: 1, fontSize: 14, lineHeight: 20, maxHeight: 100, paddingVertical: 4 },
   sendBtn: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+
+  // Memory recall banner
+  recallBanner: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, marginHorizontal: 14, marginBottom: 4 },
+  recallText: { fontSize: 12, flex: 1, lineHeight: 17 },
+  recallBtn: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  recallBtnText: { fontSize: 12 },
+
+  // Memory permission prompt
+  promptOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center", padding: 24 },
+  promptCard: { borderRadius: 20, borderWidth: 1, padding: 24, gap: 14, width: "100%", maxWidth: 360, alignItems: "center" },
+  promptIconBox: { width: 60, height: 60, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  promptTitle: { fontSize: 18, textAlign: "center" },
+  promptBody: { fontSize: 13.5, lineHeight: 21, textAlign: "center" },
+  promptActions: { flexDirection: "row", gap: 10, width: "100%" },
+  promptBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 13, paddingVertical: 13, borderWidth: 1 },
+  promptBtnText: { fontSize: 14 },
 });
