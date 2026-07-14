@@ -34,6 +34,8 @@ type Step =
   | "acuteResult"
   | "hipScreen"
   | "hipResult"
+  | "lumbarScreen"
+  | "lumbarResult"
   | "neckShoulder"
   | "neckShoulderResult";
 
@@ -68,7 +70,7 @@ const REGION_MENUS: Record<Region, MenuOption[]> = {
   spine: [
     { label: "Neck / Shoulder", sub: "We'll help work out which one", icon: "head-outline", action: { type: "step", step: "neckShoulder" } },
     { label: "Mid Back", sub: "Between the shoulder blades", icon: "human-male", action: { type: "pathway", key: "thoracic" } },
-    { label: "Low Back", sub: "Lower back, may reach the legs", icon: "seat-outline", action: { type: "pathway", key: "lumbar" } },
+    { label: "Low Back", sub: "Lower back, may reach the legs", icon: "seat-outline", action: { type: "step", step: "lumbarScreen" } },
   ],
   leg: [
     { label: "Hip", sub: "Groin, buttock or thigh pain", icon: "walk", action: { type: "step", step: "hipScreen" } },
@@ -108,6 +110,13 @@ const HIP_SCREEN_QUESTIONS: string[] = [
   "Is the pain worse when sitting, coughing, or sneezing rather than when walking?",
 ];
 
+/* ─── Lumbar-side hip rule-in screen ─── */
+const LUMBAR_SCREEN_QUESTIONS: string[] = [
+  "Is the pain mainly in your groin or the front of your thigh, rather than your back?",
+  "Is it painful or difficult to put on socks and shoes, or to get in and out of a car?",
+  "Is the pain clearly worse when standing or walking, and eased by sitting down?",
+];
+
 /* ─── Neck vs shoulder differentiator ─── */
 const NECK_SHOULDER_QUESTIONS: { text: string; options: [string, string] }[] = [
   {
@@ -137,6 +146,7 @@ export default function BodyMapScreen() {
   const [acuteAnswers, setAcuteAnswers] = useState<(number | null)[]>(new Array(ACUTE_KNEE_QUESTIONS.length).fill(null));
   const [kneeRedFlagAnswers, setKneeRedFlagAnswers] = useState<(boolean | null)[]>(new Array(RED_FLAG_QUESTIONS.length).fill(null));
   const [hipAnswers, setHipAnswers] = useState<(boolean | null)[]>(new Array(HIP_SCREEN_QUESTIONS.length).fill(null));
+  const [lumbarAnswers, setLumbarAnswers] = useState<(boolean | null)[]>(new Array(LUMBAR_SCREEN_QUESTIONS.length).fill(null));
   const [nsAnswers, setNsAnswers] = useState<(number | null)[]>(new Array(NECK_SHOULDER_QUESTIONS.length).fill(null));
 
   const zoom = useRef(new Animated.Value(0)).current;
@@ -170,6 +180,7 @@ export default function BodyMapScreen() {
         setKneeRedFlagAnswers(new Array(RED_FLAG_QUESTIONS.length).fill(null));
       }
       if (opt.action.step === "hipScreen") setHipAnswers(new Array(HIP_SCREEN_QUESTIONS.length).fill(null));
+      if (opt.action.step === "lumbarScreen") setLumbarAnswers(new Array(LUMBAR_SCREEN_QUESTIONS.length).fill(null));
       if (opt.action.step === "neckShoulder") setNsAnswers(new Array(NECK_SHOULDER_QUESTIONS.length).fill(null));
       setStep(opt.action.step);
     }
@@ -195,6 +206,7 @@ export default function BodyMapScreen() {
 
   const kneeHasRedFlag = kneeRedFlagAnswers.some((a) => a === true);
   const hipPositive = hipAnswers.some((a) => a === true);
+  const lumbarHipPositive = lumbarAnswers.filter((a) => a === true).length >= 2;
   const nsShoulderVotes = nsAnswers.filter((a) => a === 1).length;
   const nsIsShoulder = nsShoulderVotes >= 2;
 
@@ -238,6 +250,7 @@ export default function BodyMapScreen() {
             else if (step === "acuteKnee") setStep("kneeRedFlags");
             else if (step === "kneeRedFlags") setStep("kneeDuration");
             else if (step === "hipResult") setStep("hipScreen");
+            else if (step === "lumbarResult") setStep("lumbarScreen");
             else if (step === "neckShoulderResult") setStep("neckShoulder");
             else setStep("menu");
           }}
@@ -676,6 +689,103 @@ export default function BodyMapScreen() {
               >
                 <Text style={[styles.primaryCtaText, { fontFamily: "Inter_600SemiBold", color: colors.foreground }]}>
                   Do the Hip Questionnaire Instead
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* ── Lumbar-side hip rule-in screen ── */}
+        {step === "lumbarScreen" && (
+          <View style={{ gap: 16, marginTop: 6 }}>
+            <Text style={[styles.explain, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Low back pain sometimes comes from the hip joint rather than the back. Three quick questions help us check.
+            </Text>
+            {LUMBAR_SCREEN_QUESTIONS.map((q, qi) => (
+              <View key={qi} style={[styles.qCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.qText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{q}</Text>
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                  {[true, false].map((val) => {
+                    const sel = lumbarAnswers[qi] === val;
+                    return (
+                      <TouchableOpacity
+                        key={String(val)}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          const next = [...lumbarAnswers];
+                          next[qi] = val;
+                          setLumbarAnswers(next);
+                        }}
+                        style={[
+                          styles.ynBtn,
+                          {
+                            backgroundColor: sel ? (val ? colors.emergencyBg : colors.virtualBg) : colors.glass,
+                            borderColor: sel ? (val ? colors.emergency : colors.virtual) : colors.glassBorder,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.ynText, { color: sel ? (val ? colors.emergency : colors.virtual) : colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                          {val ? "Yes" : "No"}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+            <TouchableOpacity
+              disabled={lumbarAnswers.some((a) => a === null)}
+              activeOpacity={0.85}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setStep("lumbarResult");
+              }}
+              style={[styles.primaryCta, { backgroundColor: lumbarAnswers.some((a) => a === null) ? colors.muted : colors.primary }]}
+            >
+              <Text style={[styles.primaryCtaText, { fontFamily: "Inter_600SemiBold", color: lumbarAnswers.some((a) => a === null) ? colors.mutedForeground : "#fff" }]}>
+                Continue
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── Lumbar screen result ── */}
+        {step === "lumbarResult" && (
+          <View style={{ gap: 16, marginTop: 6 }}>
+            <View style={[styles.qCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <MaterialCommunityIcons
+                name={lumbarHipPositive ? "walk" : "seat-outline"}
+                size={34}
+                color={lumbarHipPositive ? colors.fastTrack : colors.primary}
+                style={{ marginBottom: 8 }}
+              />
+              <Text style={[styles.qTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                {lumbarHipPositive ? "Your pain may be coming from your hip" : "Your pain looks like true low back pain"}
+              </Text>
+              <Text style={[styles.explain, { color: colors.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 8 }]}>
+                {lumbarHipPositive
+                  ? "Pain felt mainly in the groin that makes socks, shoes or car journeys difficult often comes from the hip joint rather than the back. We recommend the hip questionnaire."
+                  : "Your answers do not suggest hip joint pain, so the low back questionnaire is the right next step."}
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => goToPathway(lumbarHipPositive ? "hip" : "lumbar")}
+              style={[styles.primaryCta, { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.primaryCtaText, { fontFamily: "Inter_600SemiBold", color: "#fff" }]}>
+                {lumbarHipPositive ? "Start Hip Questionnaire" : "Start Low Back Questionnaire"}
+              </Text>
+            </TouchableOpacity>
+            {lumbarHipPositive && (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => goToPathway("lumbar")}
+                style={[styles.secondaryCta, { borderColor: colors.border, backgroundColor: colors.card }]}
+              >
+                <Text style={[styles.primaryCtaText, { fontFamily: "Inter_600SemiBold", color: colors.foreground }]}>
+                  Do the Low Back Questionnaire Instead
                 </Text>
               </TouchableOpacity>
             )}
