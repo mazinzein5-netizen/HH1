@@ -20,7 +20,7 @@ import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useHiveBot } from "@/context/HiveBotContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
-import type { PathwayKey } from "@/data/pathwayQuestions";
+import { RED_FLAG_QUESTIONS, type PathwayKey } from "@/data/pathwayQuestions";
 
 export const HIVE_PAIN_DOCTOR_NUMBER = "1800 494 483";
 
@@ -29,6 +29,7 @@ type Step =
   | "map"
   | "menu"
   | "kneeDuration"
+  | "kneeRedFlags"
   | "acuteKnee"
   | "acuteResult"
   | "hipScreen"
@@ -134,6 +135,7 @@ export default function BodyMapScreen() {
   const [step, setStep] = useState<Step>("map");
   const [region, setRegion] = useState<Region | null>(null);
   const [acuteAnswers, setAcuteAnswers] = useState<(number | null)[]>(new Array(ACUTE_KNEE_QUESTIONS.length).fill(null));
+  const [kneeRedFlagAnswers, setKneeRedFlagAnswers] = useState<(boolean | null)[]>(new Array(RED_FLAG_QUESTIONS.length).fill(null));
   const [hipAnswers, setHipAnswers] = useState<(boolean | null)[]>(new Array(HIP_SCREEN_QUESTIONS.length).fill(null));
   const [nsAnswers, setNsAnswers] = useState<(number | null)[]>(new Array(NECK_SHOULDER_QUESTIONS.length).fill(null));
 
@@ -163,7 +165,10 @@ export default function BodyMapScreen() {
       goToPathway(opt.action.key);
     } else {
       Haptics.selectionAsync();
-      if (opt.action.step === "kneeDuration") setAcuteAnswers(new Array(ACUTE_KNEE_QUESTIONS.length).fill(null));
+      if (opt.action.step === "kneeDuration") {
+        setAcuteAnswers(new Array(ACUTE_KNEE_QUESTIONS.length).fill(null));
+        setKneeRedFlagAnswers(new Array(RED_FLAG_QUESTIONS.length).fill(null));
+      }
       if (opt.action.step === "hipScreen") setHipAnswers(new Array(HIP_SCREEN_QUESTIONS.length).fill(null));
       if (opt.action.step === "neckShoulder") setNsAnswers(new Array(NECK_SHOULDER_QUESTIONS.length).fill(null));
       setStep(opt.action.step);
@@ -188,6 +193,7 @@ export default function BodyMapScreen() {
     );
   }
 
+  const kneeHasRedFlag = kneeRedFlagAnswers.some((a) => a === true);
   const hipPositive = hipAnswers.some((a) => a === true);
   const nsShoulderVotes = nsAnswers.filter((a) => a === 1).length;
   const nsIsShoulder = nsShoulderVotes >= 2;
@@ -229,6 +235,8 @@ export default function BodyMapScreen() {
             if (step === "map") router.back();
             else if (step === "menu") backToMap();
             else if (step === "acuteResult") setStep("acuteKnee");
+            else if (step === "acuteKnee") setStep("kneeRedFlags");
+            else if (step === "kneeRedFlags") setStep("kneeDuration");
             else if (step === "hipResult") setStep("hipScreen");
             else if (step === "neckShoulderResult") setStep("neckShoulder");
             else setStep("menu");
@@ -365,7 +373,8 @@ export default function BodyMapScreen() {
               onPress={() => {
                 Haptics.selectionAsync();
                 setAcuteAnswers(new Array(ACUTE_KNEE_QUESTIONS.length).fill(null));
-                setStep("acuteKnee");
+                setKneeRedFlagAnswers(new Array(RED_FLAG_QUESTIONS.length).fill(null));
+                setStep("kneeRedFlags");
               }}
               style={[styles.bigOption, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
@@ -393,6 +402,69 @@ export default function BodyMapScreen() {
                   A longer-term problem — Oxford Knee Score questionnaire
                 </Text>
               </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── Knee red-flag safety questions ── */}
+        {step === "kneeRedFlags" && (
+          <View style={{ gap: 16, marginTop: 6 }}>
+            <Text style={[styles.explain, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              First, some important safety questions. Please answer all of them honestly — if you answer yes to any, please contact your GP urgently or call 112.
+            </Text>
+            {RED_FLAG_QUESTIONS.map((q, qi) => (
+              <View key={qi} style={[styles.qCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.qText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{q}</Text>
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                  {[true, false].map((val) => {
+                    const sel = kneeRedFlagAnswers[qi] === val;
+                    return (
+                      <TouchableOpacity
+                        key={String(val)}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          const next = [...kneeRedFlagAnswers];
+                          next[qi] = val;
+                          setKneeRedFlagAnswers(next);
+                        }}
+                        style={[
+                          styles.ynBtn,
+                          {
+                            backgroundColor: sel ? (val ? colors.emergencyBg : colors.virtualBg) : colors.glass,
+                            borderColor: sel ? (val ? colors.emergency : colors.virtual) : colors.glassBorder,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.ynText, { color: sel ? (val ? colors.emergency : colors.virtual) : colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                          {val ? "Yes" : "No"}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+            {kneeHasRedFlag && (
+              <View style={[styles.warnBox, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}>
+                <Feather name="alert-triangle" size={20} color={colors.emergency} />
+                <Text style={[styles.warnText, { color: colors.emergency, fontFamily: "Inter_600SemiBold" }]}>
+                  You answered yes to a safety question. Please contact your GP urgently or call 112. You can still continue below.
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity
+              disabled={kneeRedFlagAnswers.some((a) => a === null)}
+              activeOpacity={0.85}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setStep("acuteKnee");
+              }}
+              style={[styles.primaryCta, { backgroundColor: kneeRedFlagAnswers.some((a) => a === null) ? colors.muted : colors.primary }]}
+            >
+              <Text style={[styles.primaryCtaText, { fontFamily: "Inter_600SemiBold", color: kneeRedFlagAnswers.some((a) => a === null) ? colors.mutedForeground : "#fff" }]}>
+                Continue
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -473,6 +545,14 @@ export default function BodyMapScreen() {
               <Text style={[styles.explain, { color: colors.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 8 }]}>
                 Because your knee problem is recent, the safest next step is a short call with the HIVE pain doctor. They will review what happened and arrange the right care for you.
               </Text>
+              {kneeHasRedFlag && (
+                <View style={[styles.warnBox, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}>
+                  <Feather name="alert-triangle" size={20} color={colors.emergency} />
+                  <Text style={[styles.warnText, { color: colors.emergency, fontFamily: "Inter_600SemiBold" }]}>
+                    Important — based on your safety answers, please contact your GP urgently or call 112.
+                  </Text>
+                </View>
+              )}
               {(acuteAnswers[3] === 3 || acuteAnswers[4] === 3) && (
                 <View style={[styles.warnBox, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}>
                   <Feather name="alert-triangle" size={20} color={colors.emergency} />
