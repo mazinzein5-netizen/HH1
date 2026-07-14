@@ -1,0 +1,97 @@
+/**
+ * Biometric sign-in (Face ID / fingerprint) — Zero-Server.
+ *
+ * A user enables biometric sign-in from Settings after signing in with their
+ * password. We store ONLY a pointer to the local account (user id + display
+ * name) under one device-level key — never the password. On the next visit,
+ * a successful device biometric check re-opens that account. All checks run
+ * on-device via the OS; nothing leaves the phone.
+ *
+ * Web preview has no biometric hardware, so the feature is native-only and
+ * the UI explains that honestly.
+ */
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as LocalAuthentication from "expo-local-authentication";
+import { Platform } from "react-native";
+
+const BIOMETRIC_KEY = "hive_biometric_login_v1";
+
+export interface BiometricLoginRecord {
+  userId: string;
+  /** Shown on the login screen ("Sign in as Mary"). */
+  displayName: string;
+  enabledAt: string;
+}
+
+export interface BiometricSupport {
+  available: boolean;
+  /** Friendly name for what the device offers: "Face ID", "fingerprint", … */
+  label: string;
+  /** MDI icon that matches the label. */
+  icon: "face-recognition" | "fingerprint";
+  /** Why it is unavailable, for honest UI copy. */
+  reason?: "web" | "no-hardware" | "not-enrolled";
+}
+
+/** What the device can do right now. */
+export async function getBiometricSupport(): Promise<BiometricSupport> {
+  if (Platform.OS === "web") {
+    return { available: false, label: "biometrics", icon: "fingerprint", reason: "web" };
+  }
+  try {
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    if (!hasHardware) {
+      return { available: false, label: "biometrics", icon: "fingerprint", reason: "no-hardware" };
+    }
+    const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
+    const facial = types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
+    const label = facial ? (Platform.OS === "ios" ? "Face ID" : "face unlock") : "fingerprint";
+    const icon = facial ? ("face-recognition" as const) : ("fingerprint" as const);
+    const enrolled = await LocalAuthentication.isEnrolledAsync();
+    if (!enrolled) {
+      return { available: false, label, icon, reason: "not-enrolled" };
+    }
+    return { available: true, label, icon };
+  } catch {
+    return { available: false, label: "biometrics", icon: "fingerprint", reason: "no-hardware" };
+  }
+}
+
+/** Run the OS biometric prompt. Resolves true only on a real pass. */
+export async function promptBiometric(promptMessage: string, cancelLabel = "Use password instead"): Promise<boolean> {
+  try {
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage,
+      cancelLabel,
+      disableDeviceFallback: false,
+    });
+    return result.success;
+  } catch {
+    return false;
+  }
+}
+
+export async function getBiometricLogin(): Promise<BiometricLoginRecord | null> {
+  try {
+    const raw = await AsyncStorage.getItem(BIOMETRIC_KEY);
+    return raw ? (JSON.parse(raw) as BiometricLoginRecord) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function enableBiometricLogin(userId: string, displayName: string): Promise<void> {
+  const rec: BiometricLoginRecord = {
+    userId,
+    displayName,
+    enabledAt: new Date().toISOString(),
+  };
+  await AsyncStorage.setItem(BIOMETRIC_KEY, JSON.stringify(rec));
+}
+
+export async function disableBiometricLogin(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(BIOMETRIC_KEY);
+  } catch {}
+}

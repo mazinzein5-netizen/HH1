@@ -31,6 +31,8 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  /** Reopen a locally stored account after a successful device biometric check. */
+  loginById: (userId: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   loginAsGuest: () => Promise<void>;
   register: (data: Omit<User, "id" | "createdAt">) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
@@ -72,6 +74,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function loginById(userId: string) {
+    try {
+      const stored = await AsyncStorage.getItem(USERS_KEY);
+      const users: User[] = stored ? JSON.parse(stored) : [];
+      const found = users.find((u) => u.id === userId);
+      if (!found) return { success: false, error: "That account no longer exists on this device." };
+      await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(found));
+      setUser(found);
+      return { success: true, user: found };
+    } catch {
+      return { success: false, error: "Login failed. Please try again." };
+    }
+  }
+
   async function register(data: Omit<User, "id" | "createdAt">) {
     try {
       const stored = await AsyncStorage.getItem(USERS_KEY);
@@ -107,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginAsGuest, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginById, loginAsGuest, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

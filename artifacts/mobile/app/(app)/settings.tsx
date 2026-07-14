@@ -2,13 +2,14 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Modal,
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -23,6 +24,14 @@ import Toast from "@/components/Toast";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { ThemeMode, useTheme } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
+import {
+  BiometricSupport,
+  disableBiometricLogin,
+  enableBiometricLogin,
+  getBiometricLogin,
+  getBiometricSupport,
+  promptBiometric,
+} from "@/utils/biometricAuth";
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: "white-balance-sunny" | "moon-waning-crescent" | "cellphone-cog" }[] = [
   { mode: "light", label: "Light", icon: "white-balance-sunny" },
@@ -86,6 +95,49 @@ export default function SettingsScreen() {
   const [pilotModalVisible, setPilotModalVisible] = useState(false);
   const [pilotCode, setPilotCode] = useState("");
   const [pilotError, setPilotError] = useState("");
+  const [bioSupport, setBioSupport] = useState<BiometricSupport | null>(null);
+  const [bioEnabled, setBioEnabled] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const [support, record] = await Promise.all([getBiometricSupport(), getBiometricLogin()]);
+      setBioSupport(support);
+      setBioEnabled(!!record && record.userId === user?.id);
+    })();
+  }, [user?.id]);
+
+  const bioAllowed = !!bioSupport?.available && !user?.isGuest;
+
+  function biometricSub(): string {
+    if (user?.isGuest) return "Sign in to your own account to use this.";
+    if (!bioSupport) return "Checking what this device supports…";
+    if (bioSupport.available) return `Unlock the app with ${bioSupport.label} instead of your password.`;
+    switch (bioSupport.reason) {
+      case "web":          return "Works on your phone — Face ID or fingerprint.";
+      case "not-enrolled": return "First set up Face ID or a fingerprint in your phone's own settings.";
+      default:             return "This device doesn't support biometric sign-in.";
+    }
+  }
+
+  async function handleBiometricToggle(next: boolean) {
+    if (!bioAllowed || !user) return;
+    Haptics.selectionAsync();
+    if (next) {
+      const passed = await promptBiometric(`Confirm ${bioSupport!.label} to enable quick sign-in`, "Cancel");
+      if (!passed) return;
+      const firstName = (user.fullName || user.username).trim().split(/\s+/)[0];
+      await enableBiometricLogin(user.id, firstName);
+      setBioEnabled(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setToastMessage(`You can now sign in with ${bioSupport!.label}`);
+      setToastVisible(true);
+    } else {
+      await disableBiometricLogin();
+      setBioEnabled(false);
+      setToastMessage("Biometric sign-in turned off");
+      setToastVisible(true);
+    }
+  }
 
   function handleAction(action: string) {
     Haptics.selectionAsync();
@@ -255,6 +307,31 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
               );
             })}
+          </View>
+        </View>
+
+        {/* Security */}
+        <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionGroupLabel, { color: colors.mutedForeground }]}>SECURITY</Text>
+          <View style={styles.settingRow}>
+            <View style={[styles.settingIcon, { backgroundColor: colors.cardElevated }]}>
+              <MaterialCommunityIcons name={bioSupport?.icon ?? "fingerprint"} size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.settingLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                Biometric Sign-In
+              </Text>
+              <Text style={[styles.settingSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                {biometricSub()}
+              </Text>
+            </View>
+            <Switch
+              value={bioEnabled}
+              onValueChange={handleBiometricToggle}
+              disabled={!bioAllowed}
+              trackColor={{ false: colors.border, true: colors.gold }}
+              thumbColor="#fff"
+            />
           </View>
         </View>
 

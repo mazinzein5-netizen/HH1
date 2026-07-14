@@ -1,8 +1,8 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -21,12 +21,21 @@ import { useAuth } from "@/context/AuthContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 import { useTheme } from "@/context/ThemeContext";
+import {
+  BiometricLoginRecord,
+  BiometricSupport,
+  disableBiometricLogin,
+  enableBiometricLogin,
+  getBiometricLogin,
+  getBiometricSupport,
+  promptBiometric,
+} from "@/utils/biometricAuth";
 
 export default function LoginScreen() {
   const colors = useColors();
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { login, loginAsGuest } = useAuth();
+  const { login, loginById, loginAsGuest } = useAuth();
   const { prefs } = useLogoTheme();
 
   const [username, setUsername] = useState("");
@@ -34,6 +43,17 @@ export default function LoginScreen() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [bioRecord, setBioRecord] = useState<BiometricLoginRecord | null>(null);
+  const [bioSupport, setBioSupport] = useState<BiometricSupport | null>(null);
+  const [bioBusy, setBioBusy] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const [record, support] = await Promise.all([getBiometricLogin(), getBiometricSupport()]);
+      setBioRecord(record);
+      setBioSupport(support);
+    })();
+  }, []);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -58,6 +78,39 @@ export default function LoginScreen() {
     await loginAsGuest();
     router.replace("/(app)/(tabs)/dashboard");
   }
+
+  async function handleBiometric() {
+    if (!bioRecord || !bioSupport?.available || bioBusy) return;
+    setError("");
+    setBioBusy(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const passed = await promptBiometric(`Sign in as ${bioRecord.displayName}`);
+    if (!passed) {
+      setBioBusy(false);
+      return; // user cancelled or check failed — no error banner needed
+    }
+    const result = await loginById(bioRecord.userId);
+    setBioBusy(false);
+    if (!result.success) {
+      // The stored account was removed — clear the stale shortcut.
+      await disableBiometricLogin();
+      setBioRecord(null);
+      setError(result.error ?? "Login failed");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } else {
+      // Keep the button label in sync if the person changed their name.
+      if (result.user) {
+        const firstName = (result.user.fullName || result.user.username).trim().split(/\s+/)[0];
+        if (firstName !== bioRecord.displayName) {
+          await enableBiometricLogin(result.user.id, firstName);
+        }
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/(app)/(tabs)/dashboard");
+    }
+  }
+
+  const showBiometricBtn = !!bioRecord && !!bioSupport?.available;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -143,6 +196,26 @@ export default function LoginScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
+          {showBiometricBtn ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleBiometric}
+              disabled={bioBusy}
+              style={[styles.bioBtn, { backgroundColor: colors.glassGold, borderColor: colors.goldBorder, opacity: bioBusy ? 0.7 : 1 }]}
+            >
+              {bioBusy ? (
+                <ActivityIndicator color={colors.gold} />
+              ) : (
+                <>
+                  <MaterialCommunityIcons name={bioSupport!.icon} size={22} color={colors.gold} />
+                  <Text style={[styles.bioBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
+                    Sign in as {bioRecord!.displayName} with {bioSupport!.label}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : null}
+
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>New patient? </Text>
             <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
@@ -198,6 +271,8 @@ const styles = StyleSheet.create({
   divider: { borderTopWidth: 1, alignItems: "center", marginVertical: 4 },
   dividerText: { marginTop: -9, paddingHorizontal: 12, fontSize: 12 },
   guestBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 14, borderWidth: 1, paddingVertical: 14 },
+  bioBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 14, borderWidth: 1.5, paddingVertical: 15 },
+  bioBtnText: { fontSize: 15 },
   guestText: { fontSize: 14 },
   disclaimer: { fontSize: 11, textAlign: "center", lineHeight: 16 },
 });
