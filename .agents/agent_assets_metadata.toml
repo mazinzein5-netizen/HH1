@@ -18,6 +18,24 @@ uri = "file://artifacts/website/public/images/care-home.png"
 type = "image"
 title = "Care home setting"
 
+[[generated]]
+id = "8ltnk26SnWMe5kCtWJtF7"
+uri = "file://artifacts/surgical-video/public/images/dashboard.png"
+type = "image"
+title = "clinical dashboard ui"
+
+[[generated]]
+id = "EA4j0-SDeKeP8Ceb73wo9"
+uri = "file://artifacts/surgical-video/public/images/team.png"
+type = "image"
+title = "medical team collaboration"
+
+[[generated]]
+id = "6ouKdvlRWqJmuk3GUWNUG"
+uri = "file://artifacts/surgical-video/public/images/hexagon.png"
+type = "image"
+title = "hive logo hex"
+
 [[outputs]]
 id = "CSEAdMtBVAoK3FsSfhyPv"
 uri = "file://artifacts/promo-video/public/images/relaxed-adult.jpg"
