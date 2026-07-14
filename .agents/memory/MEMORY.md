@@ -2,3 +2,4 @@
 - [OSM lookups](osm-lookups.md) — Overpass/Nominatim need a User-Agent; third-party lookups must be disclosed in three places; no fabricated patient data in exports.
 - [Clean vs pilot mode gating](clean-vs-pilot-mode.md) — store build must stay clinical-wording-free; pilot behavior gated by pilot code validated server-side, never a client boolean.
 - [Workspace lib typecheck ordering](workspace-lib-typecheck.md) — new lib/* packages need root tsconfig reference; run tsc --build (typecheck:libs) before artifact --noEmit or TS6305.
+- [Canvas mobile screen previews](canvas-screen-previews.md) — preview RN screens by iframing real Expo web routes with dev-only ?preview=1 consent bypass; never extract RN into vite sandbox.

@@ -1,5 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { Platform } from "react-native";
+
+/** Web-only: dev preview frames pass ?preview=1 to skip the consent gate (never persisted). */
+function isWebPreview(): boolean {
+  return (
+    __DEV__ &&
+    Platform.OS === "web" &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("preview") === "1"
+  );
+}
 
 const CONSENT_KEY = "@hive_consent_v1";
 const PILOT_KEY = "@hive_pilot_mode";
@@ -36,10 +47,10 @@ export function AppModeProvider({
           AsyncStorage.getItem(CONSENT_KEY),
           AsyncStorage.getItem(PILOT_KEY),
         ]);
-        setConsentAccepted(!!consent);
+        setConsentAccepted(!!consent || isWebPreview());
         setPilotMode(pilot === "true");
       } catch {
-        setConsentAccepted(false);
+        setConsentAccepted(isWebPreview());
       } finally {
         onReady?.();
       }
