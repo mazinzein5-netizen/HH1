@@ -50,7 +50,7 @@ Preferred vocabulary:
 ## Privacy answers (both stores)
 
 - [ ] Data collection: none transmitted to developer servers for storage; AI features send the text of the current request to the API for processing only.
-- [ ] Privacy policy URL: the in-app policy text is served by the API server at `/privacy` (also reachable at `/api/privacy`). After publishing the project, the public URL is `https://<your-app>.replit.app/privacy` — paste the final published URL into both store listings. The page and the in-app policy render from one shared source (`lib/privacy-policy`), so they cannot drift.
+- [ ] Privacy policy URL: the in-app policy text is served by the API server at `/api/privacy`. After publishing the project, the public URL is `https://<your-app>.replit.app/api/privacy` — paste the final published URL into both store listings. (The website footer's "Privacy Policy" link points to the same page.) The page and the in-app policy render from one shared source (`lib/privacy-policy`), so they cannot drift.
 - [ ] Account deletion: in-app "Delete all my data" wipes all local data (Settings → Privacy & Data).
 - [ ] GDPR: consent gate shown at first launch; consent recorded on-device.
 
