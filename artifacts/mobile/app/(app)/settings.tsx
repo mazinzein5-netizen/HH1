@@ -342,7 +342,9 @@ export default function SettingsScreen() {
         <TouchableOpacity activeOpacity={1} onLongPress={handleVersionLongPress} delayLongPress={1200}>
           <Text style={[styles.versionText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
             HIVE COMPANION : Patient Portal v2.0 · IbnCeena Ltd.{"\n"}
-            Not a medical device — for information and administrative use only.
+            <Text style={{ color: "#E8590C", fontFamily: "Inter_500Medium" }}>
+              Not a medical device — for information and administrative use only.
+            </Text>
             {pilotMode ? "\nPilot programme active" : ""}
           </Text>
         </TouchableOpacity>

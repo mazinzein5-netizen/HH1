@@ -166,7 +166,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.disclaimer, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+        <Text style={[styles.disclaimer, { color: "#E8590C", fontFamily: "Inter_500Medium" }]}>
           HIVE COMPANION · GDPR Compliant · Not a medical device — for information and administrative use only
         </Text>
       </ScrollView>
