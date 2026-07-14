@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -20,8 +20,24 @@ import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useAuth } from "@/context/AuthContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
+import {
+  PROVIDER_META,
+  SocialProvider,
+  socialAvailability,
+  socialSignIn,
+  socialUnavailableReason,
+} from "@/utils/socialAuth";
+import { TRIAL_DAYS } from "@/utils/membershipStore";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"];
+
+type SignupMethod = "email" | SocialProvider;
+
+const METHODS: { id: SignupMethod; label: string; icon: string }[] = [
+  { id: "email",  label: "Email",  icon: "email-outline" },
+  { id: "apple",  label: "Apple",  icon: "apple" },
+  { id: "google", label: "Google", icon: "google" },
+];
 
 export default function RegisterScreen() {
   const colors = useColors();
@@ -39,6 +55,31 @@ export default function RegisterScreen() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [method, setMethod] = useState<SignupMethod>("email");
+  const [socialNote, setSocialNote] = useState("");
+
+  async function handleSelectMethod(m: SignupMethod) {
+    Haptics.selectionAsync();
+    setMethod(m);
+    setError("");
+    if (m === "email") {
+      setSocialNote("");
+      return;
+    }
+    if (socialAvailability(m) === "available") {
+      try {
+        const profile = await socialSignIn(m);
+        if (profile.fullName) setFullName(profile.fullName);
+        if (profile.email) setEmail(profile.email);
+        setSocialNote(`Signed in with ${PROVIDER_META[m].label} — confirm the rest of your details below.`);
+        return;
+      } catch (e: any) {
+        setSocialNote(e?.message ?? socialUnavailableReason(m));
+        return;
+      }
+    }
+    setSocialNote(socialUnavailableReason(m));
+  }
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -52,7 +93,15 @@ export default function RegisterScreen() {
     if (password.length < 6) return setError("Password must be at least 6 characters.");
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const result = await register({ fullName: fullName.trim(), username: username.trim(), email: email.trim(), dateOfBirth: dob.trim(), bloodType, password });
+    const result = await register({
+      fullName: fullName.trim(),
+      username: username.trim(),
+      email: email.trim(),
+      dateOfBirth: dob.trim(),
+      bloodType,
+      password,
+      provider: method === "email" ? "email" : method,
+    });
     setLoading(false);
     if (!result.success) {
       setError(result.error ?? "Registration failed");
@@ -113,6 +162,46 @@ export default function RegisterScreen() {
         <Text style={[styles.subheading, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
           Register as a new IbnCeena patient — all data stored securely on your device.
         </Text>
+
+        {sectionLabel("SIGN UP WITH")}
+        <View style={styles.methodRow}>
+          {METHODS.map((m) => {
+            const active = method === m.id;
+            return (
+              <TouchableOpacity
+                key={m.id}
+                activeOpacity={0.8}
+                onPress={() => handleSelectMethod(m.id)}
+                style={[styles.methodChip, {
+                  backgroundColor: active ? colors.glassPrimary : colors.glass,
+                  borderColor: active ? colors.primary : colors.glassBorder,
+                  borderWidth: active ? 1.5 : 1,
+                }]}
+              >
+                <MaterialCommunityIcons
+                  name={m.icon as any}
+                  size={20}
+                  color={active ? colors.primary : colors.mutedForeground}
+                />
+                <Text style={[styles.methodChipText, {
+                  color: active ? colors.primary : colors.mutedForeground,
+                  fontFamily: active ? "Inter_700Bold" : "Inter_400Regular",
+                }]}>
+                  {m.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {socialNote ? (
+          <View style={[styles.noteBox, { backgroundColor: colors.goldBg, borderColor: colors.goldBorder }]}>
+            <MaterialCommunityIcons name="information-outline" size={16} color={colors.gold} />
+            <Text style={[styles.noteText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+              {socialNote}
+            </Text>
+          </View>
+        ) : null}
 
         {sectionLabel("PERSONAL DETAILS")}
         {field("user", "Full Name", fullName, setFullName)}
@@ -188,6 +277,13 @@ export default function RegisterScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
+        <View style={styles.trialRow}>
+          <MaterialCommunityIcons name="gift-outline" size={15} color={colors.gold} />
+          <Text style={[styles.trialText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Includes a free {TRIAL_DAYS}-day trial — no payment needed today. Membership can be activated later after identity verification.
+          </Text>
+        </View>
+
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Already registered? </Text>
           <TouchableOpacity onPress={() => router.back()}>
@@ -208,6 +304,13 @@ const styles = StyleSheet.create({
   appEco: { fontSize: 9, letterSpacing: 1.5 },
   heading: { fontSize: 26, letterSpacing: -0.5 },
   subheading: { fontSize: 13, lineHeight: 19, marginBottom: 4 },
+  methodRow: { flexDirection: "row", gap: 8 },
+  methodChip: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, paddingVertical: 13 },
+  methodChipText: { fontSize: 14 },
+  noteBox: { flexDirection: "row", alignItems: "flex-start", gap: 8, borderRadius: 12, borderWidth: 1, padding: 12 },
+  noteText: { fontSize: 12.5, lineHeight: 18, flex: 1 },
+  trialRow: { flexDirection: "row", alignItems: "flex-start", gap: 7, paddingHorizontal: 4 },
+  trialText: { fontSize: 12, lineHeight: 17, flex: 1 },
   inputWrap: { flexDirection: "row", alignItems: "center", borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   input: { flex: 1, fontSize: 15 },
   bloodGrid: { flexDirection: "row", flexWrap: "wrap", borderRadius: 14, borderWidth: 1, padding: 6, gap: 6 },

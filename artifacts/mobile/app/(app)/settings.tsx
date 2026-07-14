@@ -35,6 +35,7 @@ const SECTIONS = [
     title: "Account",
     items: [
       { icon: "account-circle" as const, label: "Patient Profile", sub: "Edit name, DOB, blood type", action: "profile" },
+      { icon: "card-account-details-outline" as const, label: "Membership & Verification", sub: "Free trial, plans, ID verification, payment", action: "membership" },
       { icon: "bell-outline" as const, label: "Notifications", sub: "Medication reminders, appointments", action: "notifications" },
       { icon: "shield-lock-outline" as const, label: "Privacy & GDPR", sub: "How your data is stored and protected", action: "privacy" },
     ],
@@ -101,6 +102,7 @@ export default function SettingsScreen() {
       case "about":           router.push("/(app)/about");             break;
       case "help":            router.push("/(app)/help");              break;
       case "profile":         router.push("/(app)/(tabs)/profile");    break;
+      case "membership":      router.push("/(app)/membership");        break;
       default:
         setToastMessage("Coming soon — available in a future update");
         setToastVisible(true);

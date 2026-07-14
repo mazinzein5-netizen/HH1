@@ -77,7 +77,9 @@ export function AppModeProvider({
 
   async function deleteAllData() {
     const { deleteAllDocuments } = await import("@/utils/documentsStore");
+    const { deleteAllIdentityData } = await import("@/utils/identityStore");
     await deleteAllDocuments();
+    await deleteAllIdentityData();
     await AsyncStorage.clear();
     setPilotMode(false);
     setConsentAccepted(false);

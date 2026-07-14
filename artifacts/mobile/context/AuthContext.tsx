@@ -11,6 +11,8 @@ export interface User {
   bloodType: string;
   createdAt: string;
   isGuest?: boolean;
+  /** How the account was created — Apple/Google link up fully in the pilot build. */
+  provider?: "apple" | "google" | "email";
 }
 
 const DEMO_USER: User = {
