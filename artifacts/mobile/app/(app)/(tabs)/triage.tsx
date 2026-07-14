@@ -1,7 +1,8 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -28,6 +29,18 @@ import {
 
 type Step = "pathway" | "redflags" | "scoring" | "results";
 
+const PATHWAY_ICONS: Record<PathwayKey, React.ComponentProps<typeof MaterialCommunityIcons>["name"]> = {
+  lumbar: "human-handsdown",
+  cervical: "human",
+  hip: "run-fast",
+  knee: "walk",
+  shoulder: "arm-flex",
+  elbow: "angle-acute",
+  wristHand: "hand-back-right",
+  ankleFoot: "shoe-print",
+  thoracic: "human-male",
+};
+
 export default function TriageScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -44,6 +57,8 @@ export default function TriageScreen() {
   );
   const [answers, setAnswers] = useState<(number | null)[]>([]);
 
+  const params = useLocalSearchParams<{ pathway?: string; ts?: string }>();
+
   const pathway = selectedPathway ? PATHWAYS.find((p) => p.key === selectedPathway)! : null;
 
   function selectPathway(key: PathwayKey) {
@@ -53,6 +68,14 @@ export default function TriageScreen() {
     setAnswers(new Array(PATHWAYS.find((p) => p.key === key)!.questions.length).fill(null));
     setStep("redflags");
   }
+
+  useEffect(() => {
+    const requested = params.pathway;
+    if (requested && PATHWAYS.some((p) => p.key === requested)) {
+      selectPathway(requested as PathwayKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.pathway, params.ts]);
 
   function setRedFlag(i: number, val: boolean) {
     Haptics.selectionAsync();
@@ -204,7 +227,7 @@ export default function TriageScreen() {
                   style={[styles.pathwayCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                 >
                   <MaterialCommunityIcons
-                    name={p.key === "lumbar" ? "human-handsdown" : p.key === "cervical" ? "human" : p.key === "hip" ? "run-fast" : "walk"}
+                    name={PATHWAY_ICONS[p.key] ?? "walk"}
                     size={28}
                     color={colors.primary}
                   />

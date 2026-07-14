@@ -1,4 +1,13 @@
-export type PathwayKey = "lumbar" | "cervical" | "hip" | "knee";
+export type PathwayKey =
+  | "lumbar"
+  | "cervical"
+  | "hip"
+  | "knee"
+  | "shoulder"
+  | "elbow"
+  | "wristHand"
+  | "ankleFoot"
+  | "thoracic";
 
 export interface ClinicalQuestion {
   text: string;
@@ -271,6 +280,266 @@ const OKS_QUESTIONS: ClinicalQuestion[] = [
   },
 ];
 
+const OSS_QUESTIONS: ClinicalQuestion[] = [
+  {
+    text: "1. How would you describe the worst pain you had from your shoulder?",
+    options: ["None", "Mild ache", "Moderate ache", "Severe pain", "Unbearable"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "2. Have you had any trouble dressing yourself because of your shoulder?",
+    options: ["No trouble at all", "A little trouble", "Moderate trouble", "Extreme difficulty", "Impossible to do"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "3. Have you had any trouble getting in and out of a car or using public transport because of your shoulder?",
+    options: ["No trouble at all", "A little trouble", "Moderate trouble", "Extreme difficulty", "Impossible to do"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "4. Have you been able to use a knife and fork at the same time?",
+    options: ["Yes, easily", "With little difficulty", "With moderate difficulty", "With extreme difficulty", "No — impossible"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "5. Could you do the household shopping on your own?",
+    options: ["Yes, easily", "With little difficulty", "With moderate difficulty", "With extreme difficulty", "No — impossible"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "6. Could you carry a tray containing a plate of food across a room?",
+    options: ["Yes, easily", "With little difficulty", "With moderate difficulty", "With extreme difficulty", "No — impossible"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "7. Could you brush or comb your hair with the affected arm?",
+    options: ["Yes, easily", "With little difficulty", "With moderate difficulty", "With extreme difficulty", "No — impossible"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "8. How would you describe the pain you usually had from your shoulder?",
+    options: ["None", "Very mild", "Mild", "Moderate", "Severe"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "9. Could you hang your clothes up in a wardrobe using the affected arm?",
+    options: ["Yes, easily", "With little difficulty", "With moderate difficulty", "With extreme difficulty", "No — impossible"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "10. Have you been able to wash and dry yourself under both arms?",
+    options: ["Yes, easily", "With little difficulty", "With moderate difficulty", "With extreme difficulty", "No — impossible"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "11. How much has pain from your shoulder interfered with your usual work (including housework)?",
+    options: ["Not at all", "A little bit", "Moderately", "Greatly", "Totally"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "12. Have you been troubled by pain from your shoulder in bed at night?",
+    options: ["No nights at all", "Only 1 or 2 nights", "Some nights", "Most nights", "Every night"],
+    scores: [4, 3, 2, 1, 0],
+  },
+];
+
+const OES_QUESTIONS: ClinicalQuestion[] = [
+  {
+    text: "1. Have you had difficulty lifting things in your home, such as putting out the rubbish, because of your elbow?",
+    options: ["No difficulty", "A little difficulty", "Moderate difficulty", "Extreme difficulty", "Impossible to do"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "2. Have you had difficulty carrying bags of shopping because of your elbow?",
+    options: ["No difficulty", "A little difficulty", "Moderate difficulty", "Extreme difficulty", "Impossible to do"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "3. Have you had difficulty washing yourself all over because of your elbow?",
+    options: ["No difficulty", "A little difficulty", "Moderate difficulty", "Extreme difficulty", "Impossible to do"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "4. Have you had difficulty dressing yourself because of your elbow?",
+    options: ["No difficulty", "A little difficulty", "Moderate difficulty", "Extreme difficulty", "Impossible to do"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "5. How would you describe the pain you usually have from your elbow?",
+    options: ["None", "Very mild", "Mild", "Moderate", "Severe"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "6. Have you been troubled by pain from your elbow in bed at night?",
+    options: ["No nights at all", "Only 1 or 2 nights", "Some nights", "Most nights", "Every night"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "7. How much has pain from your elbow interfered with your usual work (including housework)?",
+    options: ["Not at all", "A little bit", "Moderately", "Greatly", "Totally"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "8. Have you felt that your elbow problem is 'controlling your life'?",
+    options: ["No, not at all", "Occasionally", "Some days", "Most days", "Every day"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "9. How much has your elbow problem been 'on your mind'?",
+    options: ["Not at all", "A little of the time", "Some of the time", "Most of the time", "All of the time"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "10. Have you been troubled by your elbow problem when doing your usual leisure activities?",
+    options: ["Not at all", "A little bit", "Moderately", "Greatly", "Totally"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "11. Have you had difficulty using cutlery or holding a cup because of your elbow?",
+    options: ["No difficulty", "A little difficulty", "Moderate difficulty", "Extreme difficulty", "Impossible to do"],
+    scores: [4, 3, 2, 1, 0],
+  },
+  {
+    text: "12. Have you had difficulty opening doors or turning keys because of your elbow?",
+    options: ["No difficulty", "A little difficulty", "Moderate difficulty", "Extreme difficulty", "Impossible to do"],
+    scores: [4, 3, 2, 1, 0],
+  },
+];
+
+const QUICKDASH_QUESTIONS: ClinicalQuestion[] = [
+  {
+    text: "1. Open a tight or new jar.",
+    options: ["No difficulty", "Mild difficulty", "Moderate difficulty", "Severe difficulty", "Unable"],
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    text: "2. Do heavy household chores (e.g. wash walls, wash floors).",
+    options: ["No difficulty", "Mild difficulty", "Moderate difficulty", "Severe difficulty", "Unable"],
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    text: "3. Carry a shopping bag or briefcase.",
+    options: ["No difficulty", "Mild difficulty", "Moderate difficulty", "Severe difficulty", "Unable"],
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    text: "4. Wash your back.",
+    options: ["No difficulty", "Mild difficulty", "Moderate difficulty", "Severe difficulty", "Unable"],
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    text: "5. Use a knife to cut food.",
+    options: ["No difficulty", "Mild difficulty", "Moderate difficulty", "Severe difficulty", "Unable"],
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    text: "6. Recreational activities in which you take some force or impact through your arm, shoulder or hand (e.g. golf, hammering, tennis).",
+    options: ["No difficulty", "Mild difficulty", "Moderate difficulty", "Severe difficulty", "Unable"],
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    text: "7. During the past week, to what extent has your arm, shoulder or hand problem interfered with your normal social activities with family, friends, neighbours or groups?",
+    options: ["Not at all", "Slightly", "Moderately", "Quite a bit", "Extremely"],
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    text: "8. During the past week, were you limited in your work or other regular daily activities as a result of your arm, shoulder or hand problem?",
+    options: ["Not limited at all", "Slightly limited", "Moderately limited", "Very limited", "Unable"],
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    text: "9. Arm, shoulder or hand pain over the past week.",
+    options: ["None", "Mild", "Moderate", "Severe", "Extreme"],
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    text: "10. Tingling (pins and needles) in your arm, shoulder or hand over the past week.",
+    options: ["None", "Mild", "Moderate", "Severe", "Extreme"],
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    text: "11. During the past week, how much difficulty have you had sleeping because of the pain in your arm, shoulder or hand?",
+    options: ["No difficulty", "Mild difficulty", "Moderate difficulty", "Severe difficulty", "So much I can't sleep"],
+    scores: [1, 2, 3, 4, 5],
+  },
+];
+
+const MOXFQ_QUESTIONS: ClinicalQuestion[] = [
+  {
+    text: "1. How would you describe the pain you usually have in your foot or ankle?",
+    options: ["None", "Very mild", "Mild", "Moderate", "Severe"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "2. How often does your foot or ankle pain occur?",
+    options: ["Never / rarely", "Occasionally", "Some days", "Most days", "Every day"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "3. Have you avoided walking long distances because of pain in your foot or ankle?",
+    options: ["Never", "Rarely", "Sometimes", "Often", "All of the time"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "4. Have you changed the way you walk because of pain in your foot or ankle?",
+    options: ["Never", "Rarely", "Sometimes", "Often", "All of the time"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "5. Have you avoided standing for a long time because of pain in your foot or ankle?",
+    options: ["Never", "Rarely", "Sometimes", "Often", "All of the time"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "6. Have you been troubled by pain from your foot or ankle in bed at night?",
+    options: ["No nights", "Only 1 or 2 nights", "Some nights", "Most nights", "Every night"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "7. Has foot or ankle pain limited your ability to do work or everyday activities?",
+    options: ["Not at all", "A little bit", "Moderately", "Greatly", "Totally"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "8. Has your foot or ankle felt unstable, or 'given way', when walking on uneven ground or stairs?",
+    options: ["Never", "Rarely", "Sometimes", "Often", "All of the time"],
+    scores: [0, 1, 2, 3, 4],
+  },
+];
+
+const THORACIC_QUESTIONS: ClinicalQuestion[] = [
+  {
+    text: "1. How would you describe the pain in your mid-back (between your shoulder blades and below)?",
+    options: ["No pain", "Very mild", "Mild", "Moderate", "Severe"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "2. How long have you had this mid-back pain?",
+    options: ["Less than 2 weeks", "2–6 weeks", "6 weeks – 3 months", "3–12 months", "Over a year"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "3. Does the pain wrap around your chest or ribs like a band?",
+    options: ["Never", "Rarely", "Sometimes", "Often", "Constantly"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "4. Is the pain worse when you take a deep breath, cough, or sneeze?",
+    options: ["Not at all", "Slightly", "Moderately", "Quite a bit", "Severely"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "5. Does the pain wake you or stop you sleeping at night?",
+    options: ["Never", "Only 1 or 2 nights", "Some nights", "Most nights", "Every night"],
+    scores: [0, 1, 2, 3, 4],
+  },
+  {
+    text: "6. How much has mid-back pain limited your everyday activities (housework, hobbies, walking)?",
+    options: ["Not at all", "A little bit", "Moderately", "Greatly", "Totally"],
+    scores: [0, 1, 2, 3, 4],
+  },
+];
+
 export const PATHWAYS: PathwayConfig[] = [
   {
     key: "lumbar",
@@ -339,6 +608,92 @@ export const PATHWAYS: PathwayConfig[] = [
       if (total >= 30) return { label: "Moderate Dysfunction", color: "#f59e0b", recommendation: "GP referral. Physiotherapy, analgesia optimisation, consider X-ray knee (weight-bearing AP + lateral).", referral: "Physiotherapy + GP" };
       if (total >= 20) return { label: "Moderate-Severe Arthritis", color: "#f97316", recommendation: "Orthopaedic outpatient referral. Consider intra-articular steroid injection, brace, or physiotherapy as bridge.", referral: "Orthopaedics (routine)" };
       return { label: "Severe Arthritis — Surgery Threshold", color: "#ef4444", recommendation: "Urgent orthopaedic referral for consideration of total knee replacement. Functional assessment required.", referral: "Orthopaedics (urgent) — TKR assessment" };
+    },
+  },
+  {
+    key: "shoulder",
+    name: "Shoulder",
+    subtitle: "Shoulder Pain & Function",
+    scoreTool: "Oxford Shoulder Score (OSS)",
+    toolDescription: "12-item validated patient-reported outcome for shoulder conditions (max 48)",
+    maxScore: 48,
+    higherIsBetter: true,
+    questions: OSS_QUESTIONS,
+    formatScore: (total) => `${total}/48 OSS`,
+    getResult: (total) => {
+      if (total >= 40) return { label: "Satisfactory Shoulder Function", color: "#22c55e", recommendation: "Conservative management. Home exercise programme, activity modification, simple analgesia as needed.", referral: "Self-management / Physiotherapy (optional)" };
+      if (total >= 30) return { label: "Mild-Moderate Dysfunction", color: "#f59e0b", recommendation: "GP review and physiotherapy referral. Consider rotator cuff or frozen shoulder pathway. Review in 6 weeks.", referral: "Physiotherapy + GP" };
+      if (total >= 20) return { label: "Moderate-Severe Dysfunction", color: "#f97316", recommendation: "GP referral with shoulder X-ray/ultrasound. Consider steroid injection or structured physiotherapy programme.", referral: "GP + Imaging (routine orthopaedic review)" };
+      return { label: "Severe Shoulder Dysfunction", color: "#ef4444", recommendation: "Orthopaedic shoulder clinic referral. Imaging required; consider surgical opinion (cuff repair or arthroplasty pathways).", referral: "Orthopaedics — Shoulder Clinic (urgent)" };
+    },
+  },
+  {
+    key: "elbow",
+    name: "Elbow",
+    subtitle: "Elbow Pain & Function",
+    scoreTool: "Oxford Elbow Score (OES)",
+    toolDescription: "12-item validated patient-reported outcome for elbow conditions (max 48)",
+    maxScore: 48,
+    higherIsBetter: true,
+    questions: OES_QUESTIONS,
+    formatScore: (total) => `${total}/48 OES`,
+    getResult: (total) => {
+      if (total >= 40) return { label: "Satisfactory Elbow Function", color: "#22c55e", recommendation: "Conservative management. Activity modification, eccentric loading exercises for tendinopathy, simple analgesia.", referral: "Self-management / Physiotherapy (optional)" };
+      if (total >= 30) return { label: "Mild-Moderate Dysfunction", color: "#f59e0b", recommendation: "GP review and physiotherapy referral. Consider tennis/golfer's elbow pathway with load management advice.", referral: "Physiotherapy + GP" };
+      if (total >= 20) return { label: "Moderate-Severe Dysfunction", color: "#f97316", recommendation: "GP referral with elbow X-ray. Consider steroid injection, brace, or structured rehabilitation programme.", referral: "GP + Imaging (routine orthopaedic review)" };
+      return { label: "Severe Elbow Dysfunction", color: "#ef4444", recommendation: "Orthopaedic upper-limb clinic referral. Imaging required; consider surgical opinion.", referral: "Orthopaedics — Upper Limb Clinic (urgent)" };
+    },
+  },
+  {
+    key: "wristHand",
+    name: "Wrist & Hand",
+    subtitle: "Wrist & Hand Pain",
+    scoreTool: "QuickDASH",
+    toolDescription: "11-item validated arm, shoulder and hand disability measure (scored 0–100, higher = more disability)",
+    maxScore: 55,
+    higherIsBetter: false,
+    questions: QUICKDASH_QUESTIONS,
+    formatScore: (total) => `${Math.round(((total / 11) - 1) * 25)}/100 QuickDASH`,
+    getResult: (total) => {
+      const score = Math.round(((total / 11) - 1) * 25);
+      if (score <= 25) return { label: "Mild Disability", color: "#22c55e", recommendation: "Conservative management. Splinting for suspected carpal tunnel, activity modification, simple analgesia.", referral: "Self-management / Physiotherapy (optional)" };
+      if (score <= 50) return { label: "Moderate Disability", color: "#f59e0b", recommendation: "GP review and hand therapy referral. Consider nerve conduction studies if numbness or tingling is prominent.", referral: "Hand Therapy + GP" };
+      if (score <= 75) return { label: "Severe Disability", color: "#f97316", recommendation: "GP referral with imaging. Consider steroid injection, splinting, or surgical opinion (e.g. carpal tunnel release).", referral: "GP + Imaging (routine hand clinic review)" };
+      return { label: "Very Severe Disability", color: "#ef4444", recommendation: "Urgent hand clinic referral. Marked functional loss — imaging and specialist assessment required.", referral: "Orthopaedics — Hand Clinic (urgent)" };
+    },
+  },
+  {
+    key: "ankleFoot",
+    name: "Ankle & Foot",
+    subtitle: "Ankle & Foot Pain",
+    scoreTool: "Foot & Ankle Screening (MOXFQ-based)",
+    toolDescription: "8-item screening measure based on the Manchester-Oxford Foot Questionnaire domains (pain, walking, function)",
+    maxScore: 32,
+    higherIsBetter: false,
+    questions: MOXFQ_QUESTIONS,
+    formatScore: (total) => `${total}/32`,
+    getResult: (total) => {
+      if (total <= 8) return { label: "Mild Symptoms", color: "#22c55e", recommendation: "Conservative management. Supportive footwear, calf and ankle strengthening, weight management if indicated.", referral: "Self-management / Podiatry (optional)" };
+      if (total <= 16) return { label: "Moderate Symptoms", color: "#f59e0b", recommendation: "GP review and podiatry or physiotherapy referral. Consider orthotics and structured loading programme.", referral: "Podiatry / Physiotherapy + GP" };
+      if (total <= 24) return { label: "Severe Symptoms", color: "#f97316", recommendation: "GP referral with weight-bearing X-ray. Consider immobilisation, injection, or orthopaedic foot & ankle review.", referral: "GP + Imaging (routine orthopaedic review)" };
+      return { label: "Very Severe Symptoms", color: "#ef4444", recommendation: "Orthopaedic foot & ankle clinic referral. Marked pain and instability — imaging and specialist assessment required.", referral: "Orthopaedics — Foot & Ankle Clinic (urgent)" };
+    },
+  },
+  {
+    key: "thoracic",
+    name: "Thoracic Spine",
+    subtitle: "Mid-Back Pain",
+    scoreTool: "Thoracic Spine Screening",
+    toolDescription: "6-item screening proforma — thoracic pain carries a higher index of suspicion and usually merits GP review (NICE-aligned)",
+    maxScore: 24,
+    higherIsBetter: false,
+    questions: THORACIC_QUESTIONS,
+    formatScore: (total) => `${total}/24`,
+    getResult: (total) => {
+      if (total <= 6) return { label: "Mild Mechanical Pattern", color: "#22c55e", recommendation: "Likely mechanical mid-back pain. Posture and mobility exercises, simple analgesia. See your GP if not settling within 4–6 weeks — thoracic pain should always be mentioned at your next GP visit.", referral: "Self-management + GP mention" };
+      if (total <= 12) return { label: "Moderate Symptoms", color: "#f59e0b", recommendation: "Book a routine GP appointment. Thoracic spine pain merits clinical review; physiotherapy referral likely.", referral: "GP (routine) + Physiotherapy" };
+      if (total <= 18) return { label: "Significant Symptoms", color: "#f97316", recommendation: "See your GP soon. Band-like, breath-related, or night-time thoracic pain needs examination and possibly imaging.", referral: "GP (prompt) + consider imaging" };
+      return { label: "Severe Symptoms — Review Needed", color: "#ef4444", recommendation: "Arrange an urgent GP review. Severe or constant thoracic pain, especially at night, requires clinical assessment to exclude serious causes.", referral: "GP (urgent)" };
     },
   },
 ];

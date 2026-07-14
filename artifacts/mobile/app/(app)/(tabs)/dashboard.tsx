@@ -115,6 +115,11 @@ export default function DashboardScreen() {
         )}
         scrollEventThrottle={16}
       >
+        {/* Dashboard title */}
+        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+          Health Portal Dashboard
+        </Text>
+
         {/* Hero Card — HIVE logo + honeycomb */}
         <View style={styles.heroOuter}>
           <LinearGradient colors={["#0e1560", "#1320a0", "#0a0e55"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
@@ -137,11 +142,11 @@ export default function DashboardScreen() {
               </Text>
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => router.push("/(app)/(tabs)/triage")}
+                onPress={() => router.push("/(app)/body-map")}
                 style={[styles.heroCta, { backgroundColor: "rgba(0,0,0,0.45)", borderColor: colors.gold + "55" }]}
               >
-                <MaterialCommunityIcons name="clipboard-text" size={17} color={colors.gold} />
-                <Text style={[styles.heroCtaText, { fontFamily: "Inter_600SemiBold", color: colors.goldLight }]}>Start Health Questionnaire</Text>
+                <MaterialCommunityIcons name="hand-heart" size={17} color={colors.gold} />
+                <Text style={[styles.heroCtaText, { fontFamily: "Inter_600SemiBold", color: colors.goldLight }]}>Do you have pain?</Text>
               </TouchableOpacity>
             </View>
           </LinearGradient>
@@ -376,6 +381,7 @@ const styles = StyleSheet.create({
   appEco: { fontSize: 9, letterSpacing: 1.6 },
   menuBtn: { borderRadius: 10, borderWidth: 1, padding: 8 },
 
+  pageTitle: { fontSize: 24, marginBottom: 12, marginTop: 2 },
   heroOuter: { borderRadius: 22, overflow: "hidden" },
   heroCard: { borderRadius: 22, overflow: "hidden", padding: 24, minHeight: 330 },
   goldAccentBar: { position: "absolute", top: 0, left: 0, right: 0, height: 2.5, opacity: 0.85 },

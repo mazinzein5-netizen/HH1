@@ -1,4 +1,5 @@
 - [Mobile theming](mobile-theming.md) — light/dark palettes live in constants/colors.ts; useColors reads ThemeProvider; decorative gradient hexes in screens do NOT adapt.
+- [Triage deep-link reset](triage-deeplinks.md) — triage `?pathway=` links need a fresh `ts` param or the mounted tab keeps stale questionnaire state.
 - [OSM lookups](osm-lookups.md) — Overpass/Nominatim need a User-Agent; third-party lookups must be disclosed in three places; no fabricated patient data in exports.
 - [Clean vs pilot mode gating](clean-vs-pilot-mode.md) — store build must stay clinical-wording-free; pilot behavior gated by pilot code validated server-side, never a client boolean.
 - [Workspace lib typecheck ordering](workspace-lib-typecheck.md) — new lib/* packages need root tsconfig reference; run tsc --build (typecheck:libs) before artifact --noEmit or TS6305.

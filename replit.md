@@ -34,7 +34,7 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Elderly-friendly UI: minimalist layouts, big text, large tap targets, high contrast throughout the mobile app.
 
 ## Gotchas
 
