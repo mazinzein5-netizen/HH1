@@ -27,10 +27,13 @@ import { RED_FLAG_QUESTIONS, type PathwayKey } from "@/data/pathwayQuestions";
 
 export const HIVE_PAIN_DOCTOR_NUMBER = "1800 494 483";
 
-type Region = "upperLimb" | "spine" | "leg";
+type Region = "upperLimb" | "neck" | "spine" | "leg";
 type Step =
   | "map"
   | "menu"
+  | "neckRedFlags"
+  | "neckUrgent"
+  | "neckRadiate"
   | "kneeDuration"
   | "kneeRedFlags"
   | "acuteKnee"
@@ -54,9 +57,13 @@ const REGION_META: Record<Region, { title: string; blurb: string }> = {
     title: "Arm & Hand",
     blurb: "Choose the part of your arm that hurts the most.",
   },
+  neck: {
+    title: "Neck",
+    blurb: "Let's take a closer look at your neck.",
+  },
   spine: {
-    title: "Back & Neck",
-    blurb: "Choose the part of your back or neck that hurts the most.",
+    title: "Back",
+    blurb: "Choose the part of your back that hurts the most.",
   },
   leg: {
     title: "Leg & Foot",
@@ -70,8 +77,9 @@ const REGION_MENUS: Record<Region, MenuOption[]> = {
     { label: "Elbow", sub: "Pain around the elbow joint", icon: "angle-acute", action: { type: "pathway", key: "elbow" } },
     { label: "Wrist & Hand", sub: "Pain, numbness or tingling", icon: "hand-back-right", action: { type: "pathway", key: "wristHand" } },
   ],
+  neck: [],
   spine: [
-    { label: "Neck / Shoulder", sub: "We'll help work out which one", icon: "head-outline", action: { type: "step", step: "neckShoulder" } },
+    { label: "Neck", sub: "Headache, stiffness or arm tingling", icon: "head-outline", action: { type: "step", step: "neckRedFlags" } },
     { label: "Mid Back", sub: "Between the shoulder blades", icon: "human-male", action: { type: "pathway", key: "thoracic" } },
     { label: "Low Back", sub: "Lower back, may reach the legs", icon: "seat-outline", action: { type: "step", step: "lumbarScreen" } },
   ],
@@ -120,6 +128,15 @@ const LUMBAR_SCREEN_QUESTIONS: string[] = [
   "Is the pain clearly worse when standing or walking, and eased by sitting down?",
 ];
 
+/* ─── Neck red-flag (dangerous causes) screen ─── */
+const NECK_RED_FLAG_QUESTIONS: string[] = [
+  "Do you have a bad headache with this neck pain?",
+  "Does bright light hurt your eyes more than usual?",
+  "Do you feel feverish or hot, or have you had a fever?",
+  "Do you have a sore throat, or pain when swallowing?",
+  "Is your neck so stiff you cannot bring your chin down to your chest?",
+];
+
 /* ─── Neck vs shoulder differentiator ─── */
 const NECK_SHOULDER_QUESTIONS: { text: string; options: [string, string] }[] = [
   {
@@ -151,6 +168,8 @@ export default function BodyMapScreen() {
   const [hipAnswers, setHipAnswers] = useState<(boolean | null)[]>(new Array(HIP_SCREEN_QUESTIONS.length).fill(null));
   const [lumbarAnswers, setLumbarAnswers] = useState<(boolean | null)[]>(new Array(LUMBAR_SCREEN_QUESTIONS.length).fill(null));
   const [nsAnswers, setNsAnswers] = useState<(number | null)[]>(new Array(NECK_SHOULDER_QUESTIONS.length).fill(null));
+  const [neckRfAnswers, setNeckRfAnswers] = useState<(boolean | null)[]>(new Array(NECK_RED_FLAG_QUESTIONS.length).fill(null));
+  const neckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const zoom = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(0)).current;
@@ -170,15 +189,35 @@ export default function BodyMapScreen() {
   const glowWidth = pulse.interpolate({ inputRange: [0, 1], outputRange: [4, 9] });
   const dotGlowR = pulse.interpolate({ inputRange: [0, 1], outputRange: [9, 14] });
 
+  function clearNeckTimer() {
+    if (neckTimer.current) {
+      clearTimeout(neckTimer.current);
+      neckTimer.current = null;
+    }
+  }
+
+  React.useEffect(() => clearNeckTimer, []);
+
   function pickRegion(r: Region) {
     Haptics.selectionAsync();
+    clearNeckTimer();
     setRegion(r);
+    if (r === "neck") {
+      setNeckRfAnswers(new Array(NECK_RED_FLAG_QUESTIONS.length).fill(null));
+      Animated.spring(zoom, { toValue: 1, useNativeDriver: true, friction: 8 }).start();
+      neckTimer.current = setTimeout(() => {
+        neckTimer.current = null;
+        setStep("neckRedFlags");
+      }, 650);
+      return;
+    }
     setStep("menu");
     Animated.spring(zoom, { toValue: 1, useNativeDriver: true, friction: 8 }).start();
   }
 
   function backToMap() {
     Haptics.selectionAsync();
+    clearNeckTimer();
     setStep("map");
     setRegion(null);
     Animated.spring(zoom, { toValue: 0, useNativeDriver: true, friction: 8 }).start();
@@ -201,6 +240,7 @@ export default function BodyMapScreen() {
       if (opt.action.step === "hipScreen") setHipAnswers(new Array(HIP_SCREEN_QUESTIONS.length).fill(null));
       if (opt.action.step === "lumbarScreen") setLumbarAnswers(new Array(LUMBAR_SCREEN_QUESTIONS.length).fill(null));
       if (opt.action.step === "neckShoulder") setNsAnswers(new Array(NECK_SHOULDER_QUESTIONS.length).fill(null));
+      if (opt.action.step === "neckRedFlags") setNeckRfAnswers(new Array(NECK_RED_FLAG_QUESTIONS.length).fill(null));
       setStep(opt.action.step);
     }
   }
@@ -228,10 +268,16 @@ export default function BodyMapScreen() {
   const lumbarHipPositive = lumbarAnswers.filter((a) => a === true).length >= 2;
   const nsShoulderVotes = nsAnswers.filter((a) => a === 1).length;
   const nsIsShoulder = nsShoulderVotes >= 2;
+  const neckYesCount = neckRfAnswers.filter((a) => a === true).length;
+  const neckDanger =
+    (neckRfAnswers[2] === true && (neckRfAnswers[0] === true || neckRfAnswers[1] === true || neckRfAnswers[4] === true)) ||
+    neckYesCount >= 3;
+  const neckIncomplete = neckRfAnswers.some((a) => a === null);
 
   /* ── zoom transforms per region ── */
   const regionTransforms: Record<Region, { scale: number; tx: number; ty: number }> = {
     upperLimb: { scale: 1.7, tx: 0, ty: 55 },
+    neck: { scale: 2.2, tx: 0, ty: 100 },
     spine: { scale: 1.7, tx: 0, ty: 30 },
     leg: { scale: 1.7, tx: 0, ty: -70 },
   };
@@ -263,7 +309,10 @@ export default function BodyMapScreen() {
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
         <TouchableOpacity
           onPress={() => {
-            if (step === "map") router.back();
+            if (step === "map") {
+              clearNeckTimer();
+              router.back();
+            }
             else if (step === "menu") backToMap();
             else if (step === "acuteResult") setStep("acuteKnee");
             else if (step === "acuteKnee") setStep("kneeRedFlags");
@@ -271,6 +320,8 @@ export default function BodyMapScreen() {
             else if (step === "hipResult") setStep("hipScreen");
             else if (step === "lumbarResult") setStep("lumbarScreen");
             else if (step === "neckShoulderResult") setStep("neckShoulder");
+            else if (step === "neckRedFlags") backToMap();
+            else if (step === "neckUrgent" || step === "neckRadiate") setStep("neckRedFlags");
             else setStep("menu");
           }}
           style={[styles.backBtn, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}
@@ -323,14 +374,16 @@ export default function BodyMapScreen() {
                   {/* tap zones */}
                   <Rect x={38} y={50} width={40} height={96} rx={14} {...zoneProps("upperLimb")} />
                   <Rect x={122} y={50} width={40} height={96} rx={14} {...zoneProps("upperLimb")} />
-                  <Rect x={80} y={8} width={40} height={132} rx={14} {...zoneProps("spine")} />
+                  <Rect x={80} y={8} width={40} height={50} rx={14} {...zoneProps("neck")} />
+                  <Rect x={80} y={58} width={40} height={82} rx={14} {...zoneProps("spine")} />
                   <Rect x={66} y={140} width={68} height={144} rx={14} {...zoneProps("leg")} />
                   {/* zone dots for discoverability */}
                   {step === "map" && (
                     <>
                       <Circle cx={58} cy={92} r={7} fill={colors.gold} onPress={() => pickRegion("upperLimb")} />
                       <Circle cx={142} cy={92} r={7} fill={colors.gold} onPress={() => pickRegion("upperLimb")} />
-                      <Circle cx={100} cy={48} r={7} fill={colors.gold} onPress={() => pickRegion("spine")} />
+                      <Circle cx={100} cy={48} r={7} fill={colors.gold} onPress={() => pickRegion("neck")} />
+                      <Circle cx={100} cy={100} r={7} fill={colors.gold} onPress={() => pickRegion("spine")} />
                       <Circle cx={100} cy={200} r={7} fill={colors.gold} onPress={() => pickRegion("leg")} />
                     </>
                   )}
@@ -373,7 +426,7 @@ export default function BodyMapScreen() {
 
                   {/* neck dot + pulsing halo */}
                   <AnimatedCircle cx={58} cy={48} r={dotGlowR as any} fill={colors.gold} opacity={glowOpacity as any} />
-                  <Circle cx={58} cy={48} r={7} fill={colors.gold} onPress={() => pickRegion("spine")} />
+                  <Circle cx={58} cy={48} r={7} fill={colors.gold} onPress={() => pickRegion("neck")} />
                   {/* lumbar dot + pulsing halo */}
                   <AnimatedCircle cx={70} cy={114} r={dotGlowR as any} fill={colors.gold} opacity={glowOpacity as any} />
                   <Circle cx={70} cy={114} r={7} fill={colors.gold} onPress={() => pickRegion("spine")} />
@@ -392,7 +445,7 @@ export default function BodyMapScreen() {
                   >
                     <View style={[styles.regionIcon, { backgroundColor: colors.glassGold, borderColor: colors.glassGoldBorder }]}>
                       <MaterialCommunityIcons
-                        name={r === "upperLimb" ? "arm-flex" : r === "spine" ? "human-male" : "walk"}
+                        name={r === "upperLimb" ? "arm-flex" : r === "neck" ? "head-outline" : r === "spine" ? "human-male" : "walk"}
                         size={26}
                         color={colors.gold}
                       />
@@ -851,6 +904,155 @@ export default function BodyMapScreen() {
                 </Text>
               </TouchableOpacity>
             )}
+          </View>
+        )}
+
+        {/* ── Neck red-flag safety screen ── */}
+        {step === "neckRedFlags" && (
+          <View style={{ gap: 16, marginTop: 6 }}>
+            <Text style={[styles.qTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              Your Neck — Safety First
+            </Text>
+            <Text style={[styles.explain, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Neck pain sometimes comes with signs that need urgent care. Please answer these five quick questions.
+            </Text>
+            {NECK_RED_FLAG_QUESTIONS.map((q, qi) => (
+              <View key={qi} style={[styles.qCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.qText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{q}</Text>
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                  {[true, false].map((val) => {
+                    const sel = neckRfAnswers[qi] === val;
+                    return (
+                      <TouchableOpacity
+                        key={String(val)}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          const next = [...neckRfAnswers];
+                          next[qi] = val;
+                          setNeckRfAnswers(next);
+                        }}
+                        style={[
+                          styles.ynBtn,
+                          {
+                            backgroundColor: sel ? (val ? colors.emergencyBg : colors.virtualBg) : colors.glass,
+                            borderColor: sel ? (val ? colors.emergency : colors.virtual) : colors.glassBorder,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.ynText, { color: sel ? (val ? colors.emergency : colors.virtual) : colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                          {val ? "Yes" : "No"}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+            <TouchableOpacity
+              disabled={neckIncomplete}
+              activeOpacity={0.85}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setStep(neckDanger ? "neckUrgent" : "neckRadiate");
+              }}
+              style={[styles.primaryCta, { backgroundColor: neckIncomplete ? colors.muted : colors.primary }]}
+            >
+              <Text style={[styles.primaryCtaText, { fontFamily: "Inter_600SemiBold", color: neckIncomplete ? colors.mutedForeground : "#fff" }]}>
+                Continue
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── Neck urgent warning ── */}
+        {step === "neckUrgent" && (
+          <View style={{ gap: 16, marginTop: 6 }}>
+            <View style={[styles.qCard, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}>
+              <Feather name="alert-triangle" size={34} color={colors.emergency} style={{ marginBottom: 8 }} />
+              <Text style={[styles.qTitle, { color: colors.emergency, fontFamily: "Inter_700Bold" }]}>
+                Please Get Urgent Care
+              </Text>
+              <Text style={[styles.explain, { color: colors.foreground, fontFamily: "Inter_400Regular", marginTop: 8 }]}>
+                Neck pain together with fever, a bad headache, light hurting your eyes, or a very stiff neck can be a sign of a serious infection. This needs to be checked today — please contact your GP urgently or call 112 now. Do not continue with the questionnaire.
+              </Text>
+            </View>
+            <TouchableOpacity activeOpacity={0.85} onPress={callPainDoctor} style={[styles.primaryCta, { backgroundColor: colors.gold }]}>
+              <Feather name="phone-call" size={20} color="#fff" />
+              <Text style={[styles.primaryCtaText, { fontFamily: "Inter_600SemiBold", color: "#fff" }]}>
+                Call the HIVE Pain Doctor
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={backToMap}
+              style={[styles.secondaryCta, { borderColor: colors.border, backgroundColor: colors.card }]}
+            >
+              <Text style={[styles.primaryCtaText, { fontFamily: "Inter_600SemiBold", color: colors.foreground }]}>
+                Back to the Body Map
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── Neck radiating pain step ── */}
+        {step === "neckRadiate" && (
+          <View style={{ gap: 14, marginTop: 6 }}>
+            <Text style={[styles.qTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              Does the pain travel anywhere?
+            </Text>
+            <Text style={[styles.explain, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Good news — your answers do not suggest anything dangerous. One more question to point you to the right check.
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => goToPathway("cervical")}
+              style={[styles.bigOption, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              <MaterialCommunityIcons name="flash" size={28} color={colors.fastTrack} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.bigOptionLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                  Yes — down my arm or hand
+                </Text>
+                <Text style={[styles.regionSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  Tingling, numbness or electric feelings — we'll check the neck nerves
+                </Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setNsAnswers(new Array(NECK_SHOULDER_QUESTIONS.length).fill(null));
+                setStep("neckShoulder");
+              }}
+              style={[styles.bigOption, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              <MaterialCommunityIcons name="arm-flex" size={28} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.bigOptionLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                  It's mostly in my shoulder
+                </Text>
+                <Text style={[styles.regionSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  We'll help work out if it's the neck or the shoulder
+                </Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => goToPathway("cervical")}
+              style={[styles.bigOption, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              <MaterialCommunityIcons name="head-outline" size={28} color={colors.gold} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.bigOptionLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                  No — just my neck
+                </Text>
+                <Text style={[styles.regionSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  Straight to the neck questionnaire
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
         )}
 
