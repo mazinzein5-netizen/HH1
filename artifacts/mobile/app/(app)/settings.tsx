@@ -89,21 +89,18 @@ export default function SettingsScreen() {
   function handleAction(action: string) {
     Haptics.selectionAsync();
     switch (action) {
-      case "monitoring":
-        router.push("/(app)/monitoring");
-        break;
-      case "geriatric":
-        router.push("/(app)/geriatric");
-        break;
-      case "devices":
-        router.push("/(app)/smart-devices");
-        break;
-      case "privacy":
-        router.push("/(app)/privacy-policy");
-        break;
-      case "interpreter":
-        router.push("/(app)/interpreter");
-        break;
+      case "monitoring":      router.push("/(app)/monitoring");        break;
+      case "geriatric":       router.push("/(app)/geriatric");         break;
+      case "devices":         router.push("/(app)/smart-devices");     break;
+      case "privacy":         router.push("/(app)/privacy-policy");    break;
+      case "interpreter":     router.push("/(app)/interpreter");       break;
+      case "notifications":   router.push("/(app)/notifications");     break;
+      case "history":         router.push("/(app)/intake-history");    break;
+      case "kardex":          router.push("/(app)/kardex");            break;
+      case "consult-history": router.push("/(app)/consult-history");   break;
+      case "about":           router.push("/(app)/about");             break;
+      case "help":            router.push("/(app)/help");              break;
+      case "profile":         router.push("/(app)/(tabs)/profile");    break;
       default:
         setToastMessage("Coming soon — available in a future update");
         setToastVisible(true);

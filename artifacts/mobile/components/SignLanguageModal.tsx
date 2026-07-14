@@ -1,15 +1,11 @@
 /**
  * Sign Language Modal — camera-based input for Queen B.
- * Uses expo-camera to show a live camera view while the patient signs.
- * The patient taps "I've finished signing" to submit a transcription note,
- * or uses the text field to type what they signed if auto-recognition
- * is not yet available on this device.
+ * Uses browser getUserMedia on web (works in Expo Web preview).
+ * Graceful native fallback — full camera available in the installed app.
  */
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Modal,
   Platform,
   StyleSheet,
@@ -27,20 +23,93 @@ interface Props {
   onSubmit: (text: string) => void;
 }
 
+// ── Web camera view using getUserMedia ────────────────────────────────────────
+
+function WebCameraView({ facing }: { facing: "user" | "environment" }) {
+  const videoRef   = useRef<any>(null);
+  const streamRef  = useRef<any>(null);
+
+  const startCamera = useCallback(async () => {
+    try {
+      const stream = await (navigator as any).mediaDevices?.getUserMedia({
+        video: { facingMode: facing },
+      });
+      if (!stream) return;
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
+      }
+    } catch {
+      // permission denied or not available
+    }
+  }, [facing]);
+
+  useEffect(() => {
+    startCamera();
+    return () => {
+      streamRef.current?.getTracks?.().forEach((t: any) => t.stop());
+      streamRef.current = null;
+    };
+  }, [startCamera]);
+
+  // React Native Web renders React.createElement calls as real HTML elements
+  return React.createElement("video", {
+    ref: videoRef,
+    playsInline: true,
+    muted: true,
+    autoPlay: true,
+    style: {
+      width: "100%",
+      height: 280,
+      objectFit: "cover" as any,
+      display: "block",
+      borderRadius: 0,
+      backgroundColor: "#000",
+    },
+  });
+}
+
+// ── Native placeholder ─────────────────────────────────────────────────────────
+
+function NativeCameraPlaceholder({ colors }: { colors: ReturnType<typeof useColors> }) {
+  return (
+    <View style={[native.box, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <MaterialCommunityIcons name="camera-outline" size={48} color={colors.mutedForeground} />
+      <Text style={[native.title, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+        Camera available in the app
+      </Text>
+      <Text style={[native.body, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+        Install the HIVE Companion app on your device to use the live sign language camera. In this preview, type your message in the box below.
+      </Text>
+    </View>
+  );
+}
+
+const native = StyleSheet.create({
+  box: { margin: 16, borderRadius: 16, borderWidth: 1, padding: 28, alignItems: "center", gap: 12 },
+  title: { fontSize: 16, textAlign: "center" },
+  body: { fontSize: 13, lineHeight: 20, textAlign: "center" },
+});
+
+// ── Main modal ─────────────────────────────────────────────────────────────────
+
+type Phase = "idle" | "watching" | "transcribe";
+
 export default function SignLanguageModal({ visible, onClose, onSubmit }: Props) {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
-  const [permission, requestPermission] = useCameraPermissions();
-  const [facing, setFacing]   = useState<CameraType>("front");
-  const [typed, setTyped]     = useState("");
-  const [phase, setPhase]     = useState<"idle" | "watching" | "transcribe">("idle");
+  const [facing, setFacing] = useState<"user" | "environment">("user");
+  const [typed,  setTyped]  = useState("");
+  const [phase,  setPhase]  = useState<Phase>("idle");
 
-  function handleRequestPerm() { requestPermission(); }
+  // Stop camera stream on close
+  useEffect(() => {
+    if (!visible) { setPhase("idle"); setTyped(""); }
+  }, [visible]);
 
-  function handleStartSigning() { setPhase("watching"); }
-
-  function handleDone() { setPhase("transcribe"); }
-
+  function handleDone()  { setPhase("transcribe"); }
+  function handleClose() { setTyped(""); setPhase("idle"); onClose(); }
   function handleSubmit() {
     const text = typed.trim();
     if (!text) return;
@@ -50,13 +119,8 @@ export default function SignLanguageModal({ visible, onClose, onSubmit }: Props)
     onClose();
   }
 
-  function handleClose() {
-    setTyped("");
-    setPhase("idle");
-    onClose();
-  }
-
   const bottomPad = Platform.OS === "ios" ? insets.bottom : 16;
+  const isWeb     = Platform.OS === "web";
 
   if (!visible) return null;
 
@@ -65,8 +129,11 @@ export default function SignLanguageModal({ visible, onClose, onSubmit }: Props)
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
         <View style={[styles.sheet, { backgroundColor: colors.background, paddingBottom: bottomPad }]}>
+
+          {/* Drag handle */}
+          <View style={[styles.dragHandle, { backgroundColor: colors.border }]} />
+
           {/* Header */}
-          <View style={styles.dragHandle} />
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <View style={[styles.headerIcon, { backgroundColor: "rgba(79,70,229,0.12)", borderColor: "rgba(79,70,229,0.3)" }]}>
               <MaterialCommunityIcons name="hand-wave" size={20} color="#4f46e5" />
@@ -74,7 +141,7 @@ export default function SignLanguageModal({ visible, onClose, onSubmit }: Props)
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Sign Language Mode</Text>
               <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                Queen B is watching — sign to her
+                {isWeb ? "Queen B is watching — sign to her" : "Available in the installed app"}
               </Text>
             </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeBtn} activeOpacity={0.7}>
@@ -82,105 +149,82 @@ export default function SignLanguageModal({ visible, onClose, onSubmit }: Props)
             </TouchableOpacity>
           </View>
 
-          {/* Permission not granted */}
-          {!permission?.granted && (
-            <View style={styles.permBox}>
-              <MaterialCommunityIcons name="camera-off" size={48} color={colors.mutedForeground} />
-              <Text style={[styles.permTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                Camera access needed
-              </Text>
-              <Text style={[styles.permText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                Queen B needs to see your hands to understand your signs. Your camera is only used locally — nothing is sent anywhere.
-              </Text>
-              <TouchableOpacity
-                style={[styles.permBtn, { backgroundColor: "#4f46e5" }]}
-                onPress={handleRequestPerm}
-                activeOpacity={0.85}
-              >
-                <MaterialCommunityIcons name="camera" size={18} color="#fff" />
-                <Text style={[styles.permBtnText, { fontFamily: "Inter_700Bold" }]}>Allow Camera</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Camera view */}
-          {permission?.granted && phase !== "transcribe" && (
-            <View style={styles.cameraContainer}>
-              <CameraView style={styles.camera} facing={facing}>
-                {/* Overlay */}
-                <View style={styles.cameraOverlay}>
-                  {phase === "watching" && (
-                    <View style={[styles.watchingBadge, { backgroundColor: "rgba(79,70,229,0.85)" }]}>
-                      <ActivityIndicator size="small" color="#fff" />
-                      <Text style={[styles.watchingText, { fontFamily: "Inter_600SemiBold" }]}>
-                        Queen B is watching…
-                      </Text>
-                    </View>
-                  )}
-                  {/* Flip camera button */}
+          {/* Camera / placeholder */}
+          {phase !== "transcribe" && (
+            <View>
+              {isWeb ? (
+                <View style={{ position: "relative" }}>
+                  <WebCameraView facing={facing} />
+                  {/* Flip button */}
                   <TouchableOpacity
-                    style={[styles.flipBtn, { backgroundColor: "rgba(0,0,0,0.45)" }]}
-                    onPress={() => setFacing((f) => (f === "front" ? "back" : "front"))}
+                    style={styles.flipBtn}
+                    onPress={() => setFacing((f) => (f === "user" ? "environment" : "user"))}
                     activeOpacity={0.8}
                   >
-                    <MaterialCommunityIcons name="camera-flip-outline" size={22} color="#fff" />
+                    <MaterialCommunityIcons name="camera-flip-outline" size={20} color="#fff" />
                   </TouchableOpacity>
+                  {/* Watching badge */}
+                  {phase === "watching" && (
+                    <View style={styles.watchBadge}>
+                      <View style={styles.watchDot} />
+                      <Text style={[styles.watchText, { fontFamily: "Inter_600SemiBold" }]}>Watching…</Text>
+                    </View>
+                  )}
                 </View>
-              </CameraView>
+              ) : (
+                <NativeCameraPlaceholder colors={colors} />
+              )}
 
-              {/* Controls below camera */}
-              <View style={styles.camControls}>
-                {phase === "idle" && (
-                  <>
-                    <Text style={[styles.camHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                      Position your hands in view, then tap Start Signing
+              {/* Controls */}
+              <View style={styles.controls}>
+                <Text style={[styles.hint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  {phase === "idle"
+                    ? isWeb ? "Position your hands in view, then tap Start Signing" : "Type what you want to say below"
+                    : "Sign clearly — take your time. Tap Done when finished."}
+                </Text>
+                {phase === "idle" ? (
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: "#4f46e5" }]}
+                    onPress={isWeb ? () => setPhase("watching") : () => setPhase("transcribe")}
+                    activeOpacity={0.85}
+                  >
+                    <MaterialCommunityIcons name="hand-wave" size={18} color="#fff" />
+                    <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>
+                      {isWeb ? "Start Signing" : "Type My Message"}
                     </Text>
-                    <TouchableOpacity
-                      style={[styles.primaryBtn, { backgroundColor: "#4f46e5" }]}
-                      onPress={handleStartSigning}
-                      activeOpacity={0.85}
-                    >
-                      <MaterialCommunityIcons name="hand-wave" size={20} color="#fff" />
-                      <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>Start Signing</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-                {phase === "watching" && (
-                  <>
-                    <Text style={[styles.camHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                      Sign your message clearly — take your time. Tap Done when finished.
-                    </Text>
-                    <TouchableOpacity
-                      style={[styles.primaryBtn, { backgroundColor: "#16a34a" }]}
-                      onPress={handleDone}
-                      activeOpacity={0.85}
-                    >
-                      <MaterialCommunityIcons name="check-circle" size={20} color="#fff" />
-                      <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>I've Finished Signing</Text>
-                    </TouchableOpacity>
-                  </>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: "#16a34a" }]}
+                    onPress={handleDone}
+                    activeOpacity={0.85}
+                  >
+                    <MaterialCommunityIcons name="check-circle" size={18} color="#fff" />
+                    <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>I've Finished Signing</Text>
+                  </TouchableOpacity>
                 )}
               </View>
             </View>
           )}
 
           {/* Transcription phase */}
-          {permission?.granted && phase === "transcribe" && (
+          {phase === "transcribe" && (
             <View style={styles.transcribeBox}>
-              <View style={[styles.transHintBox, { backgroundColor: "rgba(79,70,229,0.08)", borderColor: "rgba(79,70,229,0.25)" }]}>
-                <MaterialCommunityIcons name="information-outline" size={16} color="#4f46e5" />
-                <Text style={[styles.transHint, { color: "#4f46e5", fontFamily: "Inter_500Medium" }]}>
-                  Type what you just signed so Queen B can respond to it. Automated sign recognition is coming soon.
-                </Text>
-              </View>
-
+              {isWeb && (
+                <View style={[styles.transHint, { backgroundColor: "rgba(79,70,229,0.08)", borderColor: "rgba(79,70,229,0.25)" }]}>
+                  <MaterialCommunityIcons name="information-outline" size={15} color="#4f46e5" />
+                  <Text style={[styles.transHintText, { color: "#4f46e5", fontFamily: "Inter_500Medium" }]}>
+                    Type what you just signed — Queen B will respond to it. Automated sign recognition is coming soon.
+                  </Text>
+                </View>
+              )}
               <Text style={[styles.transLabel, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
-                WHAT DID YOU SIGN?
+                {isWeb ? "WHAT DID YOU SIGN?" : "YOUR MESSAGE"}
               </Text>
-              <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.inputBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <TextInput
                   style={[styles.textInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                  placeholder="Type what you signed here…"
+                  placeholder={isWeb ? "Type what you signed here…" : "Type your message…"}
                   placeholderTextColor={colors.mutedForeground}
                   value={typed}
                   onChangeText={setTyped}
@@ -188,15 +232,16 @@ export default function SignLanguageModal({ visible, onClose, onSubmit }: Props)
                   autoFocus
                 />
               </View>
-
               <View style={styles.transActions}>
-                <TouchableOpacity
-                  style={[styles.secondaryBtn, { borderColor: colors.border }]}
-                  onPress={() => setPhase("idle")}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.secondaryBtnText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Sign Again</Text>
-                </TouchableOpacity>
+                {isWeb && (
+                  <TouchableOpacity
+                    style={[styles.secondaryBtn, { borderColor: colors.border }]}
+                    onPress={() => setPhase("idle")}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.secondaryBtnText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Sign Again</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={[styles.primaryBtn, { backgroundColor: typed.trim() ? "#C9860A" : colors.border, flex: 1 }]}
                   onPress={handleSubmit}
@@ -216,43 +261,33 @@ export default function SignLanguageModal({ visible, onClose, onSubmit }: Props)
 }
 
 const styles = StyleSheet.create({
-  overlay:   { flex: 1, justifyContent: "flex-end" },
-  backdrop:  { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.55)" },
+  overlay:  { flex: 1, justifyContent: "flex-end" },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.55)" },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: "hidden" },
-  dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "rgba(0,0,0,0.15)", alignSelf: "center", marginTop: 10, marginBottom: 8 },
+  dragHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: "center", marginTop: 10, marginBottom: 8 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingBottom: 14, borderBottomWidth: 1 },
   headerIcon: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 16, letterSpacing: -0.2 },
   subtitle: { fontSize: 11.5, marginTop: 1 },
   closeBtn: { padding: 6 },
-
-  // Permission
-  permBox: { alignItems: "center", padding: 32, gap: 14 },
-  permTitle: { fontSize: 18, textAlign: "center" },
-  permText: { fontSize: 14, lineHeight: 21, textAlign: "center" },
-  permBtn: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 14 },
-  permBtnText: { color: "#fff", fontSize: 15 },
-
-  // Camera
-  cameraContainer: { gap: 0 },
-  camera: { height: 300 },
-  cameraOverlay: { flex: 1, alignItems: "center", justifyContent: "flex-end", padding: 16, gap: 8 },
-  watchingBadge: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
-  watchingText: { color: "#fff", fontSize: 13 },
-  flipBtn: { position: "absolute", top: 12, right: 12, width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  camControls: { padding: 16, gap: 12, alignItems: "center" },
-  camHint: { fontSize: 13.5, lineHeight: 20, textAlign: "center" },
-  primaryBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 14, alignSelf: "stretch" },
+  // Camera overlay elements
+  flipBtn: { position: "absolute", top: 10, right: 10, width: 38, height: 38, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" },
+  watchBadge: { position: "absolute", bottom: 10, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(220,38,38,0.85)", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
+  watchDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#fff" },
+  watchText: { color: "#fff", fontSize: 12 },
+  // Controls
+  controls: { padding: 16, gap: 12, alignItems: "center" },
+  hint: { fontSize: 13, lineHeight: 19, textAlign: "center" },
+  primaryBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 13, alignSelf: "stretch" },
   primaryBtnText: { color: "#fff", fontSize: 15 },
-
-  // Transcribe
-  transcribeBox: { padding: 16, gap: 14 },
-  transHintBox: { flexDirection: "row", alignItems: "flex-start", gap: 9, borderRadius: 12, borderWidth: 1, padding: 12 },
-  transHint: { fontSize: 13, lineHeight: 19, flex: 1 },
+  // Transcription
+  transcribeBox: { padding: 16, gap: 12 },
+  transHint: { flexDirection: "row", alignItems: "flex-start", gap: 8, borderRadius: 12, borderWidth: 1, padding: 11 },
+  transHintText: { fontSize: 12.5, lineHeight: 18, flex: 1 },
   transLabel: { fontSize: 10.5, letterSpacing: 1.2 },
-  inputWrap: { borderRadius: 14, borderWidth: 1, padding: 12 },
-  textInput: { fontSize: 14, lineHeight: 21, minHeight: 80 },
+  inputBox: { borderRadius: 14, borderWidth: 1, padding: 12 },
+  textInput: { fontSize: 14, lineHeight: 21, minHeight: 70 },
   transActions: { flexDirection: "row", gap: 10 },
-  secondaryBtn: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, alignItems: "center", justifyContent: "center" },
+  secondaryBtn: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, alignItems: "center", justifyContent: "center" },
   secondaryBtnText: { fontSize: 14 },
 });
