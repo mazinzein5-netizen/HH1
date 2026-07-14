@@ -196,9 +196,9 @@ export default function Home() {
             >
               <motion.div variants={fadeInUp}>
                 <div className="text-primary font-bold tracking-widest uppercase text-xs mb-4">One Unified Story</div>
-                <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight text-foreground">A precise, trustworthy health platform.</h2>
+                <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight text-foreground">Patients arrive informed. Clinicians organise and streamline.</h2>
                 <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
-                  We believe in empowering both sides of the care equation. By giving patients the tools to prepare for visits and manage their own records safely, and supporting clinicians with instant access to guidelines, we make healthcare more efficient and less stressful for everyone.
+                  The Health HIVE ecosystem is a digital healthcare solution platform built to attack and diminish long waiting lists — organising patient file information privately and streamlining communication where the data is needed most: between healthcare providers.
                 </p>
                 <div className="grid grid-cols-2 gap-8 mt-12">
                   <div className="space-y-4">
@@ -404,7 +404,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-panel text-foreground mb-8 shadow-2xl">
                   <Shield className="h-10 w-10 text-primary" />
                 </div>
-                <h2 className="text-4xl md:text-6xl font-bold mb-8 tracking-tight text-foreground">Privacy is our hero feature.</h2>
+                <h2 className="text-4xl md:text-6xl font-bold mb-8 tracking-tight text-foreground">Privacy is our gold standard.</h2>
                 <p className="text-xl md:text-2xl font-light mb-12 text-foreground/80 leading-relaxed max-w-3xl mx-auto">
                   ALL personal data stays on your device — nothing is uploaded to a server. No tracking, no ads. You can "Delete all my data" at any time.
                 </p>
@@ -476,7 +476,7 @@ export default function Home() {
                 </div>
                 <h2 className="text-4xl md:text-6xl font-bold mb-6 text-foreground leading-tight">HIVE Hospital Surgical Assistant</h2>
                 <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light">
-                  A similar solution for surgical clinical care: a digital patient file system tailored to the local healthcare system — safe, private and fully compliant with regulatory bodies.
+                  HIVE Hospital digitises the patient file into a member-accessed platform — organising patient flow and flagging safety risks with advanced algorithmic workflows, supported by robust evidence. Advanced AI risk oversight coming soon.
                 </p>
                 
                 <ul className="space-y-6 mb-12">
@@ -486,7 +486,7 @@ export default function Home() {
                     </div>
                     <div>
                       <h4 className="text-foreground font-semibold text-lg mb-1">Fast Documentation</h4>
-                      <span className="text-muted-foreground">Photo recognition turns captured data into organised, structured patient records in seconds.</span>
+                      <span className="text-muted-foreground">Documentation for GPs, physiotherapists and CNSs can all be efficiently executed on the application — photo recognition turns captured data into organised, structured records in seconds.</span>
                     </div>
                   </li>
                   <li className="flex items-start gap-4 p-4 rounded-2xl glass-panel border-transparent hover:border-primary/30 transition-colors">
@@ -496,6 +496,15 @@ export default function Home() {
                     <div>
                       <h4 className="text-foreground font-semibold text-lg mb-1">Built for Clinical Teams</h4>
                       <span className="text-muted-foreground">Organise patient files and collaborate seamlessly with your clinical unit or team.</span>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-4 p-4 rounded-2xl glass-panel border-transparent hover:border-primary/30 transition-colors">
+                    <div className="mt-1 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary border border-primary/20">
+                      <ArrowRight className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-foreground font-semibold text-lg mb-1">Encrypted by Design</h4>
+                      <span className="text-muted-foreground">Encrypted data communication while patient data stays on the device — with user endpoints for server-based AI.</span>
                     </div>
                   </li>
                 </ul>
