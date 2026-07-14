@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Health HIVE Ecosystem</title>
     <meta name="description" content="A connected health platform from Ireland. Patients keep their records organised; clinicians stay supported on call." />
     <meta name="robots" content="index, follow" />
@@ -16,6 +16,11 @@
     <script>
       (function() {
         try {
+          // Optional deep-link override, e.g. ?theme=dark — persisted so the app stays in sync.
+          const override = new URLSearchParams(window.location.search).get('theme');
+          if (override === 'dark' || override === 'light') {
+            localStorage.setItem('theme', override);
+          }
           const theme = localStorage.getItem('theme');
           const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
           if (theme === 'dark' || ((!theme || theme === 'system') && prefersDark)) {

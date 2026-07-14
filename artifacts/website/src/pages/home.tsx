@@ -36,13 +36,24 @@ export default function Home() {
       const anchor = target.closest('a');
       if (anchor && anchor.hash && anchor.hash.startsWith('#')) {
         e.preventDefault();
-        const element = document.querySelector(anchor.hash);
+        const element = document.getElementById(anchor.hash.slice(1));
         if (element) {
           element.scrollIntoView({ behavior: 'smooth' });
         }
       }
     };
     document.addEventListener('click', handleAnchorClick);
+
+    // Honour a #hash present on initial load — sections only exist after React mounts,
+    // so the browser's native fragment scroll silently fails on this SPA.
+    // getElementById (not querySelector) so arbitrary fragments can never throw.
+    if (window.location.hash) {
+      const element = document.getElementById(window.location.hash.slice(1));
+      if (element) {
+        requestAnimationFrame(() => element.scrollIntoView());
+      }
+    }
+
     return () => document.removeEventListener('click', handleAnchorClick);
   }, []);
 
@@ -331,7 +342,7 @@ export default function Home() {
               whileInView="visible"
               viewport={{ once: true }}
               variants={fadeInUp}
-              className="max-w-5xl mx-auto glass-panel-heavy rounded-[3rem] p-12 md:p-20 text-center border-primary/20 relative overflow-hidden"
+              className="max-w-5xl mx-auto glass-panel-heavy rounded-[3rem] p-6 sm:p-12 md:p-20 text-center border-primary/20 relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 blur-[100px] pointer-events-none rounded-full" />
               <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/10 blur-[100px] pointer-events-none rounded-full" />
@@ -346,10 +357,10 @@ export default function Home() {
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-                  <Button variant="secondary" size="lg" className="w-full sm:w-auto glass-panel hover:bg-card/80 h-14 px-8 opacity-70 cursor-not-allowed text-foreground">
+                  <Button variant="secondary" size="lg" className="w-full sm:w-auto glass-panel hover:bg-card/80 h-auto min-h-14 whitespace-normal px-6 sm:px-8 opacity-70 cursor-not-allowed text-foreground">
                     App Store (Coming Soon)
                   </Button>
-                  <Button variant="secondary" size="lg" className="w-full sm:w-auto glass-panel hover:bg-card/80 h-14 px-8 opacity-70 cursor-not-allowed text-foreground">
+                  <Button variant="secondary" size="lg" className="w-full sm:w-auto glass-panel hover:bg-card/80 h-auto min-h-14 whitespace-normal px-6 sm:px-8 opacity-70 cursor-not-allowed text-foreground">
                     Google Play (Coming Soon)
                   </Button>
                 </div>
@@ -444,8 +455,8 @@ export default function Home() {
                 </div>
 
                 <a href="https://surg-assist-copy-89eb0714.base44.app" target="_blank" rel="noreferrer">
-                  <Button size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
-                    Open HIVE Surgical Assistant <ExternalLink className="ml-2 h-4 w-4" />
+                  <Button size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-auto min-h-14 whitespace-normal px-6 sm:px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
+                    Open HIVE Surgical Assistant <ExternalLink className="ml-2 h-4 w-4 flex-shrink-0" />
                   </Button>
                 </a>
               </motion.div>
