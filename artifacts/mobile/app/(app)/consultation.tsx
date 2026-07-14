@@ -18,7 +18,7 @@ import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useAuth } from "@/context/AuthContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
-import { Allowance, getAllowance, recordUsage } from "@/utils/entitlements";
+import { Allowance, OVERAGE_LABEL, TIER_LABEL, getAllowance, recordUsage } from "@/utils/entitlements";
 
 type ConsultState = "booking" | "waiting" | "call";
 type ConsultType = "gp" | "physio" | "ortho" | "neuro" | "geriatric";
@@ -74,8 +74,8 @@ export default function ConsultationScreen() {
   async function confirmBooking() {
     if (!selectedType) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Count against the Gold Card's free monthly consultations when covered.
-    if (allowance?.tier === "gold" && allowance.remaining > 0) {
+    // Count against the card's free monthly consultations when covered.
+    if (allowance && allowance.tier !== "blue" && allowance.remaining > 0) {
       try {
         await recordUsage(userId, "consultations");
         loadAllowance();
@@ -215,20 +215,24 @@ export default function ConsultationScreen() {
           {/* Coverage note */}
           {allowance ? (
             <View style={[styles.coverageRow, {
-              backgroundColor: allowance.tier === "gold" && allowance.remaining > 0 ? "#D4A0171a" : colors.card,
-              borderColor: allowance.tier === "gold" && allowance.remaining > 0 ? "#D4A01755" : colors.border,
+              backgroundColor: allowance.tier !== "blue" && allowance.remaining > 0
+                ? (allowance.tier === "red" ? "#E5294E1a" : "#D4A0171a")
+                : colors.card,
+              borderColor: allowance.tier !== "blue" && allowance.remaining > 0
+                ? (allowance.tier === "red" ? "#E5294E55" : "#D4A01755")
+                : colors.border,
             }]}>
               <MaterialCommunityIcons
-                name={allowance.tier === "gold" ? "crown-outline" : "card-account-details-star-outline"}
+                name={allowance.tier === "red" ? "shield-star" : allowance.tier === "gold" ? "crown-outline" : "card-account-details-star-outline"}
                 size={18}
-                color={allowance.tier === "gold" ? "#D4A017" : "#2563EB"}
+                color={allowance.tier === "red" ? "#E5294E" : allowance.tier === "gold" ? "#D4A017" : "#2563EB"}
               />
               <Text style={[styles.coverageText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                {allowance.tier === "gold"
+                {allowance.tier !== "blue"
                   ? allowance.remaining > 0
-                    ? `Covered by your Gold Card — ${allowance.used} of ${allowance.limit} free consultations used this month.`
-                    : `You've used your ${allowance.limit} free Gold consultations this month — this appointment is at the standard rate, settled at your HIVE node.`
-                  : "On the Blue Card, consultations are at the standard rate, settled at your HIVE node. The Gold Card includes 3 free consultations a month."}
+                    ? `Covered by your ${TIER_LABEL[allowance.tier]} — ${allowance.used} of ${allowance.limit} free consultations used this month.`
+                    : `You've used your ${allowance.limit} free consultations this month — this appointment is at the ${OVERAGE_LABEL[allowance.tier]}, settled at your HIVE node.`
+                  : "On the Blue Card, consultations are at the standard rate, settled at your HIVE node. The Gold Card includes 3 free consultations a month; the Red Geriatric Safety Pack includes 10 free HIVE Doc consultations."}
               </Text>
             </View>
           ) : null}

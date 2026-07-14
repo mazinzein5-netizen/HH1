@@ -6,10 +6,10 @@ import { getMembership, PlanTier } from "@/utils/membershipStore";
  *
  * Each card includes a monthly allowance for metered services:
  *
- *                     Blue Card        Gold Card
- *   Pain complaints   2 / month        30 / month
- *   Consultations     standard rate    3 free / month, then standard rate
- *   Interpreter       standard rate    3 free / month, then standard rate
+ *                     Blue Card        Gold Card                Red Geriatric Pack
+ *   Pain complaints   2 / month        30 / month               Unlimited
+ *   Consultations     standard rate    3 free, then standard    10 free, then partner price
+ *   Interpreter       standard rate    3 free, then standard    3 free, then partner price
  *
  * Usage counters live in AsyncStorage under a per-user, per-calendar-month
  * key, so they reset automatically on the 1st of every month. Nothing leaves
@@ -18,9 +18,30 @@ import { getMembership, PlanTier } from "@/utils/membershipStore";
 
 export type MeteredFeature = "painComplaints" | "consultations" | "interpreter";
 
+/** Number.POSITIVE_INFINITY marks an unlimited allowance — check with Number.isFinite. */
 export const PLAN_LIMITS: Record<PlanTier, Record<MeteredFeature, number>> = {
   blue: { painComplaints: 2, consultations: 0, interpreter: 0 },
   gold: { painComplaints: 30, consultations: 3, interpreter: 3 },
+  red: { painComplaints: Number.POSITIVE_INFINITY, consultations: 10, interpreter: 3 },
+};
+
+/** True when the allowance has no monthly cap. */
+export function isUnlimited(a: { limit: number }): boolean {
+  return !Number.isFinite(a.limit);
+}
+
+/** Short card name for user-facing copy. */
+export const TIER_LABEL: Record<PlanTier, string> = {
+  blue: "Blue Card",
+  gold: "Gold Card",
+  red: "Red Geriatric Pack",
+};
+
+/** What extra sessions cost once the free allowance is used. */
+export const OVERAGE_LABEL: Record<PlanTier, string> = {
+  blue: "standard rate",
+  gold: "standard rate",
+  red: "partner price",
 };
 
 export interface Allowance {
@@ -45,13 +66,13 @@ function storageKey(userId: string): string {
 type UsageMap = Partial<Record<MeteredFeature, number>>;
 
 /**
- * The patient's current card. Gold benefits start as soon as the Gold Card is
+ * The patient's current card. Paid benefits start as soon as the card is
  * chosen in the app (pilot programme) — payment is settled out-of-band at a
  * HIVE node, online or through the insurer.
  */
 export async function getPlanTier(userId: string): Promise<PlanTier> {
   const membership = await getMembership(userId);
-  return membership ? "gold" : "blue";
+  return membership ? membership.plan : "blue";
 }
 
 export async function getMonthlyUsage(userId: string): Promise<Record<MeteredFeature, number>> {

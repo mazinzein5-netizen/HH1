@@ -14,9 +14,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { AllowanceSummary, getAllowanceSummary } from "@/utils/entitlements";
+import { MemberCode, getMemberCode, memberQrPayload, regenerateMemberCode } from "@/utils/memberCode";
 import {
   IdentityRecord,
   STATUS_META,
@@ -27,13 +29,14 @@ import {
 } from "@/utils/identityStore";
 import {
   BillingCycle,
-  GOLD_PRICING,
   InsuranceDetails,
   METHOD_META,
   MembershipRecord,
   PLAN_META,
+  PaidTier,
   PaymentMethod,
   PlanTier,
+  TIER_PRICING,
   deleteMembership,
   getMembership,
   getTrialInfo,
@@ -48,8 +51,9 @@ export default function MembershipScreen() {
   const [identity, setIdentity] = useState<IdentityRecord | null>(null);
   const [membership, setMembership] = useState<MembershipRecord | null>(null);
   const [usage, setUsage] = useState<AllowanceSummary | null>(null);
+  const [memberCode, setMemberCode] = useState<MemberCode | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [busy, setBusy] = useState<"selfie" | "id" | "confirm" | "downgrade" | null>(null);
+  const [busy, setBusy] = useState<"selfie" | "id" | "confirm" | "downgrade" | "qr" | null>(null);
   const [editing, setEditing] = useState(false);
 
   const [tier, setTier] = useState<PlanTier>("gold");
@@ -68,16 +72,18 @@ export default function MembershipScreen() {
   const statusMeta = STATUS_META[vStatus];
 
   const refresh = useCallback(async () => {
-    const [idRec, mem, summary] = await Promise.all([
+    const [idRec, mem, summary, code] = await Promise.all([
       getIdentity(userId),
       getMembership(userId),
       getAllowanceSummary(userId),
+      getMemberCode(userId),
     ]);
     setIdentity(idRec);
     setMembership(mem);
     setUsage(summary);
+    setMemberCode(code);
     if (mem) {
-      setTier("gold");
+      setTier(mem.plan);
       setBilling(mem.billing);
       setMethod(mem.method);
       setInsurer(mem.insurance?.provider ?? "");
@@ -107,6 +113,29 @@ export default function MembershipScreen() {
     }
   }
 
+  function handleRegenerateQr() {
+    const doIt = async () => {
+      try {
+        setBusy("qr");
+        const fresh = await regenerateMemberCode(userId);
+        setMemberCode(fresh);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } finally {
+        setBusy(null);
+      }
+    };
+    const msg = "Generate a new QR code? Your current code will stop working.";
+    if (Platform.OS === "web") {
+      // Alert buttons don't fire on react-native-web
+      if (typeof window !== "undefined" && window.confirm(msg)) doIt();
+      return;
+    }
+    Alert.alert("New QR code", msg, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Generate", onPress: doIt },
+    ]);
+  }
+
   async function handleIdDoc() {
     Haptics.selectionAsync();
     try {
@@ -123,8 +152,9 @@ export default function MembershipScreen() {
     }
   }
 
-  async function handleConfirmGold() {
+  async function handleConfirmPaid() {
     setError("");
+    if (tier === "blue") return;
     if (!verified) {
       setError("Please complete identity verification (Step 1) first.");
       return;
@@ -146,7 +176,7 @@ export default function MembershipScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const rec: MembershipRecord = {
         userId,
-        plan: "gold",
+        plan: tier as PaidTier,
         billing,
         method,
         insurance,
@@ -181,15 +211,16 @@ export default function MembershipScreen() {
   }
 
   function handleDowngrade() {
+    const fromLabel = membership ? PLAN_META[membership.plan].label : "your card";
     const message =
-      "Switch back to the free Blue Card? You'll go back to 2 pain complaints a month, and consultations and interpreter sessions will be at the standard rate.";
+      `Switch back to the free Blue Card? You'll go back to 2 pain complaints a month, and consultations and interpreter sessions will be at the standard rate.`;
     if (Platform.OS === "web") {
       // Alert with buttons is not supported on web
       if (window.confirm(message)) doDowngrade();
       return;
     }
     Alert.alert("Switch to Blue Card?", message, [
-      { text: "Keep Gold", style: "cancel" },
+      { text: `Keep ${fromLabel}`, style: "cancel" },
       { text: "Switch to Blue", style: "destructive", onPress: () => doDowngrade() },
     ]);
   }
@@ -222,35 +253,38 @@ export default function MembershipScreen() {
     );
   }
 
-  const onGold = !!membership;
+  const onPaid = !!membership;
+  const currentTier: PlanTier = membership?.plan ?? "blue";
   const showChooser = !membership || editing;
-  const currentMeta = onGold ? PLAN_META.gold : PLAN_META.blue;
+  const currentMeta = PLAN_META[currentTier];
 
   const usageRows = usage
     ? [
         {
           icon: "clipboard-pulse-outline" as const,
           label: "Pain complaints",
-          value: `${usage.painComplaints.used} of ${usage.painComplaints.limit} used`,
-          warn: usage.painComplaints.remaining === 0,
+          value: Number.isFinite(usage.painComplaints.limit)
+            ? `${usage.painComplaints.used} of ${usage.painComplaints.limit} used`
+            : `${usage.painComplaints.used} used — unlimited`,
+          warn: Number.isFinite(usage.painComplaints.limit) && usage.painComplaints.remaining === 0,
         },
         {
           icon: "video-outline" as const,
           label: "Video consultations",
           value:
-            usage.tier === "gold"
+            usage.tier !== "blue"
               ? `${usage.consultations.used} of ${usage.consultations.limit} free used`
               : "Standard rate",
-          warn: usage.tier === "gold" && usage.consultations.remaining === 0,
+          warn: usage.tier !== "blue" && usage.consultations.remaining === 0,
         },
         {
           icon: "translate" as const,
           label: "Interpreter sessions",
           value:
-            usage.tier === "gold"
+            usage.tier !== "blue"
               ? `${usage.interpreter.used} of ${usage.interpreter.limit} free used`
               : "Standard rate",
-          warn: usage.tier === "gold" && usage.interpreter.remaining === 0,
+          warn: usage.tier !== "blue" && usage.interpreter.remaining === 0,
         },
       ]
     : [];
@@ -260,7 +294,13 @@ export default function MembershipScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Status card */}
         <LinearGradient
-          colors={onGold ? ["#3B2F0B", "#1F2937"] : ["#1E3A8A", "#111827"]}
+          colors={
+            currentTier === "red"
+              ? ["#4C0519", "#1F2937"]
+              : currentTier === "gold"
+                ? ["#3B2F0B", "#1F2937"]
+                : ["#1E3A8A", "#111827"]
+          }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.statusCard}
@@ -269,14 +309,14 @@ export default function MembershipScreen() {
             <MaterialCommunityIcons
               name={currentMeta.icon as any}
               size={26}
-              color={onGold ? "#D4A017" : "#93C5FD"}
+              color={currentTier === "red" ? "#FDA4AF" : currentTier === "gold" ? "#D4A017" : "#93C5FD"}
             />
             <View style={{ flex: 1 }}>
               <Text style={[styles.statusTitle, { fontFamily: "Inter_700Bold" }]}>
                 {isGuest
                   ? "Demo account"
-                  : onGold
-                    ? "Gold Card"
+                  : onPaid
+                    ? currentMeta.label
                     : trial.expired
                       ? "Blue Card — trial ended"
                       : "Blue Card — Free Trial"}
@@ -284,12 +324,12 @@ export default function MembershipScreen() {
               <Text style={[styles.statusSub, { fontFamily: "Inter_400Regular" }]}>
                 {isGuest
                   ? "Create your own account to start your free Blue Card trial."
-                  : onGold
+                  : onPaid
                     ? membership!.status === "active"
-                      ? `${GOLD_PRICING[membership!.billing].price} · Membership active`
-                      : `${GOLD_PRICING[membership!.billing].price} · Awaiting payment · ${METHOD_META[membership!.method].label}`
+                      ? `${TIER_PRICING[membership!.plan][membership!.billing].price} · Membership active`
+                      : `${TIER_PRICING[membership!.plan][membership!.billing].price} · Awaiting payment · ${METHOD_META[membership!.method].label}`
                     : trial.expired
-                      ? "Your free trial period has ended — your Blue Card benefits continue. Upgrade to Gold for more each month."
+                      ? "Your free trial period has ended — your Blue Card benefits continue. Upgrade to Gold or the Red Geriatric Safety Pack for more each month."
                       : `${trial.daysLeft} day${trial.daysLeft === 1 ? "" : "s"} left — every account starts free.`}
               </Text>
             </View>
@@ -339,6 +379,65 @@ export default function MembershipScreen() {
           </View>
         ) : null}
 
+        {/* Your member QR */}
+        {!isGuest && memberCode ? (
+          <View style={[styles.card, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
+            <View style={styles.vStatusRow}>
+              <MaterialCommunityIcons name="qrcode" size={18} color={colors.primary} />
+              <Text style={[styles.vStatusText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                Your member QR code
+              </Text>
+            </View>
+            <View style={styles.qrWrap}>
+              <View style={styles.qrBox}>
+                <QRCode
+                  value={memberQrPayload({
+                    memberCode,
+                    tier: currentTier,
+                    fullName: user?.fullName,
+                  })}
+                  size={132}
+                  color={currentTier === "red" ? "#7F1D1D" : currentTier === "gold" ? "#6b4400" : "#1E3A8A"}
+                  backgroundColor="#FFFFFF"
+                />
+              </View>
+              <Text style={[styles.qrCodeText, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                {memberCode.code}
+              </Text>
+              <Text style={[styles.qrIssued, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                This code is unique to you · issued {memberCode.issuedAt.slice(0, 10)}
+              </Text>
+            </View>
+            <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Show this code at any HIVE node — partner GPs, pharmacies and clinics — to check in as a member.
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleRegenerateQr}
+              disabled={busy !== null}
+              style={[styles.qrRegenBtn, { backgroundColor: colors.glassPrimary, borderColor: colors.primary }]}
+            >
+              {busy === "qr" ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <>
+                  <MaterialCommunityIcons name="refresh" size={17} color={colors.primary} />
+                  <Text style={[styles.qrRegenText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>
+                    Generate a new QR code
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <View style={styles.qrNoteRow}>
+              <MaterialCommunityIcons name="mailbox-outline" size={17} color={colors.gold} />
+              <Text style={[styles.qrNoteText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                A physical membership card is posted to you on the Gold Card or the Red Geriatric Safety Pack.
+                Blue Card members use this digital code.
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         {isGuest ? (
           <View style={[styles.card, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <View style={styles.vStatusRow}>
@@ -372,9 +471,9 @@ export default function MembershipScreen() {
             </Text>
           </View>
           <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Upgrading to Gold needs identity verification: add a selfie and a photo ID (passport, driving
-            licence or public services card). Both stay on this device — staff verify them in person at your
-            HIVE node.
+            Upgrading to a paid card needs identity verification: add a selfie and a photo ID (passport,
+            driving licence or public services card). Both stay on this device — staff verify them in person
+            at your HIVE node.
           </Text>
 
           <View style={styles.vRow}>
@@ -432,10 +531,10 @@ export default function MembershipScreen() {
         {sectionTitle("2", "Choose your card")}
         {showChooser ? (
           <View style={{ gap: 10 }}>
-            {(["blue", "gold"] as PlanTier[]).map((t) => {
+            {(["blue", "gold", "red"] as PlanTier[]).map((t) => {
               const meta = PLAN_META[t];
               const active = tier === t;
-              const isCurrent = t === (onGold ? "gold" : "blue");
+              const isCurrent = t === currentTier;
               return (
                 <TouchableOpacity
                   key={t}
@@ -455,7 +554,7 @@ export default function MembershipScreen() {
                           {meta.label}
                         </Text>
                         <Text style={[styles.planPrice, { color: meta.accent, fontFamily: "Inter_700Bold" }]}>
-                          {t === "blue" ? "Free" : GOLD_PRICING[billing].price}
+                          {t === "blue" ? "Free" : TIER_PRICING[t][billing].price}
                         </Text>
                       </View>
                       <Text style={[styles.planBlurb, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
@@ -489,7 +588,7 @@ export default function MembershipScreen() {
               );
             })}
 
-            {tier === "gold" ? (
+            {tier !== "blue" ? (
               <>
                 <Text style={[styles.payLabel, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
                   HOW OFTEN WOULD YOU LIKE TO PAY?
@@ -497,7 +596,8 @@ export default function MembershipScreen() {
                 <View style={styles.billingRow}>
                   {(["monthly", "yearly"] as BillingCycle[]).map((b) => {
                     const active = billing === b;
-                    const meta = GOLD_PRICING[b];
+                    const meta = TIER_PRICING[tier as PaidTier][b];
+                    const accent = PLAN_META[tier].accent;
                     return (
                       <TouchableOpacity
                         key={b}
@@ -505,14 +605,14 @@ export default function MembershipScreen() {
                         onPress={() => { Haptics.selectionAsync(); setBilling(b); }}
                         style={[styles.billingCard, {
                           backgroundColor: active ? colors.glassPrimary : colors.glass,
-                          borderColor: active ? "#D4A017" : colors.glassBorder,
+                          borderColor: active ? accent : colors.glassBorder,
                           borderWidth: active ? 1.5 : 1,
                         }]}
                       >
                         <Text style={[styles.billingLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
                           {meta.label}
                         </Text>
-                        <Text style={[styles.billingPrice, { color: active ? "#D4A017" : colors.mutedForeground, fontFamily: "Inter_700Bold" }]}>
+                        <Text style={[styles.billingPrice, { color: active ? accent : colors.mutedForeground, fontFamily: "Inter_700Bold" }]}>
                           {meta.price}
                         </Text>
                         {meta.note ? (
@@ -529,8 +629,8 @@ export default function MembershipScreen() {
                   <View style={[styles.lockCard, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                     <MaterialCommunityIcons name="lock-outline" size={18} color={colors.mutedForeground} />
                     <Text style={[styles.lockText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                      Complete Step 1 first — upgrading to Gold needs identity verification. Your Blue Card keeps
-                      working in the meantime.
+                      Complete Step 1 first — upgrading to the {PLAN_META[tier].label} needs identity
+                      verification. Your Blue Card keeps working in the meantime.
                     </Text>
                   </View>
                 ) : (
@@ -605,19 +705,28 @@ export default function MembershipScreen() {
                       </View>
                     ) : null}
 
-                    <TouchableOpacity activeOpacity={0.85} onPress={handleConfirmGold} disabled={busy !== null}>
-                      <LinearGradient colors={["#C9860A", "#D4A017", "#C9860A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.confirmBtn}>
+                    <TouchableOpacity activeOpacity={0.85} onPress={handleConfirmPaid} disabled={busy !== null}>
+                      <LinearGradient
+                        colors={tier === "red" ? ["#B91C3C", "#E5294E", "#B91C3C"] : ["#C9860A", "#D4A017", "#C9860A"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.confirmBtn}
+                      >
                         {busy === "confirm"
                           ? <ActivityIndicator color="#fff" />
                           : <Text style={[styles.confirmText, { fontFamily: "Inter_700Bold" }]}>
-                              {onGold ? "Update Gold Membership" : "Upgrade to Gold Card"}
+                              {currentTier === tier
+                                ? "Update My Membership"
+                                : onPaid
+                                  ? `Switch to the ${PLAN_META[tier].label}`
+                                  : `Upgrade to the ${PLAN_META[tier].label}`}
                             </Text>}
                       </LinearGradient>
                     </TouchableOpacity>
                   </>
                 )}
               </>
-            ) : onGold ? (
+            ) : onPaid ? (
               <>
                 {error ? (
                   <View style={[styles.errorBox, { backgroundColor: colors.emergencyBg, borderColor: colors.emergencyBorder }]}>
@@ -642,8 +751,8 @@ export default function MembershipScreen() {
               <View style={[styles.lockCard, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
                 <MaterialCommunityIcons name="check-circle-outline" size={18} color="#2563EB" />
                 <Text style={[styles.lockText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  The Blue Card is your current card — there's nothing to pay. Select the Gold Card above if
-                  you'd like more each month.
+                  The Blue Card is your current card — there's nothing to pay. Select the Gold Card or the
+                  Red Geriatric Safety Pack above if you'd like more each month.
                 </Text>
               </View>
             )}
@@ -657,7 +766,7 @@ export default function MembershipScreen() {
         ) : (
           <View style={[styles.card, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}>
             <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Gold Card · {GOLD_PRICING[membership!.billing].price} · {METHOD_META[membership!.method].label}
+              {PLAN_META[membership!.plan].label} · {TIER_PRICING[membership!.plan][membership!.billing].price} · {METHOD_META[membership!.method].label}
             </Text>
             <TouchableOpacity
               onPress={() => { Haptics.selectionAsync(); setEditing(true); }}
@@ -742,4 +851,12 @@ const styles = StyleSheet.create({
   cancelText: { fontSize: 14 },
   privacyRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, paddingHorizontal: 4, marginTop: 4 },
   privacyText: { flex: 1, fontSize: 12, lineHeight: 17 },
+  qrWrap: { alignItems: "center", gap: 6 },
+  qrBox: { backgroundColor: "#FFFFFF", borderRadius: 14, padding: 12 },
+  qrCodeText: { fontSize: 17, letterSpacing: 1.5, marginTop: 4 },
+  qrIssued: { fontSize: 11.5 },
+  qrRegenBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12, borderWidth: 1, paddingVertical: 12 },
+  qrRegenText: { fontSize: 14 },
+  qrNoteRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  qrNoteText: { flex: 1, fontSize: 12.5, lineHeight: 18 },
 });

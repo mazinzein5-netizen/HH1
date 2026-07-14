@@ -18,7 +18,7 @@ import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useAuth } from "@/context/AuthContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
-import { Allowance, getAllowance, recordUsage } from "@/utils/entitlements";
+import { Allowance, OVERAGE_LABEL, TIER_LABEL, getAllowance, recordUsage } from "@/utils/entitlements";
 import {
   addBooking,
   cancelBooking,
@@ -97,8 +97,8 @@ export default function InterpreterScreen() {
       const dateTime = new Date(day);
       dateTime.setHours(hh, mm, 0, 0);
 
-      // Covered by the Gold Card's monthly allowance?
-      const covered = allowance?.tier === "gold" && allowance.remaining > 0;
+      // Covered by the card's monthly allowance?
+      const covered = !!allowance && allowance.tier !== "blue" && allowance.remaining > 0;
 
       const booking = await addBooking({
         language: language!,
@@ -339,20 +339,24 @@ export default function InterpreterScreen() {
         {/* Coverage note */}
         {allowance ? (
           <View style={[styles.coverageRow, {
-            backgroundColor: allowance.tier === "gold" && allowance.remaining > 0 ? "#D4A0171a" : colors.card,
-            borderColor: allowance.tier === "gold" && allowance.remaining > 0 ? "#D4A01755" : colors.border,
+            backgroundColor: allowance.tier !== "blue" && allowance.remaining > 0
+              ? (allowance.tier === "red" ? "#E5294E1a" : "#D4A0171a")
+              : colors.card,
+            borderColor: allowance.tier !== "blue" && allowance.remaining > 0
+              ? (allowance.tier === "red" ? "#E5294E55" : "#D4A01755")
+              : colors.border,
           }]}>
             <MaterialCommunityIcons
-              name={allowance.tier === "gold" ? "crown-outline" : "card-account-details-star-outline"}
+              name={allowance.tier === "red" ? "shield-star" : allowance.tier === "gold" ? "crown-outline" : "card-account-details-star-outline"}
               size={18}
-              color={allowance.tier === "gold" ? "#D4A017" : "#2563EB"}
+              color={allowance.tier === "red" ? "#E5294E" : allowance.tier === "gold" ? "#D4A017" : "#2563EB"}
             />
             <Text style={[styles.coverageText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              {allowance.tier === "gold"
+              {allowance.tier !== "blue"
                 ? allowance.remaining > 0
-                  ? `Covered by your Gold Card — ${allowance.used} of ${allowance.limit} free sessions used this month.`
-                  : `You've used your ${allowance.limit} free Gold sessions this month — this booking is at the standard rate, settled at your HIVE node.`
-                : "On the Blue Card, interpreter sessions are at the standard rate, settled at your HIVE node. The Gold Card includes 3 free sessions a month."}
+                  ? `Covered by your ${TIER_LABEL[allowance.tier]} — ${allowance.used} of ${allowance.limit} free sessions used this month.`
+                  : `You've used your ${allowance.limit} free sessions this month — this booking is at the ${OVERAGE_LABEL[allowance.tier]}, settled at your HIVE node.`
+                : "On the Blue Card, interpreter sessions are at the standard rate, settled at your HIVE node. The Gold Card and the Red Geriatric Safety Pack include 3 free sessions a month."}
             </Text>
           </View>
         ) : null}

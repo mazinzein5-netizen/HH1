@@ -1,5 +1,5 @@
 - [Mobile theming](mobile-theming.md) — light/dark palettes live in constants/colors.ts; useColors reads ThemeProvider; decorative gradient hexes in screens do NOT adapt.
-- [Pricing tiers](pricing-tiers.md) — Blue = no record, pending Gold counts as Gold, usage counted at intake start, trial expiry is copy-only; web confirms need window.confirm.
+- [Pricing tiers](pricing-tiers.md) — Blue/Gold/Red model: pending paid records grant that tier's benefits; Infinity limits need Number.isFinite guards; Red price €150/€1,200 is an UNCONFIRMED placeholder.
 - [Mobile preview testing](mobile-preview-testing.md) — use ?preview=1 to skip ConsentGate in web screenshots; default web user is the guest/demo account.
 - [Triage deep-link reset](triage-deeplinks.md) — triage `?pathway=` links need a fresh `ts` param or the mounted tab keeps stale questionnaire state.
 - [OSM lookups](osm-lookups.md) — Overpass/Nominatim need a User-Agent; third-party lookups must be disclosed in three places; no fabricated patient data in exports.

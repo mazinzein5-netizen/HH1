@@ -3,19 +3,21 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 /* ────────────────────────────────────────────────────────────────────────────
  * On-device membership & payment store (Zero-Server framework).
  *
- * Two cards:
+ * Three cards:
  *   • Blue Card — the free trial card every account starts on.
  *   • Gold Card — €90 / month or €700 / year, chosen in the app.
+ *   • Red Geriatric Safety Pack — the elder-care card, physical card posted.
  *
- * Nothing is charged from inside the app — upgrading to Gold generates a
+ * Nothing is charged from inside the app — upgrading generates a
  * human-readable payment reference (HIVE-XXXX-XXXX) that is settled online
  * (pilot programme), through the patient's insurer, or in cash at a partner
  * HIVE node. All details stay on this device.
  * ──────────────────────────────────────────────────────────────────────────── */
 
-/** The two cards. "blue" is the default — a saved membership record is only
- *  created when the patient upgrades to Gold. */
-export type PlanTier = "blue" | "gold";
+/** The three cards. "blue" is the default — a saved membership record is only
+ *  created when the patient upgrades to a paid card. */
+export type PlanTier = "blue" | "gold" | "red";
+export type PaidTier = "gold" | "red";
 export type BillingCycle = "monthly" | "yearly";
 export type PaymentMethod = "online" | "insurance" | "cash";
 
@@ -27,8 +29,8 @@ export interface InsuranceDetails {
 
 export interface MembershipRecord {
   userId: string;
-  /** Paid card — currently always "gold". */
-  plan: "gold";
+  /** Paid card. */
+  plan: PaidTier;
   billing: BillingCycle;
   method: PaymentMethod;
   /** Human-readable payment reference, e.g. HIVE-4KT9-XE2M */
@@ -68,14 +70,33 @@ export const PLAN_META: Record<
       "3 free interpreter sessions per month — more at standard rates",
     ],
   },
+  red: {
+    label: "Red Geriatric Safety Pack",
+    tagline: "Complete elder-care membership",
+    icon: "shield-star",
+    accent: "#E5294E",
+    features: [
+      "Unlimited pain complaints",
+      "Everything in the Gold Card included",
+      "10 free HIVE Doc consultations per month — more at partner price",
+      "Geriatric screening & cognitive care",
+      "Smart device & falls monitoring",
+    ],
+  },
 };
 
-export const GOLD_PRICING: Record<
-  BillingCycle,
-  { label: string; price: string; note?: string }
+export const TIER_PRICING: Record<
+  PaidTier,
+  Record<BillingCycle, { label: string; price: string; note?: string }>
 > = {
-  monthly: { label: "Monthly", price: "€90 / month" },
-  yearly: { label: "Yearly", price: "€700 / year", note: "Save €380 a year" },
+  gold: {
+    monthly: { label: "Monthly", price: "€90 / month" },
+    yearly: { label: "Yearly", price: "€700 / year", note: "Save €380 a year" },
+  },
+  red: {
+    monthly: { label: "Monthly", price: "€150 / month" },
+    yearly: { label: "Yearly", price: "€1,200 / year", note: "Save €600 a year" },
+  },
 };
 
 export const METHOD_META: Record<
@@ -85,17 +106,17 @@ export const METHOD_META: Record<
   online: {
     label: "Pay online",
     icon: "credit-card-outline",
-    blurb: "Card payment using your reference — activates with the pilot programme.",
+    blurb: "Buy your monthly or yearly membership online by card, using your reference.",
   },
   insurance: {
-    label: "Use my health insurance",
+    label: "Link my health insurance",
     icon: "shield-account-outline",
-    blurb: "Enter your insurer and policy details — confirmed at your HIVE node.",
+    blurb: "Link your insurer and policy details — your insurer settles it, confirmed at your HIVE node.",
   },
   cash: {
     label: "Cash at a HIVE node",
     icon: "cash",
-    blurb: "Show your reference at any partner HIVE node and pay in person.",
+    blurb: "Pay in person at any HIVE node — partner GPs, pharmacies and clinics take cash.",
   },
 };
 
@@ -133,9 +154,9 @@ export async function getMembership(userId: string): Promise<MembershipRecord | 
     const raw = await AsyncStorage.getItem(`${KEY_PREFIX}${userId}`);
     if (!raw) return null;
     const rec = JSON.parse(raw) as MembershipRecord & { plan: string };
-    // Records saved before the Blue/Gold pricing (essential/plus/family)
+    // Records saved before the Blue/Gold/Red pricing (essential/plus/family)
     // are treated as Gold monthly memberships.
-    if (rec.plan !== "gold") rec.plan = "gold";
+    if (rec.plan !== "gold" && rec.plan !== "red") rec.plan = "gold";
     if (rec.billing !== "monthly" && rec.billing !== "yearly") rec.billing = "monthly";
     return rec as MembershipRecord;
   } catch {

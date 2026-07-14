@@ -20,7 +20,7 @@ import { PILOT_ACTIVATION_CODE, useAppMode } from "@/context/AppModeContext";
 import { useAuth } from "@/context/AuthContext";
 import { usePatient, type Complaint } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
-import { Allowance, getAllowance, recordUsage } from "@/utils/entitlements";
+import { Allowance, TIER_LABEL, getAllowance, recordUsage } from "@/utils/entitlements";
 
 const FALLBACK_QUESTIONS = [
   "How long have you had this symptom?",
@@ -209,18 +209,19 @@ export default function ComplaintScreen() {
               </Text>
               <Text style={[styles.limitBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
                 You've used all {allowance.limit} pain complaints included with your{" "}
-                {allowance.tier === "gold" ? "Gold Card" : "Blue Card"} this month. Your allowance resets on the
-                1st of next month.
+                {TIER_LABEL[allowance.tier]} this month. Your allowance resets on the 1st of next month.
               </Text>
-              {allowance.tier === "blue" ? (
+              {allowance.tier !== "red" ? (
                 <TouchableOpacity
                   activeOpacity={0.85}
                   onPress={() => { Haptics.selectionAsync(); router.push("/(app)/membership"); }}
-                  style={[styles.btn, { backgroundColor: "#D4A017", alignSelf: "stretch" }]}
+                  style={[styles.btn, { backgroundColor: allowance.tier === "gold" ? "#E5294E" : "#D4A017", alignSelf: "stretch" }]}
                 >
-                  <MaterialCommunityIcons name="crown-outline" size={18} color="#fff" />
+                  <MaterialCommunityIcons name={allowance.tier === "gold" ? "shield-star" : "crown-outline"} size={18} color="#fff" />
                   <Text style={[styles.btnText, { fontFamily: "Inter_600SemiBold" }]}>
-                    Upgrade to Gold — 30 pain complaints a month
+                    {allowance.tier === "gold"
+                      ? "Upgrade to the Red Geriatric Pack — unlimited"
+                      : "Upgrade your card — up to unlimited complaints"}
                   </Text>
                 </TouchableOpacity>
               ) : null}
@@ -236,12 +237,14 @@ export default function ComplaintScreen() {
               {allowance ? (
                 <View style={[styles.allowanceChip, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
                   <MaterialCommunityIcons
-                    name={allowance.tier === "gold" ? "crown-outline" : "card-account-details-star-outline"}
+                    name={allowance.tier === "red" ? "shield-star" : allowance.tier === "gold" ? "crown-outline" : "card-account-details-star-outline"}
                     size={14}
-                    color={allowance.tier === "gold" ? "#D4A017" : "#2563EB"}
+                    color={allowance.tier === "red" ? "#E5294E" : allowance.tier === "gold" ? "#D4A017" : "#2563EB"}
                   />
                   <Text style={[styles.allowanceChipText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    {allowance.used} of {allowance.limit} pain complaints used this month
+                    {Number.isFinite(allowance.limit)
+                      ? `${allowance.used} of ${allowance.limit} pain complaints used this month`
+                      : "Unlimited pain complaints on your Red Geriatric Pack"}
                   </Text>
                 </View>
               ) : null}
