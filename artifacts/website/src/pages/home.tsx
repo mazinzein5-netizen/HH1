@@ -263,7 +263,7 @@ export default function Home() {
                 </div>
                 <div className="p-8 pt-2 flex-grow flex flex-col justify-center">
                   <p className="text-lg text-muted-foreground leading-relaxed">
-                    Designed with clarity and respect. Complete standardised questionnaires before a GP visit, safely hold your private medication list, and keep an emergency health card that ensures the information is there when it matters most.
+                    Designed with clarity and respect. Your health record and prescriptions are kept safe and available digitally, with standardised questionnaires before a GP visit and an emergency health card so the information is there when it matters most.
                   </p>
                 </div>
               </motion.div>
@@ -289,7 +289,7 @@ export default function Home() {
                 </div>
                 <div className="p-8 pt-2 flex-grow flex flex-col justify-center">
                   <p className="text-lg text-muted-foreground leading-relaxed">
-                    Our Geriatric Pack securely connects with health devices to keep a loved one's day-to-day health records together. It empowers families to stay closely connected without losing independence or privacy.
+                    Our Geriatric Pack provides close monitoring and smart device connectivity, keeping a loved one's day-to-day health records together. It empowers families to stay closely connected without losing independence or privacy.
                   </p>
                 </div>
               </motion.div>
@@ -311,13 +311,13 @@ export default function Home() {
                 },
                 {
                   icon: <Pill className="h-6 w-6 text-primary" />,
-                  title: "Safe medication records",
-                  desc: "Maintain one comprehensive, up-to-date medication and prescription list, completely safe on your own device."
+                  title: "Records & prescriptions",
+                  desc: "Your health record and prescriptions kept safe and available digitally — one comprehensive, up-to-date list on your own device."
                 },
                 {
                   icon: <Video className="h-6 w-6 text-primary" />,
-                  title: "Telehealth video calls",
-                  desc: "Video call your healthcare professional and share a clear, digital record of your health that is easy to understand."
+                  title: "Seamless booking & telehealth",
+                  desc: "Seamless booking with partner healthcare providers and pharmacists, plus video calls with your healthcare professional."
                 },
                 {
                   icon: <AlertCircle className="h-6 w-6 text-primary" />,
@@ -326,13 +326,13 @@ export default function Home() {
                 },
                 {
                   icon: <Activity className="h-6 w-6 text-primary" />,
-                  title: "Geriatric pack connections",
-                  desc: "Connects with health devices to keep a loved one's day-to-day health records together, ensuring the family stays closely connected."
+                  title: "Geriatric Pack monitoring",
+                  desc: "Close monitoring and smart device connectivity keep a loved one's day-to-day health picture together for the whole family."
                 },
                 {
                   icon: <ShieldCheck className="h-6 w-6 text-primary" />,
-                  title: "Irish & EU standards",
-                  desc: "Built to stringent European data protection standards (GDPR). Your data stays entirely private and secure on your device."
+                  title: "GDPR & HSE standards",
+                  desc: "GDPR compliant and aligned with HSE safety standards. Your data stays entirely private and secure on your device."
                 }
               ].map((feature, idx) => (
                 <motion.div key={idx} variants={fadeInUp} className="glass-panel p-8 rounded-3xl hover:border-primary/40 transition-all duration-300 group">

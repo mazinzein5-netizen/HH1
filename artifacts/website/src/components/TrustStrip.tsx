@@ -4,8 +4,8 @@ export function TrustStrip() {
   const items = [
     {
       icon: <ShieldCheck className="h-6 w-6 text-primary mb-3" />,
-      title: "GDPR Aligned",
-      description: "Built for strict European privacy standards",
+      title: "GDPR Compliant",
+      description: "Built for strict European data protection standards",
     },
     {
       icon: <HardDrive className="h-6 w-6 text-primary mb-3" />,
@@ -19,8 +19,8 @@ export function TrustStrip() {
     },
     {
       icon: <Flag className="h-6 w-6 text-primary mb-3" />,
-      title: "EU Based",
-      description: "Operating under European Union law",
+      title: "HSE Safety Standards",
+      description: "Aligned with HSE safety standards for patient information",
     },
   ];
 
