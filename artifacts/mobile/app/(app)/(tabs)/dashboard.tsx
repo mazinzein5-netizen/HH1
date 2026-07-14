@@ -113,11 +113,6 @@ export default function DashboardScreen() {
         )}
         scrollEventThrottle={16}
       >
-        {/* Dashboard title */}
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-          Health Portal Dashboard
-        </Text>
-
         {/* Hero Card — HIVE logo + honeycomb */}
         <View style={styles.heroOuter}>
           <LinearGradient colors={["#0e1560", "#1320a0", "#0a0e55"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>

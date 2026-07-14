@@ -1,8 +1,10 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,9 +18,6 @@ import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 
-const HR_BARS = [58, 62, 65, 72, 78, 88, 76, 72, 68, 70, 72, 74];
-const HR_LABELS = ["2a", "4a", "6a", "8a", "10a", "12p", "2p", "4p", "6p", "8p", "10p", "Now"];
-
 const ECG_HEIGHTS = [2, 2, 2, 3, 2, 2, 2, 14, 62, 5, 2, 20, 4, 2, 2, 2, 2, 2, 3, 2, 2, 2, 14, 62, 5, 2, 20, 4, 2, 2, 2];
 
 const SLEEP_STAGES = [
@@ -28,19 +27,137 @@ const SLEEP_STAGES = [
   { label: "Deep", pct: 23, color: "#22c55e", hours: "1h 32m" },
 ];
 
+const HR_LABELS = ["2a", "4a", "6a", "8a", "10a", "12p", "2p", "4p", "6p", "8p", "10p", "Now"];
+const HR_HISTORY = [58, 62, 65, 72, 78, 88, 76, 72, 68, 70, 72, 74];
+
+/** Clamp a number between min and max */
+function clamp(v: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, v));
+}
+
+/** Return a random delta within ±range, then clamp result */
+function jitter(base: number, delta: number, min: number, max: number) {
+  return clamp(base + (Math.random() * 2 - 1) * delta, min, max);
+}
+
 type DeviceName = "Apple Watch" | "Fitbit Sense" | "Garmin";
+
+/** Animated glowing dot that pulses for "live" */
+function PulseDot({ color }: { color: string }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(scale, { toValue: 1.5, duration: 700, useNativeDriver: true, easing: Easing.out(Easing.ease) }),
+          Animated.timing(opacity, { toValue: 0.2, duration: 700, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(scale, { toValue: 1, duration: 700, useNativeDriver: true, easing: Easing.in(Easing.ease) }),
+          Animated.timing(opacity, { toValue: 0.9, duration: 700, useNativeDriver: true }),
+        ]),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={{
+        width: 8, height: 8, borderRadius: 4,
+        backgroundColor: color,
+        transform: [{ scale }],
+        opacity,
+      }}
+    />
+  );
+}
+
+/** A live metric top card with a smoothly animating value */
+function LiveTopCard({
+  gradient,
+  borderColor,
+  icon,
+  iconColor,
+  value,
+  unit,
+  label,
+}: {
+  gradient: [string, string];
+  borderColor: string;
+  icon: string;
+  iconColor: string;
+  value: number;
+  unit: string;
+  label: string;
+}) {
+  const animVal = useRef(new Animated.Value(value)).current;
+  const displayRef = useRef(value);
+  const [display, setDisplay] = useState(value);
+
+  useEffect(() => {
+    Animated.timing(animVal, {
+      toValue: value,
+      duration: 600,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    const id = animVal.addListener(({ value: v }) => {
+      const rounded = Math.round(v);
+      if (rounded !== displayRef.current) {
+        displayRef.current = rounded;
+        setDisplay(rounded);
+      }
+    });
+    return () => animVal.removeListener(id);
+  }, [value]);
+
+  return (
+    <LinearGradient colors={gradient} style={[styles.topCard, { borderColor }]}>
+      <PulseDot color={iconColor} />
+      <MaterialCommunityIcons name={icon as any} size={18} color={iconColor} />
+      <Text style={[styles.topValue, { color: iconColor, fontFamily: "Inter_700Bold" }]}>{display}</Text>
+      <Text style={[styles.topUnit, { color: "#888", fontFamily: "Inter_400Regular" }]}>{unit}</Text>
+      <Text style={[styles.topLabel, { color: "#888", fontFamily: "Inter_400Regular" }]}>{label}</Text>
+    </LinearGradient>
+  );
+}
 
 export default function MonitoringScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
-  // Rendered both as a stack screen and inside the tab bar (Live HIVE tab),
-  // so always leave room for the tab bar + safe area at the bottom.
   const bottomPad = (Platform.OS === "web" ? 34 : insets.bottom) + 64 + 20;
 
   const [deviceName] = useState<DeviceName>("Apple Watch");
   const batteryPct = 78;
+
+  // ── Live fluctuating vitals ──────────────────────────────────────────────
+  const [hr, setHr] = useState(72);
+  const [spo2, setSpo2] = useState(97);
+  const [rr, setRr] = useState(14);
+  const [hrBars, setHrBars] = useState(HR_HISTORY);
+
+  useEffect(() => {
+    const tick = () => {
+      setHr((prev) => {
+        const next = Math.round(jitter(prev, 3, 55, 105));
+        setHrBars((bars) => [...bars.slice(1), next]);
+        return next;
+      });
+      setSpo2((prev) => Math.round(jitter(prev, 0.8, 94, 100)));
+      setRr((prev) => Math.round(jitter(prev, 1, 10, 22)));
+    };
+
+    const id = setInterval(tick, 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  const hrMax = Math.max(...hrBars);
+  const hrMin = Math.min(...hrBars);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -63,45 +180,56 @@ export default function MonitoringScreen() {
           </Text>
         </View>
         <View style={[styles.liveBadge, { backgroundColor: "#0a2818", borderColor: "#22c55e44" }]}>
-          <View style={styles.liveDot} />
+          <PulseDot color="#22c55e" />
           <Text style={[styles.liveBadgeText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>LIVE</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]} showsVerticalScrollIndicator={false}>
 
-        {/* ── TOP METRICS ROW ── */}
+        {/* ── TOP METRICS ROW — LIVE ── */}
         <View style={styles.topRow}>
-          <LinearGradient colors={["#1a0818", "#2a0f22"]} style={[styles.topCard, { borderColor: colors.accent + "44" }]}>
-            <MaterialCommunityIcons name="heart-pulse" size={18} color={colors.accent} />
-            <Text style={[styles.topValue, { color: colors.accent, fontFamily: "Inter_700Bold" }]}>72</Text>
-            <Text style={[styles.topUnit, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>bpm</Text>
-            <Text style={[styles.topLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Heart Rate</Text>
-          </LinearGradient>
-
-          <LinearGradient colors={["#0f1840", "#172060"]} style={[styles.topCard, { borderColor: colors.primary + "44" }]}>
-            <MaterialCommunityIcons name="water-percent" size={18} color={colors.primary} />
-            <Text style={[styles.topValue, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>97</Text>
-            <Text style={[styles.topUnit, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>%</Text>
-            <Text style={[styles.topLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>SpO₂</Text>
-          </LinearGradient>
-
-          <LinearGradient colors={["#1a1200", "#2a1e00"]} style={[styles.topCard, { borderColor: colors.gold + "44" }]}>
-            <MaterialCommunityIcons name="head-dots-horizontal" size={18} color={colors.gold} />
-            <Text style={[styles.topValue, { color: colors.gold, fontFamily: "Inter_700Bold" }]}>32</Text>
-            <Text style={[styles.topUnit, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>/100</Text>
-            <Text style={[styles.topLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Stress</Text>
-          </LinearGradient>
+          <LiveTopCard
+            gradient={["#1a0818", "#2a0f22"]}
+            borderColor={colors.accent + "55"}
+            icon="heart-pulse"
+            iconColor={colors.accent}
+            value={hr}
+            unit="bpm"
+            label="Heart Rate"
+          />
+          <LiveTopCard
+            gradient={["#0f1840", "#172060"]}
+            borderColor={colors.primary + "55"}
+            icon="water-percent"
+            iconColor={colors.primary}
+            value={spo2}
+            unit="%"
+            label="SpO₂"
+          />
+          <LiveTopCard
+            gradient={["#071a10", "#0a2818"]}
+            borderColor="#22c55e55"
+            icon="lungs"
+            iconColor="#22c55e"
+            value={rr}
+            unit="rpm"
+            label="Resp Rate"
+          />
         </View>
 
-        {/* ── HEART RATE GRAPH ── */}
+        {/* ── HEART RATE GRAPH — live bars ── */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <MaterialCommunityIcons name="heart-pulse" size={18} color={colors.accent} />
             <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Heart Rate — Today</Text>
           </View>
           <View style={styles.hrStatRow}>
-            {[{ label: "Resting", val: "58" }, { label: "Current", val: "72" }, { label: "Max", val: "94" }].map((s) => (
+            {[
+              { label: "Resting", val: `${hrMin}` },
+              { label: "Current", val: `${hr}` },
+              { label: "Max", val: `${hrMax}` },
+            ].map((s) => (
               <View key={s.label} style={styles.hrStat}>
                 <Text style={[styles.hrStatVal, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{s.val}</Text>
                 <Text style={[styles.hrStatLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{s.label}</Text>
@@ -109,12 +237,15 @@ export default function MonitoringScreen() {
             ))}
           </View>
           <View style={styles.barChart}>
-            {HR_BARS.map((h, i) => {
-              const isNow = i === HR_BARS.length - 1;
-              const barH = Math.round((h / 100) * 60);
+            {hrBars.map((h, i) => {
+              const isNow = i === hrBars.length - 1;
+              const barH = Math.round(Math.max(4, (h / 110) * 60));
               return (
                 <View key={i} style={styles.barWrap}>
-                  <View style={[styles.bar, { height: barH, backgroundColor: isNow ? colors.accent : colors.primary + "88" }]} />
+                  <View style={[styles.bar, {
+                    height: barH,
+                    backgroundColor: isNow ? colors.accent : colors.primary + "88",
+                  }]} />
                   <Text style={[styles.barLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{HR_LABELS[i]}</Text>
                 </View>
               );
@@ -122,21 +253,21 @@ export default function MonitoringScreen() {
           </View>
         </View>
 
-        {/* ── SpO2 DETAIL ── */}
+        {/* ── SpO2 DETAIL — live ── */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <MaterialCommunityIcons name="water-percent" size={18} color={colors.primary} />
             <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Oxygen Saturation (SpO₂)</Text>
           </View>
           <View style={styles.spo2Row}>
-            <View style={[styles.spo2Gauge, { borderColor: colors.primary }]}>
-              <Text style={[styles.spo2Value, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>97%</Text>
+            <View style={[styles.spo2Gauge, { borderColor: spo2 >= 95 ? colors.primary : "#f97316" }]}>
+              <Text style={[styles.spo2Value, { color: spo2 >= 95 ? colors.primary : "#f97316", fontFamily: "Inter_700Bold" }]}>{spo2}%</Text>
               <Text style={[styles.spo2Sub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>SpO₂</Text>
             </View>
             <View style={styles.spo2Detail}>
               {[
-                { label: "Status", val: "Normal (95–100%)", color: "#22c55e" },
-                { label: "Last Measured", val: "2 minutes ago", color: colors.foreground },
+                { label: "Status", val: spo2 >= 95 ? "Normal (95–100%)" : "Low — See GP", color: spo2 >= 95 ? "#22c55e" : "#f97316" },
+                { label: "Last Measured", val: "Live", color: "#22c55e" },
                 { label: "Average (24h)", val: "96.8%", color: colors.foreground },
                 { label: "Lowest (sleep)", val: "94%", color: colors.gold },
               ].map((r) => (
@@ -152,6 +283,37 @@ export default function MonitoringScreen() {
             <Text style={[styles.noteText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
               SpO₂ below 90% requires immediate medical attention. Consult your GP if readings are consistently below 95%.
             </Text>
+          </View>
+        </View>
+
+        {/* ── RESPIRATORY RATE — live ── */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons name="lungs" size={18} color="#22c55e" />
+            <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Respiratory Rate</Text>
+            <View style={[styles.rhythmBadge, { backgroundColor: "#0a2818", borderColor: "#22c55e44" }]}>
+              <Text style={[styles.rhythmText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>
+                {rr >= 12 && rr <= 20 ? "Normal" : rr < 12 ? "Low" : "Elevated"}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.rrRow}>
+            <View style={styles.rrGaugeWrap}>
+              <Text style={[styles.rrValue, { color: "#22c55e", fontFamily: "Inter_700Bold" }]}>{rr}</Text>
+              <Text style={[styles.rrUnit, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>breaths/min</Text>
+            </View>
+            <View style={styles.spo2Detail}>
+              {[
+                { label: "Normal Range", val: "12–20 rpm", color: colors.foreground },
+                { label: "Status", val: rr >= 12 && rr <= 20 ? "Normal" : rr < 12 ? "Low" : "Elevated", color: rr >= 12 && rr <= 20 ? "#22c55e" : "#f97316" },
+                { label: "Trend", val: "Stable", color: colors.foreground },
+              ].map((r) => (
+                <View key={r.label} style={styles.spo2Row2}>
+                  <Text style={[styles.spo2Key, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
+                  <Text style={[styles.spo2Val, { color: r.color, fontFamily: "Inter_600SemiBold" }]}>{r.val}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         </View>
 
@@ -177,7 +339,7 @@ export default function MonitoringScreen() {
           </View>
           <View style={styles.ecgMetrics}>
             {[
-              { label: "Heart Rate", val: "72 bpm" },
+              { label: "Heart Rate", val: `${hr} bpm` },
               { label: "QRS Duration", val: "82 ms" },
               { label: "PR Interval", val: "156 ms" },
               { label: "QT Interval", val: "388 ms" },
@@ -282,14 +444,14 @@ export default function MonitoringScreen() {
           </View>
         </View>
 
-        {/* ── VITALS ── */}
+        {/* ── OTHER VITALS ── */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <MaterialCommunityIcons name="stethoscope" size={18} color={colors.primary} />
             <Text style={[styles.cardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Other Vital Signs</Text>
           </View>
           {[
-            { label: "Respiratory Rate", val: "14 rpm", status: "Normal", color: "#22c55e" },
+            { label: "Respiratory Rate", val: `${rr} rpm`, status: rr >= 12 && rr <= 20 ? "Normal" : rr < 12 ? "Low" : "Elevated", color: rr >= 12 && rr <= 20 ? "#22c55e" : "#f97316" },
             { label: "Body Temperature", val: "36.6 °C", status: "Normal", color: "#22c55e" },
             { label: "Blood Pressure (est.)", val: "128 / 78 mmHg", status: "Normal", color: "#22c55e" },
             { label: "Body Battery", val: "68 / 100", status: "Good", color: colors.gold },
@@ -315,15 +477,14 @@ const styles = StyleSheet.create({
   backBtn: { padding: 6 },
   headerTitle: { fontSize: 17, letterSpacing: -0.3 },
   headerSub: { fontSize: 11, marginTop: 2 },
-  liveBadge: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
-  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#22c55e" },
+  liveBadge: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
   liveBadgeText: { fontSize: 11, letterSpacing: 0.5 },
   scroll: { padding: 16, gap: 14 },
   topRow: { flexDirection: "row", gap: 10 },
-  topCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 14, gap: 2, alignItems: "center" },
-  topValue: { fontSize: 30, lineHeight: 36 },
+  topCard: { flex: 1, borderRadius: 14, borderWidth: 1, padding: 10, gap: 3, alignItems: "center" },
+  topValue: { fontSize: 28, lineHeight: 34 },
   topUnit: { fontSize: 11 },
-  topLabel: { fontSize: 10, marginTop: 2 },
+  topLabel: { fontSize: 10, marginTop: 2, textAlign: "center" },
   card: { borderRadius: 18, borderWidth: 1, padding: 16, gap: 14 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   cardTitle: { fontSize: 15, flex: 1 },
@@ -347,6 +508,10 @@ const styles = StyleSheet.create({
   spo2Val: { fontSize: 12 },
   noteBox: { flexDirection: "row", alignItems: "flex-start", gap: 8, borderRadius: 10, borderWidth: 1, padding: 10 },
   noteText: { fontSize: 11, lineHeight: 17, flex: 1 },
+  rrRow: { flexDirection: "row", alignItems: "center", gap: 16 },
+  rrGaugeWrap: { alignItems: "center", justifyContent: "center", width: 90 },
+  rrValue: { fontSize: 42, lineHeight: 48, letterSpacing: -1 },
+  rrUnit: { fontSize: 10, textAlign: "center" },
   ecgWave: { flexDirection: "row", alignItems: "center", gap: 2, height: 70, overflow: "hidden" },
   ecgBar: { flex: 1, borderRadius: 1, maxWidth: 5 },
   ecgMetrics: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
