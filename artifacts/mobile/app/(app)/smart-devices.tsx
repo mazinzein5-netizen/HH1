@@ -56,6 +56,43 @@ export default function SmartDevicesScreen() {
 
   const { devices, connectedCount, toggleDevice } = useSmartDevices();
 
+  const connected = devices.filter((d) => d.connected);
+  const hrDevice = connected.find((d) => d.readingLabel === "HR bpm");
+  const spo2Device = connected.find((d) => d.readingLabel === "SpO₂ %");
+  const cgmDevice = connected.find((d) => d.category === "cgm");
+  const fallDevice = connected.find((d) => d.capabilities.includes("Fall Detection"));
+
+  const liveReadings = [
+    {
+      label: "Heart Rate",
+      value: hrDevice ? hrDevice.reading : "—",
+      unit: hrDevice ? "bpm" : "no device",
+      icon: "heart-pulse" as const,
+      color: "#ef4444",
+    },
+    {
+      label: "SpO₂",
+      value: spo2Device ? spo2Device.reading : "—",
+      unit: spo2Device ? "%" : "no device",
+      icon: "water-percent" as const,
+      color: "#4F6EF7",
+    },
+    {
+      label: "Blood Glucose",
+      value: cgmDevice ? cgmDevice.reading : "—",
+      unit: cgmDevice ? cgmDevice.readingLabel : "no device",
+      icon: "water-percent" as const,
+      color: "#f59e0b",
+    },
+    {
+      label: "Falls Detected",
+      value: fallDevice ? "0" : "—",
+      unit: fallDevice ? "today" : "no device",
+      icon: "alert-circle" as const,
+      color: "#22c55e",
+    },
+  ];
+
   function handleToggle(id: string) {
     Haptics.selectionAsync();
     toggleDevice(id);
@@ -118,12 +155,7 @@ export default function SmartDevicesScreen() {
           <>
             <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>LIVE READINGS</Text>
             <View style={styles.readingsGrid}>
-              {[
-                { label: "Heart Rate",    value: "72",   unit: "bpm",    icon: "heart-pulse"    as const, color: "#ef4444" },
-                { label: "SpO₂",          value: "98",   unit: "%",      icon: "water-percent"  as const, color: "#4F6EF7" },
-                { label: "Blood Glucose", value: "5.4",  unit: "mmol/L", icon: "water-percent"  as const, color: "#f59e0b" },
-                { label: "Falls Detected",value: "0",    unit: "today",  icon: "alert-circle"   as const, color: "#22c55e" },
-              ].map((r) => (
+              {liveReadings.map((r) => (
                 <LinearGradient
                   key={r.label}
                   colors={[r.color + "22", r.color + "11"]}
