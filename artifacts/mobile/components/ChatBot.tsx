@@ -43,19 +43,19 @@ interface Props {
 const PILOT_GREETING: ChatMessage = {
   role: "assistant",
   content:
-    "Hello! I'm Queen B, your AI pain and clinical guidance assistant.\n\nI can help you understand your symptoms, explain likely causes, walk you through self-care steps, and flag any signs that need urgent attention — all aligned with NICE and HSE clinical guidelines.\n\nTo get started, could you tell me where you're experiencing pain or discomfort?",
+    "Hi there 🐝 I'm Queen B — your companion on this health journey.\n\nFirst things first — how are you feeling right now, in yourself? Not just physically, but how are you doing today?",
 };
 
 const CLEAN_GREETING: ChatMessage = {
   role: "assistant",
   content:
-    "Hello! I'm Queen B. I can help you find and understand health guideline information from HSE and NICE, explained in plain English.\n\nI don't give medical advice or assess symptoms — for anything about your own health, please speak to your GP, or call 112 in an emergency.\n\nWhat health topic would you like to look up?",
+    "Hi there 🐝 I'm Queen B — I'm here as your companion. Think of me as a warm friend who's walked this road before and wants to help you feel a little less alone on yours.\n\nI won't give medical advice — your doctor is the right person for that — but I can listen, help you make sense of things, and be here with you.\n\nHow are you feeling today?",
 };
 
 const PAIN_HELPER_GREETING: ChatMessage = {
   role: "assistant",
   content:
-    "Hello! I'm Queen B. I'm here to help you put your pain into words your doctor or physiotherapist will understand.\n\nTell me about your pain in your own way, and I'll help you describe where it is, how it feels, when it started, and what makes it better or worse — so nothing important gets missed at your appointment.\n\nWhere is your pain?",
+    "Hi there 🐝 I'm Queen B. I can hear that something's not quite right, and I want to help.\n\nLet's take it gently. Tell me, in your own words — what's been bothering you? There's no rush, and nothing is too small to mention.",
 };
 
 /** Strip markdown/emoji noise so text-to-speech sounds natural. */

@@ -2,11 +2,12 @@ import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useHiveBot } from "@/context/HiveBotContext";
 import { useSmartDevices } from "@/context/SmartDevicesContext";
 import { useColors } from "@/hooks/useColors";
+import QueenBeeWidget from "@/components/QueenBeeWidget";
 
 export default function TabLayout() {
   const colors = useColors();
@@ -88,41 +89,17 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      {/* Floating Queen B bee — visible across all tabs */}
-      <TouchableOpacity
-        activeOpacity={0.88}
+      {/* Queen B — draggable Pixar bee companion */}
+      <QueenBeeWidget
         onPress={() => hiveBot.open()}
-        style={[styles.fab, { bottom: fabBottom, backgroundColor: "#C9860A", shadowColor: "#C9860A" }]}
-      >
-        <MaterialCommunityIcons name="bee" size={26} color="#fff" />
-        <Text style={styles.fabLabel}>Ask{"\n"}Queen B</Text>
-      </TouchableOpacity>
+        initialBottom={fabBottom}
+        initialRight={16}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fab: {
-    position: "absolute",
-    right: 20,
-    zIndex: 50,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    borderRadius: 30,
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 12,
-  },
-  fabLabel: {
-    color: "#fff",
-    fontFamily: "Inter_700Bold",
-    fontSize: 12,
-    lineHeight: 14,
-  },
   deviceDot: {
     position: "absolute",
     top: -1,
