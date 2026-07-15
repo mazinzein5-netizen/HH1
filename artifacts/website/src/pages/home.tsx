@@ -174,7 +174,7 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
-                  With the patient's permission, hospital specialists as first responders can access critical medical history data and current live digital prescription information when it's required.
+                  With the patient's permission, hospital specialists and first responders can access critical medical history data and current live digital prescription information when it's required.
                 </p>
                 <div className="grid grid-cols-2 gap-8 mt-12">
                   <div className="space-y-4">
@@ -182,7 +182,7 @@ export default function Home() {
                       <ShieldCheck className="h-7 w-7" />
                     </div>
                     <h3 className="font-semibold text-lg text-foreground">Privacy First</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">Your data stays on your device. Always. No central servers, no tracking.</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">EU GDPR compliant with advanced encryption features — no central servers, no tracking.</p>
                   </div>
                   <div className="space-y-4">
                     <div className="w-14 h-14 rounded-2xl glass-panel flex items-center justify-center text-primary shadow-inner">
