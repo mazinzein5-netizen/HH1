@@ -146,7 +146,7 @@ export default function Home() {
         <TrustStrip />
 
         {/* Section 2: Ecosystem Overview */}
-        <section id="ecosystem" className="py-24 relative">
+        <section id="ecosystem" className="pt-24 pb-10 relative">
           <div className="container mx-auto px-6">
             <motion.div 
               variants={staggerContainer}
@@ -164,8 +164,8 @@ export default function Home() {
                 <div className="rounded-2xl overflow-hidden glass-panel-heavy mb-6">
                   <div className="aspect-video bg-[#07070f]">
                     <iframe
-                      src="/surgical-video/?embed=1"
-                      title="HIVE Hospital System video"
+                      src="/hub-video/?embed=1"
+                      title="HIVE Hub video"
                       className="w-full h-full border-0 pointer-events-none"
                       loading="lazy"
                       tabIndex={-1}
@@ -235,7 +235,7 @@ export default function Home() {
         </section>
 
         {/* Section 3: HIVE Companion Hero */}
-        <section id="companion" className="py-24 relative overflow-hidden">
+        <section id="companion" className="pt-10 pb-24 relative overflow-hidden">
           <div className="container mx-auto px-6">
             <motion.div 
               initial="hidden"

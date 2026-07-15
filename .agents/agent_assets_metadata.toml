@@ -36,6 +36,24 @@ uri = "file://artifacts/surgical-video/public/images/hexagon.png"
 type = "image"
 title = "hive logo hex"
 
+[[generated]]
+id = "92Bf9M4fr-BYpDdVGor6H"
+uri = "file://artifacts/hub-video/public/images/bg-hive.png"
+type = "image"
+title = "dark glassy hexagon background"
+
+[[generated]]
+id = "mzak5woxbgQaSKMhUzmov"
+uri = "file://artifacts/hub-video/public/images/smart-devices.png"
+type = "image"
+title = "smart watch health monitor"
+
+[[generated]]
+id = "WA0efmybzUL9sCJlNQeeO"
+uri = "file://artifacts/hub-video/public/images/elderly-care.png"
+type = "image"
+title = "elderly care shield icon"
+
 [[outputs]]
 id = "CSEAdMtBVAoK3FsSfhyPv"
 uri = "file://artifacts/promo-video/public/images/relaxed-adult.jpg"
