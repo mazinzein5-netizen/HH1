@@ -161,6 +161,21 @@ export default function Home() {
                 <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
                   Patients can express their symptoms to the HIVE Companion, which can pass information to the GP and help administrative streamlining of acute and chronic joint, neck and back pain. Far less paperwork for primary healthcare professionals in the network, with automated scheduling for video consultations and clinical appointments.
                 </p>
+                <div className="rounded-2xl overflow-hidden glass-panel-heavy mb-6">
+                  <div className="aspect-video bg-[#07070f]">
+                    <iframe
+                      src="/surgical-video/?embed=1"
+                      title="HIVE Hospital System video"
+                      className="w-full h-full border-0 pointer-events-none"
+                      loading="lazy"
+                      tabIndex={-1}
+                      scrolling="no"
+                    />
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
+                  With the patient's permission, hospital specialists as first responders can access critical medical history data and current live digital prescription information when it's required.
+                </p>
                 <div className="grid grid-cols-2 gap-8 mt-12">
                   <div className="space-y-4">
                     <div className="w-14 h-14 rounded-2xl glass-panel flex items-center justify-center text-primary shadow-inner">
