@@ -3,6 +3,17 @@ import React from 'react';
 export function HexagonBackground() {
   return (
     <div className="fixed inset-0 z-[-1] overflow-hidden hex-grid-container pointer-events-none bg-background">
+      {/* Glossy hive texture — variation of the HIVE Hub video background */}
+      <div className="absolute inset-0">
+        <img
+          src={`${import.meta.env.BASE_URL}images/bg-hive.webp`}
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover opacity-[0.07] dark:opacity-30 dark:mix-blend-screen transition-opacity duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background opacity-70" />
+      </div>
+
       <div className="absolute top-0 left-0 w-[200vw] h-[200vh] -translate-x-[50vw] -translate-y-[50vh] hex-grid-surface">
         {/* We use an SVG pattern to render repeating hexagons efficiently */}
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HexagonBackground } from "@/components/HexagonBackground";
 import { TrustStrip } from "@/components/TrustStrip";
+import { VideoEmbed } from "@/components/VideoEmbed";
 import { 
   ArrowRight, ShieldCheck, FileText, Smartphone, 
   Stethoscope, Mail, ExternalLink, Activity,
@@ -110,8 +111,8 @@ export default function Home() {
               transition={{ duration: 0.7, delay: 0.1 }}
               className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 leading-[1.05] text-foreground drop-shadow-sm"
             >
-              Patients arrive with a Companion. <br />
-              <span className="hive-gradient-text drop-shadow-sm">Clinicians stay well informed.</span>
+              Gold Standard Privacy. <br />
+              <span className="hive-gradient-text drop-shadow-sm">A focused, efficient digital solution.</span>
             </motion.h1>
             
             <motion.p 
@@ -162,16 +163,7 @@ export default function Home() {
                   Patients can express their symptoms to the HIVE Companion, which can pass information to the GP and help administrative streamlining of acute and chronic joint, neck and back pain. Far less paperwork for primary healthcare professionals in the network, with automated scheduling for video consultations and clinical appointments.
                 </p>
                 <div className="rounded-2xl overflow-hidden glass-panel-heavy mb-6">
-                  <div className="aspect-video bg-[#07070f]">
-                    <iframe
-                      src="/hub-video/?embed=1"
-                      title="HIVE Hub video"
-                      className="w-full h-full border-0 pointer-events-none"
-                      loading="lazy"
-                      tabIndex={-1}
-                      scrolling="no"
-                    />
-                  </div>
+                  <VideoEmbed src="/hub-video/?embed=1" title="HIVE Hub video" />
                 </div>
                 <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
                   With the patient's permission, hospital specialists and first responders can access critical medical history data and current live digital prescription information when it's required.
@@ -262,16 +254,7 @@ export default function Home() {
               transition={{ duration: 0.7 }}
               className="relative max-w-5xl mx-auto mb-16 rounded-[2rem] overflow-hidden glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
             >
-              <div className="aspect-video bg-[#07070f]">
-                <iframe
-                  src="/promo-video/?embed=1"
-                  title="HIVE Companion promo video"
-                  className="w-full h-full border-0 pointer-events-none"
-                  loading="lazy"
-                  tabIndex={-1}
-                  scrolling="no"
-                />
-              </div>
+              <VideoEmbed src="/promo-video/?embed=1" title="HIVE Companion promo video" />
             </motion.div>
 
             {/* Targeted Marketing Split */}
@@ -443,16 +426,7 @@ export default function Home() {
                      <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                      <div className="ml-4 h-6 w-1/2 bg-muted/50 rounded-md"></div>
                    </div>
-                   <div className="aspect-video bg-[#07070f]">
-                     <iframe
-                       src="/surgical-video/?embed=1"
-                       title="HIVE Hospital Surgical Assistant video"
-                       className="w-full h-full border-0 pointer-events-none"
-                       loading="lazy"
-                       tabIndex={-1}
-                       scrolling="no"
-                     />
-                   </div>
+                   <VideoEmbed src="/surgical-video/?embed=1" title="HIVE Hospital Surgical Assistant video" />
                 </div>
                 
                 {/* Decorative elements */}
