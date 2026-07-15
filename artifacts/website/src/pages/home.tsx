@@ -110,8 +110,8 @@ export default function Home() {
               transition={{ duration: 0.7, delay: 0.1 }}
               className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 leading-[1.05] text-foreground drop-shadow-sm"
             >
-              Patients arrive organised. <br />
-              <span className="hive-gradient-text drop-shadow-sm">Clinicians stay supported.</span>
+              Patients arrive with a Companion. <br />
+              <span className="hive-gradient-text drop-shadow-sm">Clinicians stay well informed.</span>
             </motion.h1>
             
             <motion.p 
@@ -120,7 +120,7 @@ export default function Home() {
               transition={{ duration: 0.7, delay: 0.2 }}
               className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light glass-panel px-6 py-4 rounded-3xl"
             >
-              A connected health ecosystem from Ireland. Keep your own health records in your pocket, while on-call hospital doctors access AI decision support when they need it most.
+              An intricate health documentation ecosystem. Long specialist waiting lists &amp; health systems under pressure can benefit from this digital health solution platform. HIVE Health is smart, safe, efficient and a cost effective augmentation available to all parties.
             </motion.p>
             
             <motion.div 
