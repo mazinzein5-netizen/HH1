@@ -188,8 +188,8 @@ export default function Home() {
                     <div className="w-14 h-14 rounded-2xl glass-panel flex items-center justify-center text-primary shadow-inner">
                       <Stethoscope className="h-7 w-7" />
                     </div>
-                    <h3 className="font-semibold text-lg text-foreground">Clinically Aligned</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">Built to support standard clinical workflows and internationally recognised protocols.</p>
+                    <h3 className="font-semibold text-lg text-foreground">Clinically Safe</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">Built to simplify input of documentation and speed up long paper processes — an efficient, cost effective solution.</p>
                   </div>
                 </div>
               </motion.div>
