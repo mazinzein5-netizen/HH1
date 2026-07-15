@@ -14,7 +14,7 @@ import {
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
-import { useSmartDevices } from "@/context/SmartDevicesContext";
+import { useSmartDevices, type VitalSummary } from "@/context/SmartDevicesContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useAppMode } from "@/context/AppModeContext";
 import { useHealthMonitor } from "@/context/HealthMonitorContext";
@@ -57,7 +57,7 @@ export default function SmartDevicesScreen() {
   const { prefs } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
 
-  const { devices, connectedCount, toggleDevice } = useSmartDevices();
+  const { devices, connectedCount, vitalsSummary, toggleDevice } = useSmartDevices();
   const scrollRef = useRef<ScrollView>(null);
   const categoryYs = useRef<Partial<Record<Category, number>>>({});
   const [highlightedCategory, setHighlightedCategory] = useState<Category | null>(null);
@@ -85,11 +85,15 @@ export default function SmartDevicesScreen() {
     clearHistory,
   } = useHealthMonitor();
 
-  const connected = devices.filter((d) => d.connected);
-  const hrDevice = connected.find((d) => d.readingLabel === "HR bpm");
-  const spo2Device = connected.find((d) => d.readingLabel === "SpO₂ %");
-  const cgmDevice = connected.find((d) => d.category === "cgm");
-  const fallDevice = connected.find((d) => d.capabilities.includes("Fall Detection"));
+  const VITAL_DISPLAY: Record<
+    VitalSummary["key"],
+    { icon: keyof typeof MaterialCommunityIcons.glyphMap; color: string; hintText: string }
+  > = {
+    heartRate: { icon: "heart-pulse", color: "#ef4444", hintText: "Pair a smart ring" },
+    spo2: { icon: "water-percent", color: "#4F6EF7", hintText: "Pair a wearable" },
+    glucose: { icon: "water-percent", color: "#f59e0b", hintText: "Pair a glucose monitor" },
+    falls: { icon: "alert-circle", color: "#22c55e", hintText: "Pair a wearable" },
+  };
 
   const liveReadings: {
     label: string;
@@ -98,40 +102,17 @@ export default function SmartDevicesScreen() {
     icon: keyof typeof MaterialCommunityIcons.glyphMap;
     color: string;
     hint?: { text: string; category: Category };
-  }[] = [
-    {
-      label: "Heart Rate",
-      value: hrDevice ? hrDevice.reading : "—",
-      unit: hrDevice ? "bpm" : "no device",
-      icon: "heart-pulse",
-      color: "#ef4444",
-      hint: hrDevice ? undefined : { text: "Pair a smart ring", category: "rings" },
-    },
-    {
-      label: "SpO₂",
-      value: spo2Device ? spo2Device.reading : "—",
-      unit: spo2Device ? "%" : "no device",
-      icon: "water-percent",
-      color: "#4F6EF7",
-      hint: spo2Device ? undefined : { text: "Pair a wearable", category: "watches" },
-    },
-    {
-      label: "Blood Glucose",
-      value: cgmDevice ? cgmDevice.reading : "—",
-      unit: cgmDevice ? cgmDevice.readingLabel : "no device",
-      icon: "water-percent",
-      color: "#f59e0b",
-      hint: cgmDevice ? undefined : { text: "Pair a glucose monitor", category: "cgm" },
-    },
-    {
-      label: "Falls Detected",
-      value: fallDevice ? "0" : "—",
-      unit: fallDevice ? "today" : "no device",
-      icon: "alert-circle",
-      color: "#22c55e",
-      hint: fallDevice ? undefined : { text: "Pair a wearable", category: "watches" },
-    },
-  ];
+  }[] = vitalsSummary.map((v) => {
+    const display = VITAL_DISPLAY[v.key];
+    return {
+      label: v.label,
+      value: v.value,
+      unit: v.unit,
+      icon: display.icon,
+      color: display.color,
+      hint: v.available ? undefined : { text: display.hintText, category: v.pairCategory },
+    };
+  });
 
   function handleToggle(id: string) {
     Haptics.selectionAsync();

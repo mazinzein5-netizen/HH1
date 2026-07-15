@@ -28,8 +28,8 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
   const { pilotMode } = useAppMode();
-  const { connectedCount, devices } = useSmartDevices();
-  const liveVitals = devices.filter((d) => d.connected).slice(0, 2);
+  const { connectedCount, vitalsSummary } = useSmartDevices();
+  const liveVitals = vitalsSummary.filter((v) => v.available).slice(0, 2);
   const topPad    = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 + 68 : insets.bottom + 64;
 
@@ -300,16 +300,16 @@ export default function DashboardScreen() {
           </Text>
           {liveVitals.length > 0 && (
             <View style={styles.vitalsRow}>
-              {liveVitals.map((d) => (
+              {liveVitals.map((v) => (
                 <View
-                  key={d.id}
+                  key={v.key}
                   style={[styles.vitalChip, { backgroundColor: "#22c55e14", borderColor: "#22c55e33" }]}
                 >
                   <Text style={[styles.vitalValue, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                    {d.reading}
+                    {v.value}
                   </Text>
                   <Text style={[styles.vitalLabel, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
-                    {d.readingLabel}
+                    {v.label} {v.unit !== "today" ? `· ${v.unit}` : ""}
                   </Text>
                 </View>
               ))}

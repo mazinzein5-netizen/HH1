@@ -220,9 +220,65 @@ const READING_VARIATION: Record<string, () => string> = {
   guardian4: () => jitterFloat(5.8, 0.3, 4.6, 7.2, 1),
 };
 
+export interface VitalSummary {
+  key: "heartRate" | "spo2" | "glucose" | "falls";
+  label: string;
+  value: string;
+  unit: string;
+  available: boolean;
+  pairCategory: Device["category"];
+}
+
+// Derives the named vitals summary (Heart Rate, SpO₂, Blood Glucose, Falls)
+// from the currently connected devices. Shared by the Smart Devices Live
+// Readings grid and the dashboard mini-summary so both stay consistent.
+export function deriveVitalsSummary(devices: Device[]): VitalSummary[] {
+  const connected = devices.filter((d) => d.connected);
+  const hrDevice = connected.find((d) => d.readingLabel === "HR bpm");
+  const spo2Device = connected.find((d) => d.readingLabel === "SpO₂ %");
+  const cgmDevice = connected.find((d) => d.category === "cgm");
+  const fallDevice = connected.find((d) => d.capabilities.includes("Fall Detection"));
+
+  return [
+    {
+      key: "heartRate",
+      label: "Heart Rate",
+      value: hrDevice ? hrDevice.reading : "—",
+      unit: hrDevice ? "bpm" : "no device",
+      available: !!hrDevice,
+      pairCategory: "rings",
+    },
+    {
+      key: "spo2",
+      label: "SpO₂",
+      value: spo2Device ? spo2Device.reading : "—",
+      unit: spo2Device ? "%" : "no device",
+      available: !!spo2Device,
+      pairCategory: "watches",
+    },
+    {
+      key: "glucose",
+      label: "Blood Glucose",
+      value: cgmDevice ? cgmDevice.reading : "—",
+      unit: cgmDevice ? cgmDevice.readingLabel : "no device",
+      available: !!cgmDevice,
+      pairCategory: "cgm",
+    },
+    {
+      key: "falls",
+      label: "Falls Detected",
+      value: fallDevice ? "0" : "—",
+      unit: fallDevice ? "today" : "no device",
+      available: !!fallDevice,
+      pairCategory: "watches",
+    },
+  ];
+}
+
 interface SmartDevicesContextValue {
   devices: Device[];
   connectedCount: number;
+  vitalsSummary: VitalSummary[];
   toggleDevice: (id: string) => void;
 }
 
@@ -290,9 +346,10 @@ export function SmartDevicesProvider({ children }: { children: React.ReactNode }
   }
 
   const connectedCount = devices.filter((d) => d.connected).length;
+  const vitalsSummary = React.useMemo(() => deriveVitalsSummary(devices), [devices]);
 
   return (
-    <SmartDevicesContext.Provider value={{ devices, connectedCount, toggleDevice }}>
+    <SmartDevicesContext.Provider value={{ devices, connectedCount, vitalsSummary, toggleDevice }}>
       {children}
     </SmartDevicesContext.Provider>
   );
