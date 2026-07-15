@@ -159,7 +159,7 @@ export default function Home() {
                 <div className="text-primary font-bold tracking-widest uppercase text-xs mb-4">One Unified Story</div>
                 <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight text-foreground">Patients arrive informed. Clinicians organise and streamline.</h2>
                 <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
-                  The Health HIVE ecosystem is a digital healthcare solution platform built to attack and diminish long waiting lists — organising patient file information privately and streamlining communication where the data is needed most: between healthcare providers.
+                  Patients can express their symptoms to the HIVE Companion, which can pass information to the GP and help administrative streamlining of acute and chronic joint, neck and back pain. Far less paperwork for primary healthcare professionals in the network, with automated scheduling for video consultations and clinical appointments.
                 </p>
                 <div className="grid grid-cols-2 gap-8 mt-12">
                   <div className="space-y-4">
