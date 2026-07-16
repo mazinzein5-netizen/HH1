@@ -149,3 +149,33 @@ id = "7DlOjorWsJwBQgT4eusv7"
 uri = "file://artifacts/promo-video/public/audio/vo_close.mp3"
 type = "audio"
 title = "vo close v3"
+
+[[outputs]]
+id = "pq92ywkTFtZT7_-iyMkob"
+uri = "file://attached_assets/stock_images/gp-consult.jpg"
+type = "image"
+title = "friendly doctor consulting older patient in bright modern GP clinic"
+
+[[outputs]]
+id = "llpPg0YgIv9JrfufU_tS_"
+uri = "file://attached_assets/stock_images/paramedics.jpg"
+type = "image"
+title = "paramedics with ambulance helping elderly person, professional emergency care"
+
+[[outputs]]
+id = "2fMWSK7-RF6BXJtxtUTRK"
+uri = "file://attached_assets/stock_images/pharmacist.jpg"
+type = "image"
+title = "pharmacist explaining prescription medication to senior customer in pharmacy"
+
+[[outputs]]
+id = "HKBDNivYpcz8tKQmJ_YUW"
+uri = "file://attached_assets/stock_images/physio.jpg"
+type = "image"
+title = "physiotherapist guiding older adult through knee exercise in clinic"
+
+[[outputs]]
+id = "Djl_iMnc0625OXmwpgtz9"
+uri = "file://attached_assets/stock_images/family-tablet.jpg"
+type = "image"
+title = "adult daughter and elderly mother looking at tablet together at home, warm light"
