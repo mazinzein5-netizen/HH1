@@ -162,8 +162,13 @@ export default function Home() {
                 <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
                   Patients can express their symptoms to the HIVE Companion, which can pass information to the GP and help administrative streamlining of acute and chronic joint, neck and back pain. Far less paperwork for primary healthcare professionals in the network, with automated scheduling for video consultations and clinical appointments.
                 </p>
-                <div className="rounded-2xl overflow-hidden glass-panel-heavy mb-6">
-                  <VideoEmbed src="/hub-video/?embed=1" title="HIVE Hub video" />
+                <div className="mb-6">
+                  <VideoEmbed
+                    src="/hub-video/?embed=1"
+                    title="HIVE Hub video"
+                    audioSrc={`${import.meta.env.BASE_URL}audio/hub-ambient.mp3`}
+                    frameClassName="rounded-2xl glass-panel-heavy"
+                  />
                 </div>
                 <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
                   With the patient's permission, hospital specialists and first responders can access critical medical history data and current live digital prescription information when it's required.
@@ -252,9 +257,14 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.7 }}
-              className="relative max-w-5xl mx-auto mb-16 rounded-[2rem] overflow-hidden glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+              className="relative max-w-5xl mx-auto mb-16"
             >
-              <VideoEmbed src="/promo-video/?embed=1" title="HIVE Companion promo video" />
+              <VideoEmbed
+                src="/promo-video/?embed=1"
+                title="HIVE Companion promo video"
+                audioSrc={`${import.meta.env.BASE_URL}audio/promo-ambient.mp3`}
+                frameClassName="rounded-[2rem] glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+              />
             </motion.div>
 
             {/* Targeted Marketing Split */}
@@ -418,7 +428,7 @@ export default function Home() {
                 variants={fadeInUp}
                 className="order-2 lg:order-1 relative"
               >
-                <div className="relative rounded-3xl overflow-hidden glass-panel flex flex-col group">
+                <div className="relative rounded-3xl overflow-hidden glass-panel flex flex-col group transition-transform duration-500 hover:scale-[1.03] hover:z-20 motion-reduce:transform-none">
                    {/* Browser chrome */}
                    <div className="h-12 bg-background/50 border-b border-border flex items-center px-4 gap-2">
                      <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
@@ -426,7 +436,12 @@ export default function Home() {
                      <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                      <div className="ml-4 h-6 w-1/2 bg-muted/50 rounded-md"></div>
                    </div>
-                   <VideoEmbed src="/surgical-video/?embed=1" title="HIVE Hospital Surgical Assistant video" />
+                   <VideoEmbed
+                     src="/surgical-video/?embed=1"
+                     title="HIVE Hospital Surgical Assistant video"
+                     audioSrc={`${import.meta.env.BASE_URL}audio/surgical-ambient.mp3`}
+                     scaleOnHover={false}
+                   />
                 </div>
                 
                 {/* Decorative elements */}

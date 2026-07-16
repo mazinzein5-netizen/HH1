@@ -9,3 +9,4 @@
 - [Canvas mobile screen previews](canvas-screen-previews.md) — preview RN screens by iframing real Expo web routes with dev-only ?preview=1 consent bypass; never extract RN into vite sandbox.
 - [OpenAI config](openai-config.md) — no user OPENAI_API_KEY; api-server uses Replit AI Integrations proxy env vars; re-run setup instead of requesting a key.
 - [Companion supervisor pattern](companion-supervisor.md) — pilot AI replies pass a second safety-review model call; on failure serve reply flagged supervised:false, never block.
+- [Website video embeds](website-video-embeds.md) — pop-out scale needs unclipped wrapper (frameClassName); audio lives in parent page; promo clip at 0.8x must span scenes 1-3 exactly.

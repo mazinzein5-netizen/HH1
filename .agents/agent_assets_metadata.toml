@@ -101,3 +101,21 @@ id = "Q2UF-LDV2H6zd1_CfNhrW"
 uri = "file://artifacts/promo-video/public/images/medication.jpg"
 type = "image"
 title = "organized medication pill bottles and prescription papers"
+
+[[outputs]]
+id = "tGxnS5NS-jt5ING2XTIbt"
+uri = "file://artifacts/website/public/audio/promo-ambient.mp3"
+type = "audio"
+title = "promo ambient"
+
+[[outputs]]
+id = "ARuHJLkZHjOVAdmHJHpDu"
+uri = "file://artifacts/website/public/audio/hub-ambient.mp3"
+type = "audio"
+title = "hub ambient"
+
+[[outputs]]
+id = "eCJTDpzq0FkgSGOpkM2Uu"
+uri = "file://artifacts/website/public/audio/surgical-ambient.mp3"
+type = "audio"
+title = "surgical ambient"

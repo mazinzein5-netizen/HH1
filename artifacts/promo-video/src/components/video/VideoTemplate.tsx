@@ -9,15 +9,14 @@ import { Scene5 } from './video_scenes/Scene5';
 
 import geminiVideo from '@assets/gemini_generated_video_C4C07499_1784082950083.mp4';
 
-// 4s + 2.5s + 4s + 3.5s = 14s total video duration
-// Video clip is 10s, we play it from scene 1 through scene 3 (2.5s + 4s + 3.5s = 10s exactly!)
-// We will start playing the video on scene 1.
+// Slowed pacing: the 10s clip plays at 0.8x speed => 12.5s effective duration,
+// spanning scenes 1-3 exactly (3100 + 5000 + 4400 = 12500ms).
 export const SCENE_DURATIONS = {
-  open: 4000,
-  context: 2500,
-  features: 4000,
-  privacy: 3500,
-  close: 4000,
+  open: 4800,
+  context: 3100,
+  features: 5000,
+  privacy: 4400,
+  close: 4800,
 };
 
 const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
@@ -55,11 +54,16 @@ export default function VideoTemplate({
   const sceneIndex = Object.keys(SCENE_DURATIONS).indexOf(baseSceneKey);
   const SceneComponent = SCENE_COMPONENTS[baseSceneKey];
 
-  // Restart video if looping back to beginning
+  // Clip plays at 0.8x speed across scenes 1-3; reset when looping back to start
   useEffect(() => {
-    if (sceneIndex === 0 && videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(() => {});
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = 0.8;
+    if (sceneIndex === 0) {
+      video.pause();
+      video.currentTime = 0;
+    } else if (sceneIndex === 1) {
+      video.play().catch(() => {});
     }
   }, [sceneIndex]);
 
@@ -145,11 +149,11 @@ export default function VideoTemplate({
       <motion.div 
         className="absolute z-50 flex items-center gap-[1vw]"
         animate={{ 
-          top: sceneIndex === 0 ? '45vh' : sceneIndex === 4 ? '45vh' : '4vw',
-          left: sceneIndex === 0 ? '50vw' : sceneIndex === 4 ? '50vw' : '4vw',
+          top: sceneIndex === 0 ? '64vh' : sceneIndex === 4 ? '82vh' : '4vw',
+          left: sceneIndex === 0 ? '78vw' : sceneIndex === 4 ? '50vw' : '4vw',
           x: sceneIndex === 0 ? '-50%' : sceneIndex === 4 ? '-50%' : '0%',
           y: sceneIndex === 0 ? '-50%' : sceneIndex === 4 ? '-50%' : '0%',
-          scale: sceneIndex === 0 ? 2.5 : sceneIndex === 4 ? 2.5 : 1,
+          scale: sceneIndex === 0 ? 2.5 : sceneIndex === 4 ? 1.8 : 1,
         }}
         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
       >

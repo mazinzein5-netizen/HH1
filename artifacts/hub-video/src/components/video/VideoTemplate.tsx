@@ -8,11 +8,11 @@ import { Scene4 } from './video_scenes/Scene4';
 import { Scene5 } from './video_scenes/Scene5';
 
 export const SCENE_DURATIONS = {
-  intro: 3500,
-  prescriptions: 4000,
-  devices: 4000,
-  geriatric: 4500,
-  outro: 3500
+  intro: 4400,
+  prescriptions: 5000,
+  devices: 5000,
+  geriatric: 5600,
+  outro: 4400
 };
 
 const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
