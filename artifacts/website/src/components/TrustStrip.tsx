@@ -31,7 +31,7 @@ export function TrustStrip() {
           {items.map((item, i) => (
             <div key={i} className="flex flex-col items-center text-center">
               {item.icon}
-              <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">{item.title}</h4>
+              <p className="font-bold text-foreground text-sm uppercase tracking-wider">{item.title}</p>
               <p className="text-muted-foreground text-xs mt-1 max-w-[200px]">{item.description}</p>
             </div>
           ))}

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { HiveLogo } from "@/components/HiveLogo";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,8 @@ import {
   ArrowRight, ShieldCheck, FileText, Smartphone, 
   Stethoscope, Mail, ExternalLink, Activity,
   AlertCircle, Heart, Shield,
-  MapPin, Pill, Video, Users
+  MapPin, Pill, Video, Users,
+  Menu, X
 } from "lucide-react";
 
 const fadeInUp = {
@@ -29,6 +30,8 @@ const staggerContainer = {
 };
 
 export default function Home() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   // Smooth scroll for anchor links
   useEffect(() => {
     const handleAnchorClick = (e: MouseEvent) => {
@@ -60,6 +63,8 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-[100dvh] bg-transparent text-foreground overflow-x-hidden font-sans">
       
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+
       <HexagonBackground />
 
       {/* Navigation */}
@@ -74,23 +79,50 @@ export default function Home() {
             <HiveLogo size={32} />
             <span className="font-semibold text-lg tracking-tight text-foreground">HEALTH HIVE</span>
           </div>
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
+          <nav aria-label="Main navigation" className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#ecosystem" className="hover:text-primary transition-colors">Ecosystem</a>
             <a href="#companion" className="hover:text-primary transition-colors">HIVE Companion</a>
             <a href="#surgical-assistant" className="hover:text-primary transition-colors">Surgical Assistant</a>
           </nav>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <a href="https://surg-assist-copy-89eb0714.base44.app" target="_blank" rel="noreferrer">
-              <Button variant="outline" className="hidden sm:flex border-primary/30 hover:border-primary text-primary hover:bg-primary/10 transition-all duration-300 glass-panel">
+            <Button asChild variant="outline" className="hidden sm:flex border-primary/30 hover:border-primary text-primary hover:bg-primary/10 transition-all duration-300 glass-panel">
+              <a href="https://surg-assist-copy-89eb0714.base44.app" target="_blank" rel="noreferrer">
                 Clinician Sign In
-              </Button>
-            </a>
+              </a>
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="md:hidden rounded-full bg-background/50 backdrop-blur border-border/50 text-foreground"
+              aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              {menuOpen ? <X aria-hidden="true" className="h-5 w-5" /> : <Menu aria-hidden="true" className="h-5 w-5" />}
+            </Button>
           </div>
         </div>
+        {menuOpen && (
+          <nav
+            id="mobile-menu"
+            aria-label="Mobile navigation"
+            className="md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl"
+          >
+            <div className="container mx-auto px-6 py-4 flex flex-col gap-1 text-base font-medium">
+              <a href="#ecosystem" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Ecosystem</a>
+              <a href="#companion" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">HIVE Companion</a>
+              <a href="#surgical-assistant" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Surgical Assistant</a>
+              <a href="https://surg-assist-copy-89eb0714.base44.app" target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
+                Clinician Sign In
+              </a>
+            </div>
+          </nav>
+        )}
       </motion.header>
 
-      <main className="flex-grow pt-20">
+      <main id="main-content" className="flex-grow pt-20">
         
         {/* Section 1: Hero */}
         <section className="relative pt-24 pb-32 lg:pt-40 lg:pb-40 flex items-center min-h-[90vh]">
@@ -130,16 +162,14 @@ export default function Home() {
               transition={{ duration: 0.7, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-5"
             >
-              <a href="#companion" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
-                  Explore HIVE Companion
-                </Button>
-              </a>
-              <a href="#surgical-assistant" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="glass-panel w-full sm:w-auto h-14 px-8 text-base border-border hover:bg-card/80 transition-all duration-300">
-                  Surgical Assistant <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </a>
+              <Button asChild size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
+                <a href="#companion">Explore HIVE Companion</a>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="glass-panel w-full sm:w-auto h-14 px-8 text-base border-border hover:bg-card/80 transition-all duration-300">
+                <a href="#surgical-assistant">
+                  Surgical Assistant <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
             </motion.div>
           </div>
         </section>
@@ -410,10 +440,10 @@ export default function Home() {
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-                  <Button variant="secondary" size="lg" className="w-full sm:w-auto glass-panel hover:bg-card/80 h-auto min-h-14 whitespace-normal px-6 sm:px-8 opacity-70 cursor-not-allowed text-foreground">
+                  <Button variant="secondary" size="lg" disabled aria-disabled="true" className="w-full sm:w-auto glass-panel h-auto min-h-14 whitespace-normal px-6 sm:px-8 text-foreground">
                     App Store (Coming Soon)
                   </Button>
-                  <Button variant="secondary" size="lg" className="w-full sm:w-auto glass-panel hover:bg-card/80 h-auto min-h-14 whitespace-normal px-6 sm:px-8 opacity-70 cursor-not-allowed text-foreground">
+                  <Button variant="secondary" size="lg" disabled aria-disabled="true" className="w-full sm:w-auto glass-panel h-auto min-h-14 whitespace-normal px-6 sm:px-8 text-foreground">
                     Google Play (Coming Soon)
                   </Button>
                 </div>
@@ -456,7 +486,7 @@ export default function Home() {
                 </div>
                 
                 {/* Decorative elements */}
-                <div className="absolute -bottom-6 -right-6 w-32 h-32 glass-panel rounded-2xl flex items-center justify-center -z-10">
+                <div aria-hidden="true" className="absolute -bottom-6 -right-6 w-32 h-32 glass-panel rounded-2xl flex items-center justify-center -z-10">
                   <Activity className="h-10 w-10 text-muted-foreground/30" />
                 </div>
               </motion.div>
@@ -483,7 +513,7 @@ export default function Home() {
                       <ArrowRight className="h-4 w-4" />
                     </div>
                     <div>
-                      <h4 className="text-foreground font-semibold text-lg mb-1">Fast Documentation</h4>
+                      <h3 className="text-foreground font-semibold text-lg mb-1">Fast Documentation</h3>
                       <span className="text-muted-foreground">Documentation for GPs, physiotherapists and CNSs can all be efficiently executed on the application — photo recognition turns captured data into organised, structured records in seconds.</span>
                     </div>
                   </li>
@@ -492,7 +522,7 @@ export default function Home() {
                       <ArrowRight className="h-4 w-4" />
                     </div>
                     <div>
-                      <h4 className="text-foreground font-semibold text-lg mb-1">Built for Clinical Teams</h4>
+                      <h3 className="text-foreground font-semibold text-lg mb-1">Built for Clinical Teams</h3>
                       <span className="text-muted-foreground">Organise patient files and collaborate seamlessly with your clinical unit or team.</span>
                     </div>
                   </li>
@@ -501,7 +531,7 @@ export default function Home() {
                       <ArrowRight className="h-4 w-4" />
                     </div>
                     <div>
-                      <h4 className="text-foreground font-semibold text-lg mb-1">Encrypted by Design</h4>
+                      <h3 className="text-foreground font-semibold text-lg mb-1">Encrypted by Design</h3>
                       <span className="text-muted-foreground">Encrypted data communication while patient data stays on the device — with user endpoints for server-based AI.</span>
                     </div>
                   </li>
@@ -514,11 +544,11 @@ export default function Home() {
                   </p>
                 </div>
 
-                <a href="https://surg-assist-copy-89eb0714.base44.app" target="_blank" rel="noreferrer">
-                  <Button size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-auto min-h-14 whitespace-normal px-6 sm:px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
-                    Open HIVE Surgical Assistant <ExternalLink className="ml-2 h-4 w-4 flex-shrink-0" />
-                  </Button>
-                </a>
+                <Button asChild size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-auto min-h-14 whitespace-normal px-6 sm:px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
+                  <a href="https://surg-assist-copy-89eb0714.base44.app" target="_blank" rel="noreferrer">
+                    Open HIVE Surgical Assistant <ExternalLink aria-hidden="true" className="ml-2 h-4 w-4 flex-shrink-0" />
+                  </a>
+                </Button>
               </motion.div>
             </div>
           </div>
@@ -544,7 +574,7 @@ export default function Home() {
               </div>
               
               <div>
-                <h4 className="font-semibold text-foreground mb-4">Ecosystem</h4>
+                <h3 className="font-semibold text-foreground mb-4">Ecosystem</h3>
                 <ul className="space-y-3 text-sm">
                   <li><a href="#companion" className="text-muted-foreground hover:text-primary transition-colors">HIVE Companion App</a></li>
                   <li><a href="#surgical-assistant" className="text-muted-foreground hover:text-primary transition-colors">Surgical Assistant</a></li>
@@ -552,7 +582,7 @@ export default function Home() {
               </div>
 
               <div>
-                <h4 className="font-semibold text-foreground mb-4">Legal</h4>
+                <h3 className="font-semibold text-foreground mb-4">Legal</h3>
                 <ul className="space-y-3 text-sm">
                   <li><a href="/api/privacy" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
                 </ul>
@@ -563,7 +593,7 @@ export default function Home() {
               <p className="text-sm text-muted-foreground">
                 © {new Date().getFullYear()} IbnCeena Ltd. All rights reserved.
               </p>
-              <div className="text-xs text-muted-foreground/60 flex items-center gap-2">
+              <div className="text-xs text-muted-foreground flex items-center gap-2">
                 <MapPin className="h-3 w-3" /> Dublin, Ireland
               </div>
             </div>
