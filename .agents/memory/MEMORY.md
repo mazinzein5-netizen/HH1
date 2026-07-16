@@ -13,3 +13,4 @@
 - [Expo route typegen](expo-route-typegen.md) — router.d.ts/expo-env.d.ts are gitignored dev-server artifacts; mobile typecheck regenerates them headlessly first or clean checkouts fail.
 - [Video export pipeline](video-export-pipeline.md) — no platform export tool; screencast-record video artifacts to MP4, aligning capture to a loop boundary via reload + startRecording.
 - [expo-audio voice](expo-audio-voice.md) — presets leave metering OFF; spread isMeteringEnabled:true or silence auto-stop is dead code; proxy transcription = gpt-4o-mini-transcribe, not whisper-1.
+- [Promo narration & captions](promo-narration.md) — per-scene TTS clips must fit fixed scene slots (trim+atempo ≤1.15x); captions burned in; store-safe wording only.

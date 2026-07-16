@@ -119,3 +119,33 @@ id = "eCJTDpzq0FkgSGOpkM2Uu"
 uri = "file://artifacts/website/public/audio/surgical-ambient.mp3"
 type = "audio"
 title = "surgical ambient"
+
+[[outputs]]
+id = "-DaIYk548GJ_kRglJkMwL"
+uri = "file://artifacts/promo-video/public/audio/vo_open.mp3"
+type = "audio"
+title = "vo open v2"
+
+[[outputs]]
+id = "H-P0AHWcskV1-2iQ47Nzd"
+uri = "file://artifacts/promo-video/public/audio/vo_context.mp3"
+type = "audio"
+title = "vo context v3"
+
+[[outputs]]
+id = "aFGpjbscCqXAL2i6Tx5bY"
+uri = "file://artifacts/promo-video/public/audio/vo_features.mp3"
+type = "audio"
+title = "vo features v2"
+
+[[outputs]]
+id = "VA9f70trUz50z3JThTmiD"
+uri = "file://artifacts/promo-video/public/audio/vo_privacy.mp3"
+type = "audio"
+title = "vo privacy v2"
+
+[[outputs]]
+id = "7DlOjorWsJwBQgT4eusv7"
+uri = "file://artifacts/promo-video/public/audio/vo_close.mp3"
+type = "audio"
+title = "vo close v3"

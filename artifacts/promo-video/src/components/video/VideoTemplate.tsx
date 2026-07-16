@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Volume2, VolumeX } from 'lucide-react';
 import { useVideoPlayer } from '@/lib/video';
 import { Scene1 } from './video_scenes/Scene1';
 import { Scene2 } from './video_scenes/Scene2';
@@ -17,6 +18,16 @@ export const SCENE_DURATIONS = {
   features: 5000,
   privacy: 4400,
   close: 4800,
+};
+
+// Narration + burned-in captions. Wording follows the store-safe vocabulary
+// (docs/store-metadata-checklist.md): no clinical/triage/diagnosis terms.
+export const SCENE_CAPTIONS: Record<string, string> = {
+  open: 'Health HIVE. Your health records, organised.',
+  context: 'Track joint health with trusted questionnaires.',
+  features: 'Video call your healthcare professional and share a clear record.',
+  privacy: "Connect health devices, and keep a loved one's records together.",
+  close: 'Private, secure, and built to European standards.',
 };
 
 const SCENE_COMPONENTS: Record<string, React.ComponentType> = {
@@ -45,6 +56,11 @@ export default function VideoTemplate({
 } = {}) {
   const { currentSceneKey } = useVideoPlayer({ durations, loop });
   const videoRef = useRef<HTMLVideoElement>(null);
+  const narrationRef = useRef<HTMLAudioElement>(null);
+  const [soundOn, setSoundOn] = useState(false);
+  const soundOnRef = useRef(soundOn);
+  soundOnRef.current = soundOn;
+  const autoAttemptedRef = useRef(false);
 
   useEffect(() => {
     onSceneChange?.(currentSceneKey);
@@ -53,6 +69,35 @@ export default function VideoTemplate({
   const baseSceneKey = currentSceneKey.replace(/_r[12]$/, '') as keyof typeof SCENE_DURATIONS;
   const sceneIndex = Object.keys(SCENE_DURATIONS).indexOf(baseSceneKey);
   const SceneComponent = SCENE_COMPONENTS[baseSceneKey];
+  const caption = SCENE_CAPTIONS[baseSceneKey];
+
+  // Play the scene's narration clip. On first load we attempt unmuted
+  // autoplay once; if the browser blocks it, narration stays off until
+  // the user taps the sound button.
+  useEffect(() => {
+    const audio = narrationRef.current;
+    if (!audio) return;
+    if (soundOnRef.current) {
+      audio.play().catch(() => setSoundOn(false));
+    } else if (!autoAttemptedRef.current) {
+      autoAttemptedRef.current = true;
+      audio.play()
+        .then(() => setSoundOn(true))
+        .catch(() => {});
+    }
+    // Re-run per scene change (currentSceneKey), including locked-loop repeats.
+  }, [currentSceneKey]);
+
+  const toggleSound = () => {
+    const audio = narrationRef.current;
+    if (soundOn) {
+      audio?.pause();
+      setSoundOn(false);
+    } else {
+      setSoundOn(true);
+      audio?.play().catch(() => setSoundOn(false));
+    }
+  };
 
   // Clip plays at 0.8x speed across scenes 1-3; reset when looping back to start
   useEffect(() => {
@@ -178,6 +223,48 @@ export default function VideoTemplate({
       <AnimatePresence mode="popLayout">
         {SceneComponent && <SceneComponent key={currentSceneKey} />}
       </AnimatePresence>
+
+      {/* Narration audio (one clip per scene) */}
+      <audio
+        key={currentSceneKey}
+        ref={narrationRef}
+        src={`${import.meta.env.BASE_URL}audio/vo_${baseSceneKey}.mp3`}
+        preload="auto"
+      />
+
+      {/* Burned-in captions — high contrast, sized to stay readable when the
+          video is scaled down for social media */}
+      <div className="absolute bottom-[4vh] left-0 right-0 z-[60] flex justify-center pointer-events-none px-[6vw]">
+        <AnimatePresence mode="wait">
+          {caption && (
+            <motion.div
+              key={baseSceneKey}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="bg-black/75 backdrop-blur-sm rounded-xl px-[2vw] py-[1vw] max-w-[80vw]"
+            >
+              <p className="text-white text-center font-body font-semibold leading-snug text-[2.4vw]">
+                {caption}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Sound toggle */}
+      <button
+        onClick={toggleSound}
+        className="absolute top-[4vw] right-[4vw] z-[70] w-[3.5vw] h-[3.5vw] min-w-11 min-h-11 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-white/20 text-white/80 hover:text-white hover:bg-black/70 transition-colors"
+        title={soundOn ? 'Mute narration' : 'Play narration'}
+        aria-label={soundOn ? 'Mute narration' : 'Play narration'}
+        aria-pressed={soundOn}
+      >
+        {soundOn
+          ? <Volume2 className="w-[60%] h-[60%]" />
+          : <VolumeX className="w-[60%] h-[60%]" />}
+      </button>
     </div>
   );
 }
