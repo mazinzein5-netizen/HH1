@@ -22,6 +22,7 @@ import SignLanguageModal from "@/components/SignLanguageModal";
 import { PILOT_ACTIVATION_CODE, useAppMode } from "@/context/AppModeContext";
 import { usePatient } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 import {
   callEmergencyServices,
   EMERGENCY_NUMBER,
@@ -181,9 +182,16 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
   const voiceOnRef = useRef(voiceOn);
   voiceOnRef.current = voiceOn;
 
-  // ── Voice input (Web Speech API) ──
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  // ── Voice input (web SpeechRecognition / native mic + transcription) ──
+  const voice = useVoiceInput({
+    onInterim: (t) => setInput(t),
+    onFinal: (t) => {
+      setInput("");
+      if (t) sendMessage(t);
+    },
+    onError: (msg) => Alert.alert("Voice", msg),
+  });
+  const isListening = voice.listening;
 
   // ── Sign language camera ──
   const [showSignLang, setShowSignLang] = useState(false);
@@ -218,48 +226,14 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
     });
   }
 
-  // ── Voice input (Web Speech API — live in web preview; native handled gracefully) ──
+  // ── Voice input toggle — tap to talk, tap again (or pause) to finish ──
   function toggleVoiceInput() {
     if (isListening) {
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
-      setIsListening(false);
+      voice.stop();
       return;
     }
-
-    if (Platform.OS !== "web") {
-      Alert.alert(
-        "Voice Input",
-        "Speak clearly — voice input is fully available in the installed app. In this preview, please type or use sign language mode.",
-        [{ text: "OK" }]
-      );
-      return;
-    }
-
-    const Win = window as any;
-    const SR  = Win.SpeechRecognition ?? Win.webkitSpeechRecognition;
-    if (!SR) {
-      Alert.alert("Not supported", "Your browser does not support voice input. Please type your message.");
-      return;
-    }
-
-    const recognition = new SR();
-    recognition.continuous     = false;
-    recognition.interimResults = true;
-    recognition.lang           = "en-IE";
-
-    recognition.onresult = (event: any) => {
-      const transcript = (Array.from(event.results) as any[])
-        .map((r: any) => r[0].transcript as string)
-        .join("");
-      setInput(transcript);
-    };
-    recognition.onend   = () => { setIsListening(false); recognitionRef.current = null; };
-    recognition.onerror = () => { setIsListening(false); recognitionRef.current = null; };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
+    try { Speech.stop(); } catch {}
+    voice.start();
   }
 
   // ── Sign language submit ──
@@ -271,8 +245,8 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
   useEffect(() => {
     if (!visible) {
       try { Speech.stop(); } catch {}
-      // Stop voice recognition if active
-      if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} recognitionRef.current = null; setIsListening(false); }
+      // Stop voice capture if active
+      voice.cancel();
       // Save session to memory on close (if conversation happened)
       const msgs = messagesRef.current;
       if (msgs.length > 1) {
@@ -398,48 +372,59 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
     setMessages(nextMessages);
     setLoading(true);
 
-    try {
-      const domain = process.env.EXPO_PUBLIC_DOMAIN;
-      const res = await fetch(`https://${domain}/api/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: nextMessages.map(({ role, content }) => ({ role, content })),
-          pilotCode: pilotMode ? PILOT_ACTIVATION_CODE : undefined,
-          mode: painHelper ? "painDescribe" : undefined,
-          // Always send patient context so Queen B can detect interactions in real-time
-          patientContext: {
-            medications: activeMeds.map((m) => ({
-              name: m.medication,
-              dose: m.dose,
-              frequency: m.frequency,
-            })),
-            allergies: patient.allergies.map((a) => ({
-              drug: a.drug,
-              reaction: a.reaction,
-              severity: a.severity,
-            })),
-          },
-        }),
-      });
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    const body = JSON.stringify({
+      messages: nextMessages.map(({ role, content }) => ({ role, content })),
+      pilotCode: pilotMode ? PILOT_ACTIVATION_CODE : undefined,
+      mode: painHelper ? "painDescribe" : undefined,
+      // Always send patient context so Queen B can detect interactions in real-time
+      patientContext: {
+        medications: activeMeds.map((m) => ({
+          name: m.medication,
+          dose: m.dose,
+          frequency: m.frequency,
+        })),
+        allergies: patient.allergies.map((a) => ({
+          drug: a.drug,
+          reaction: a.reaction,
+          severity: a.severity,
+        })),
+      },
+    });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.message) {
-          setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
-          speak(data.message);
+    // Always-there companion: retry transient failures with a short backoff
+    // before falling back, so a network blip doesn't end the conversation.
+    try {
+      let reply: string | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch(`https://${domain}/api/ai/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.message) reply = data.message;
+            break;
+          }
+          // Retry only transient server-side statuses
+          if (![429, 500, 502, 503, 504].includes(res.status)) break;
+        } catch {
+          // Network error — retry
         }
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "I'm having trouble connecting right now. Please check your connection and try again." },
-        ]);
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
       }
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "I'm having trouble connecting right now. Please check your connection and try again." },
-      ]);
+
+      if (reply) {
+        setMessages((prev) => [...prev, { role: "assistant", content: reply! }]);
+        speak(reply);
+      } else {
+        const fallback =
+          "I'm still right here with you 🐝 — I just couldn't reach my hive for a moment. Give it a few seconds and say that again, and if it keeps happening, it's worth checking your internet connection.";
+        setMessages((prev) => [...prev, { role: "assistant", content: fallback }]);
+        speak(fallback);
+      }
     } finally {
       setLoading(false);
     }
@@ -673,21 +658,26 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
                 <TouchableOpacity
                   onPress={toggleVoiceInput}
                   activeOpacity={0.75}
+                  disabled={voice.transcribing}
                   style={[
                     styles.accessBtn,
                     {
-                      backgroundColor: isListening ? "rgba(220,38,38,0.12)" : colors.card,
-                      borderColor: isListening ? "#dc2626" : colors.border,
+                      backgroundColor: isListening ? "rgba(220,38,38,0.12)" : voice.transcribing ? "rgba(201,134,10,0.1)" : colors.card,
+                      borderColor: isListening ? "#dc2626" : voice.transcribing ? "#C9860A" : colors.border,
                     },
                   ]}
                 >
-                  <MaterialCommunityIcons
-                    name={isListening ? "microphone" : "microphone-outline"}
-                    size={18}
-                    color={isListening ? "#dc2626" : colors.mutedForeground}
-                  />
-                  <Text style={[styles.accessBtnText, { color: isListening ? "#dc2626" : colors.mutedForeground, fontFamily: isListening ? "Inter_700Bold" : "Inter_400Regular" }]}>
-                    {isListening ? "Listening…" : "Voice"}
+                  {voice.transcribing ? (
+                    <ActivityIndicator size={16} color="#C9860A" />
+                  ) : (
+                    <MaterialCommunityIcons
+                      name={isListening ? "microphone" : "microphone-outline"}
+                      size={18}
+                      color={isListening ? "#dc2626" : colors.mutedForeground}
+                    />
+                  )}
+                  <Text style={[styles.accessBtnText, { color: isListening ? "#dc2626" : voice.transcribing ? "#C9860A" : colors.mutedForeground, fontFamily: isListening || voice.transcribing ? "Inter_700Bold" : "Inter_400Regular" }]}>
+                    {voice.transcribing ? "One moment…" : isListening ? "Listening…" : "Voice"}
                   </Text>
                 </TouchableOpacity>
 

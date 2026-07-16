@@ -35,6 +35,12 @@
         {
           "locationWhenInUsePermission": "HIVE Companion™ uses your location to find pharmacies near you. Your coordinates are sent only to the OpenStreetMap lookup service to run the search, and are never stored or sent to HIVE servers."
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "HIVE Companion™ uses your microphone so you can talk to Queen B instead of typing. Your voice is turned into text by a secure transcription service and the recording is discarded straight away — it is never stored."
+        }
       ]
     ],
     "experiments": {

@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { PILOT_ACTIVATION_CODE, useAppMode } from "@/context/AppModeContext";
 import { useColors } from "@/hooks/useColors";
+import { useVoiceInput, type VoiceInput } from "@/hooks/useVoiceInput";
 import { callEmergencyServices, EMERGENCY_NUMBER } from "@/utils/healthShare";
 import {
   getCompanionMemory,
@@ -57,14 +58,12 @@ export default function CompanionScreen() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [loading, setLoading] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const [listening, setListening] = useState(false);
   const [handsFree, setHandsFree] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [typedInput, setTypedInput] = useState("");
   const [showTyping, setShowTyping] = useState(false);
 
   const memoryRef = useRef<CompanionMemory | null>(null);
-  const recognitionRef = useRef<any>(null);
   const handsFreeRef = useRef(handsFree);
   handsFreeRef.current = handsFree;
   const loadingRef = useRef(loading);
@@ -73,6 +72,33 @@ export default function CompanionScreen() {
   messagesRef.current = messages;
   const scrollRef = useRef<ScrollView>(null);
   const mountedRef = useRef(true);
+
+  // ── Voice input: web SpeechRecognition / native mic → transcription ──
+  const voiceRef = useRef<VoiceInput | null>(null);
+  const voice = useVoiceInput({
+    onInterim: setLiveTranscript,
+    onFinal: (t) => {
+      setLiveTranscript("");
+      if (t) {
+        sendMessage(t);
+      } else if (handsFreeRef.current && mountedRef.current && !loadingRef.current) {
+        // Nothing heard — keep listening in hands-free mode
+        setTimeout(() => {
+          if (handsFreeRef.current && mountedRef.current && !loadingRef.current) {
+            voiceRef.current?.start();
+          }
+        }, 600);
+      }
+    },
+    onError: (msg) => {
+      setLiveTranscript("");
+      setHandsFree(false);
+      setShowTyping(true);
+      Alert.alert("Voice", msg);
+    },
+  });
+  voiceRef.current = voice;
+  const listening = voice.listening;
 
   // ── Pilot gate ──
   useEffect(() => {
@@ -98,7 +124,7 @@ export default function CompanionScreen() {
     return () => {
       mountedRef.current = false;
       try { Speech.stop(); } catch {}
-      stopListening();
+      // Voice capture cleans itself up on unmount (useVoiceInput effect)
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -113,7 +139,7 @@ export default function CompanionScreen() {
         onDone: () => {
           setSpeaking(false);
           // Hands-free: resume listening after the companion finishes speaking
-          if (handsFreeRef.current && mountedRef.current) startListening(true);
+          if (handsFreeRef.current && mountedRef.current) startListening();
         },
         onStopped: () => setSpeaking(false),
         onError: () => setSpeaking(false),
@@ -128,73 +154,19 @@ export default function CompanionScreen() {
     if (last) speakText(last.content);
   }
 
-  // ── Speech recognition (Web Speech API on web; graceful note on native) ──
-  function startListening(fromHandsFree = false) {
-    if (loadingRef.current || recognitionRef.current) return;
-
-    if (Platform.OS !== "web") {
-      if (!fromHandsFree) {
-        Alert.alert(
-          "Voice",
-          "Voice conversation works fully in the installed app. In this preview, please use the keyboard button to type instead."
-        );
-        setShowTyping(true);
-      }
-      return;
-    }
-
-    const Win = window as any;
-    const SR = Win.SpeechRecognition ?? Win.webkitSpeechRecognition;
-    if (!SR) {
-      Alert.alert("Voice not supported", "This browser doesn't support voice input. Please type instead.");
-      setShowTyping(true);
-      return;
-    }
-
-    const rec = new SR();
-    rec.continuous = false;
-    rec.interimResults = true;
-    rec.lang = "en-IE";
-
-    let finalText = "";
-    rec.onresult = (event: any) => {
-      const transcript = (Array.from(event.results) as any[])
-        .map((r: any) => r[0].transcript as string)
-        .join("");
-      finalText = transcript;
-      setLiveTranscript(transcript);
-    };
-    rec.onend = () => {
-      recognitionRef.current = null;
-      setListening(false);
-      setLiveTranscript("");
-      const said = finalText.trim();
-      if (said) {
-        sendMessage(said);
-      } else if (handsFreeRef.current && mountedRef.current && !loadingRef.current) {
-        // Nothing heard — keep listening in hands-free mode
-        setTimeout(() => startListening(true), 600);
-      }
-    };
-    rec.onerror = () => {
-      recognitionRef.current = null;
-      setListening(false);
-      setLiveTranscript("");
-    };
-
+  // ── Voice controls (shared cross-platform hook) ──
+  function startListening() {
+    const v = voiceRef.current;
+    if (loadingRef.current || !v || v.listening || v.transcribing) return;
     try { Speech.stop(); } catch {}
     setSpeaking(false);
-    recognitionRef.current = rec;
-    rec.start();
-    setListening(true);
+    v.start();
   }
 
-  function stopListening() {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch {}
-      recognitionRef.current = null;
-    }
-    setListening(false);
+  /** Stop capturing. finalize=true sends what was heard; false discards it. */
+  function stopListening(finalize = true) {
+    if (finalize) voiceRef.current?.stop();
+    else voiceRef.current?.cancel();
     setLiveTranscript("");
   }
 
@@ -202,9 +174,9 @@ export default function CompanionScreen() {
     setHandsFree((v) => {
       const next = !v;
       if (next) {
-        startListening(true);
+        startListening();
       } else {
-        stopListening();
+        stopListening(false);
       }
       return next;
     });
@@ -212,7 +184,7 @@ export default function CompanionScreen() {
 
   function onPushToTalk() {
     if (listening) {
-      stopListening();
+      stopListening(true);
     } else {
       setHandsFree(false);
       startListening();
@@ -229,45 +201,55 @@ export default function CompanionScreen() {
     setMessages(next);
     setLoading(true);
 
-    try {
-      const domain = process.env.EXPO_PUBLIC_DOMAIN;
-      const res = await fetch(`https://${domain}/api/ai/companion`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pilotCode: PILOT_ACTIVATION_CODE,
-          messages: next.map(({ role, content }) => ({ role, content })),
-          memory: memoryRef.current ?? undefined,
-        }),
-      });
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    const body = JSON.stringify({
+      pilotCode: PILOT_ACTIVATION_CODE,
+      messages: next.map(({ role, content }) => ({ role, content })),
+      memory: memoryRef.current ?? undefined,
+    });
 
-      if (res.ok) {
-        const data = (await res.json()) as {
-          message?: string;
-          supervised?: boolean;
-          memoryUpdates?: Parameters<typeof mergeCompanionMemory>[0];
-        };
-        if (data.message) {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: data.message!, supervised: data.supervised },
-          ]);
-          speakText(data.message);
+    // Always-there companion: quietly retry transient hiccups before
+    // falling back, so a brief network blip doesn't end the conversation.
+    try {
+      let data: {
+        message?: string;
+        supervised?: boolean;
+        memoryUpdates?: Parameters<typeof mergeCompanionMemory>[0];
+      } | null = null;
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch(`https://${domain}/api/ai/companion`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+          });
+          if (res.ok) {
+            data = await res.json();
+            break;
+          }
+          if (![429, 500, 502, 503, 504].includes(res.status)) break;
+        } catch {
+          // Network error — retry
         }
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
+      }
+
+      if (data?.message) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: data!.message!, supervised: data!.supervised },
+        ]);
+        speakText(data.message);
         if (data.memoryUpdates) {
           memoryRef.current = await mergeCompanionMemory(data.memoryUpdates);
         }
       } else {
         const fallback =
-          "I'm sorry, I'm having a little trouble hearing from my helpers right now. Let's try again in a moment.";
+          "I'm still right here with you — I just couldn't hear from my helpers for a moment. Take a breath, and let's try that again together in a few seconds.";
         setMessages((prev) => [...prev, { role: "assistant", content: fallback, supervised: true }]);
         speakText(fallback);
       }
-    } catch {
-      const fallback =
-        "I'm sorry, I couldn't connect just now. Please check your internet and try again.";
-      setMessages((prev) => [...prev, { role: "assistant", content: fallback, supervised: true }]);
-      speakText(fallback);
     } finally {
       setLoading(false);
     }
@@ -408,6 +390,14 @@ export default function CompanionScreen() {
             </Text>
           </View>
         )}
+        {voice.transcribing && (
+          <View style={[styles.listeningCard, { borderColor: colors.gold, backgroundColor: "rgba(245,197,24,0.08)" }]}>
+            <ActivityIndicator size="small" color={colors.gold} />
+            <Text style={[styles.listeningText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
+              One moment — writing down what you said…
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* ── Controls ── */}
@@ -499,12 +489,18 @@ export default function CompanionScreen() {
           ]}
         >
           <MaterialCommunityIcons
-            name={listening ? "stop" : speaking ? "volume-high" : "microphone"}
+            name={listening ? "stop" : voice.transcribing ? "ear-hearing" : speaking ? "volume-high" : "microphone"}
             size={44}
             color="#fff"
           />
           <Text style={[styles.talkBtnText, { fontFamily: "Inter_700Bold" }]}>
-            {listening ? "I'm listening — tap when done" : speaking ? "Speaking… tap to talk" : "Tap and speak to me"}
+            {listening
+              ? "I'm listening — tap when done"
+              : voice.transcribing
+                ? "One moment…"
+                : speaking
+                  ? "Speaking… tap to talk"
+                  : "Tap and speak to me"}
           </Text>
         </TouchableOpacity>
 

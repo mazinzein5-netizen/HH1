@@ -1,5 +1,5 @@
-import { Router, type IRouter } from "express";
-import OpenAI from "openai";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import OpenAI, { toFile } from "openai";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -252,6 +252,98 @@ router.post("/ai/companion", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "AI companion error");
     res.status(500).json({ error: "Failed to generate companion response" });
+  }
+});
+
+// Simple in-memory per-IP rate limit for the transcription endpoint —
+// it is unauthenticated (voice input is available in clean mode) and each
+// call costs money, so cap the request rate per client.
+const TRANSCRIBE_WINDOW_MS = 60_000;
+const TRANSCRIBE_MAX_PER_WINDOW = 20;
+const transcribeHits = new Map<string, { count: number; resetAt: number }>();
+
+function transcribeRateLimit(req: Request, res: Response, next: NextFunction) {
+  const now = Date.now();
+  const key = req.ip ?? "unknown";
+  const entry = transcribeHits.get(key);
+  if (!entry || now > entry.resetAt) {
+    // Opportunistic cleanup so the map can't grow without bound
+    if (transcribeHits.size > 5000) {
+      for (const [k, v] of transcribeHits) {
+        if (now > v.resetAt) transcribeHits.delete(k);
+      }
+    }
+    transcribeHits.set(key, { count: 1, resetAt: now + TRANSCRIBE_WINDOW_MS });
+    next();
+    return;
+  }
+  entry.count += 1;
+  if (entry.count > TRANSCRIBE_MAX_PER_WINDOW) {
+    res.status(429).json({ error: "Too many voice requests — please wait a moment and try again." });
+    return;
+  }
+  next();
+}
+
+/**
+ * POST /ai/transcribe
+ * Voice-input transcription for the mobile app (iOS/Android, where the
+ * browser SpeechRecognition API is unavailable). Accepts a short audio clip
+ * as base64 JSON and returns the transcript. Audio is processed transiently
+ * for transcription only — never stored.
+ */
+router.post("/ai/transcribe", transcribeRateLimit, async (req, res) => {
+  const openai = getOpenAI();
+  if (!openai) {
+    res.status(503).json({ error: "AI_NOT_CONFIGURED" });
+    return;
+  }
+
+  const { audio, mimeType } = req.body as { audio?: string; mimeType?: string };
+
+  if (typeof audio !== "string" || !audio.trim()) {
+    res.status(400).json({ error: "audio (base64) is required" });
+    return;
+  }
+  // ~15MB decoded cap (≈ 20MB base64) — far beyond any voice message
+  if (audio.length > 20_000_000) {
+    res.status(413).json({ error: "Audio clip is too large" });
+    return;
+  }
+
+  const type = typeof mimeType === "string" ? mimeType.toLowerCase() : "audio/m4a";
+  const extByType: Record<string, string> = {
+    "audio/m4a": "m4a",
+    "audio/x-m4a": "m4a",
+    "audio/mp4": "m4a",
+    "audio/aac": "aac",
+    "audio/mpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/webm": "webm",
+    "audio/ogg": "ogg",
+    "audio/3gpp": "3gp",
+  };
+  const ext = extByType[type] ?? "m4a";
+
+  try {
+    const buffer = Buffer.from(audio, "base64");
+    if (buffer.length < 200) {
+      res.status(400).json({ error: "Audio clip is empty or too short" });
+      return;
+    }
+
+    const transcription = await openai.audio.transcriptions.create({
+      file: await toFile(buffer, `voice.${ext}`),
+      model: "gpt-4o-mini-transcribe",
+      language: "en",
+    });
+
+    res.json({ text: (transcription.text ?? "").trim() });
+  } catch (err) {
+    logger.error({ err }, "AI transcribe error");
+    res.status(500).json({ error: "Failed to transcribe audio" });
   }
 });
 

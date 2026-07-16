@@ -17,7 +17,7 @@ export default function TabLayout() {
   const { connectedCount } = useSmartDevices();
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-  const fabBottom = bottomPad + 64 + 14;
+  const fabBottom = bottomPad + 64 + 8;
 
   return (
     <View style={{ flex: 1 }}>
