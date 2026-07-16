@@ -5,7 +5,7 @@ description: How to turn a video-js artifact into a hosted MP4 file (no platform
 
 # Exporting video artifacts to MP4
 
-There is no platform/sandbox callback that exports a video artifact. The promo recorder (`scripts/record-promo.mjs`, run via `pnpm --filter @workspace/scripts run export:promo`) is now a one-command export: it parses SCENE_DURATIONS out of the promo's VideoTemplate.tsx (never hardcode the total), records via puppeteer-core + nix-store playwright Chromium + CDP `Page.startScreencast`, encodes with ffmpeg (ambient audio muxed), and extracts the poster. A staleness guard (`check:promo-freshness`) exits 1 when the promo source is newer than the hosted MP4.
+There is no platform/sandbox callback that exports a video artifact. The promo recorder (`scripts/record-promo.mjs`, run via `pnpm --filter @workspace/scripts run export:promo`) is now a one-command export: it parses SCENE_DURATIONS out of the promo's VideoTemplate.tsx (never hardcode the total), records via puppeteer-core + nix-store playwright Chromium + CDP `Page.startScreencast`, encodes with ffmpeg (ambient audio muxed), and extracts the poster. A staleness guard (`check:promo-freshness`) exits 1 when the promo source is newer than the hosted MP4. The surgical video follows the identical pattern (`export:surgical` / `check:surgical-freshness`); the surgical freshness check is also registered as a validation command (`surgical-freshness`).
 
 **Rules:**
 - Capture must be aligned to a loop boundary or the MP4 starts/ends mid-scene. Do a warm-up load first (fonts + background clips cache), keep the screencast running, then `page.reload()` and start keeping frames when the fresh mount calls `window.startRecording` — that pins frame 0 to scene 1.
