@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { HiveLogo } from "@/components/HiveLogo";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { HexagonBackground } from "@/components/HexagonBackground";
+import { RubberBackground } from "@/components/RubberBackground";
 import { TrustStrip } from "@/components/TrustStrip";
 import { VideoEmbed } from "@/components/VideoEmbed";
 import { VideoShowcase } from "@/components/VideoShowcase";
@@ -15,9 +15,12 @@ import {
   Menu, X
 } from "lucide-react";
 
+// Shared, deliberate easing — a soft "settle" curve used across the whole page
+const SMOOTH_EASE = [0.22, 1, 0.36, 1] as const;
+
 const fadeInUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
+  hidden: { opacity: 0, y: 28 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: SMOOTH_EASE } }
 } as const;
 
 const staggerContainer = {
@@ -25,13 +28,23 @@ const staggerContainer = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.15
+      staggerChildren: 0.12
     }
   }
 };
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+
+  // Gentle parallax: hero content drifts up slightly slower than the scroll
+  const heroRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, prefersReducedMotion ? 0 : 90]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.85], [1, prefersReducedMotion ? 1 : 0.25]);
 
   // Smooth scroll for anchor links
   useEffect(() => {
@@ -66,13 +79,13 @@ export default function Home() {
       
       <a href="#main-content" className="skip-link">Skip to main content</a>
 
-      <HexagonBackground />
+      <RubberBackground />
 
       {/* Navigation */}
       <motion.header 
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.7, ease: SMOOTH_EASE }}
         className="fixed top-0 left-0 right-0 z-50 bg-background/70 backdrop-blur-xl border-b border-border/50 supports-[backdrop-filter]:bg-background/50"
       >
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
@@ -126,12 +139,12 @@ export default function Home() {
       <main id="main-content" className="flex-grow pt-20">
         
         {/* Section 1: Hero */}
-        <section className="relative pt-24 pb-32 lg:pt-40 lg:pb-40 flex items-center min-h-[90vh]">
-          <div className="container mx-auto px-6 relative z-10 text-center max-w-5xl">
+        <section ref={heroRef} className="relative pt-24 pb-32 lg:pt-40 lg:pb-40 flex items-center min-h-[90vh]">
+          <motion.div style={{ y: heroY, opacity: heroOpacity }} className="container mx-auto px-6 relative z-10 text-center max-w-5xl">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.7, ease: SMOOTH_EASE }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-primary text-xs font-bold tracking-[0.2em] uppercase mb-8 shadow-[0_0_15px_rgba(245,197,24,0.1)]"
             >
               <HiveLogo size={16} />
@@ -141,7 +154,7 @@ export default function Home() {
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.1 }}
+              transition={{ duration: 0.9, delay: 0.1, ease: SMOOTH_EASE }}
               className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 leading-[1.05] text-foreground drop-shadow-sm"
             >
               Gold Standard Privacy. <br />
@@ -151,7 +164,7 @@ export default function Home() {
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
+              transition={{ duration: 0.9, delay: 0.22, ease: SMOOTH_EASE }}
               className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light glass-panel px-6 py-4 rounded-3xl"
             >
               An intricate health documentation ecosystem. Long specialist waiting lists &amp; health systems under pressure can benefit from this digital health solution platform. HIVE Health is smart, safe, efficient and a cost effective augmentation available to all parties.
@@ -160,7 +173,7 @@ export default function Home() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.3 }}
+              transition={{ duration: 0.9, delay: 0.34, ease: SMOOTH_EASE }}
               className="flex flex-col sm:flex-row items-center justify-center gap-5"
             >
               <Button asChild size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
@@ -172,7 +185,7 @@ export default function Home() {
                 </a>
               </Button>
             </motion.div>
-          </div>
+          </motion.div>
         </section>
 
         <TrustStrip />
@@ -286,8 +299,8 @@ export default function Home() {
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.7 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.9, ease: SMOOTH_EASE }}
               className="relative max-w-5xl mx-auto mb-16"
             >
               <div className="relative aspect-video overflow-hidden rounded-[2rem] glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)] bg-[#07070f]">
@@ -312,9 +325,10 @@ export default function Home() {
             {/* Targeted Marketing Split */}
             <div className="grid lg:grid-cols-2 gap-8 mb-16">
               <motion.div 
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -24 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.9, ease: SMOOTH_EASE }}
                 className="glass-panel-heavy rounded-[2rem] overflow-hidden flex flex-col group hover:border-primary/30 transition-colors"
               >
                 <div className="h-64 sm:h-80 relative overflow-hidden">
@@ -338,9 +352,10 @@ export default function Home() {
               </motion.div>
 
               <motion.div 
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 24 }}
                 whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.9, delay: 0.12, ease: SMOOTH_EASE }}
                 className="glass-panel-heavy rounded-[2rem] overflow-hidden flex flex-col group hover:border-primary/30 transition-colors"
               >
                 <div className="h-64 sm:h-80 relative overflow-hidden">
