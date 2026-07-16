@@ -259,12 +259,23 @@ export default function Home() {
               transition={{ duration: 0.7 }}
               className="relative max-w-5xl mx-auto mb-16"
             >
-              <VideoEmbed
-                src="/promo-video/?embed=1"
-                title="HIVE Companion promo video"
-                audioSrc={`${import.meta.env.BASE_URL}audio/promo-ambient.mp3`}
-                frameClassName="rounded-[2rem] glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
-              />
+              <div className="relative aspect-video overflow-hidden rounded-[2rem] glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)] bg-[#07070f]">
+                <video
+                  className="h-full w-full object-cover"
+                  src={`${import.meta.env.BASE_URL}videos/hive-companion-promo.mp4`}
+                  poster={`${import.meta.env.BASE_URL}videos/hive-companion-promo-poster.jpg`}
+                  controls
+                  preload="metadata"
+                  playsInline
+                  aria-label="HIVE Companion promo video"
+                >
+                  Your browser does not support the video tag. You can{" "}
+                  <a href={`${import.meta.env.BASE_URL}videos/hive-companion-promo.mp4`}>
+                    download the promo video
+                  </a>{" "}
+                  instead.
+                </video>
+              </div>
             </motion.div>
 
             {/* Targeted Marketing Split */}

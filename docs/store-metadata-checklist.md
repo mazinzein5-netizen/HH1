@@ -1,11 +1,11 @@
-# Store Metadata Checklist — HIVE Intake : Patient Portal
+# Store Metadata Checklist — HIVE Companion™ : Patient Portal
 
 Use this checklist when preparing the Apple App Store and Google Play submissions.
 The store build ships in **clean mode only** (pilot mode is hidden and off by default).
 
 ## App identity
 
-- [ ] **App name:** HIVE Intake : Patient Portal
+- [ ] **App name:** HIVE Companion™ : Patient Portal
 - [ ] **Subtitle (Apple, 30 chars):** "Your health records, organised"
 - [ ] **Short description (Google, 80 chars):** "Organise your health records, questionnaires and emergency card in one place."
 - [ ] **Developer / company name:** IbnCeena Ltd.
@@ -23,12 +23,12 @@ Preferred vocabulary:
 
 ## Long description — approved framing
 
-> HIVE Intake helps you keep your health information organised and ready to share with your GP.
+> HIVE Companion™ helps you keep your health information organised and ready to share with your GP.
 > - Complete standardised, internationally recognised health questionnaires (ODI, mJOA, Oxford Hip & Knee) and bring the summary to your appointment.
 > - Keep a private record of medications, conditions and allergies on your device.
 > - Set up an emergency health card that first responders can access by QR code and PIN.
 > - Look up plain-English information from public HSE and NICE health guidelines.
-> HIVE Intake is not a medical device. It does not diagnose, treat, or provide medical advice. All personal data stays on your device.
+> HIVE Companion™ is not a medical device. It does not diagnose, treat, or provide medical advice. All personal data stays on your device.
 
 ## Keywords (Apple, 100 chars)
 

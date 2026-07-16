@@ -11,3 +11,4 @@
 - [Companion supervisor pattern](companion-supervisor.md) — pilot AI replies pass a second safety-review model call; on failure serve reply flagged supervised:false, never block.
 - [Website video embeds](website-video-embeds.md) — pop-out scale needs unclipped wrapper (frameClassName); audio lives in parent page; promo clip at 0.8x must span scenes 1-3 exactly.
 - [Expo route typegen](expo-route-typegen.md) — router.d.ts/expo-env.d.ts are gitignored dev-server artifacts; mobile typecheck regenerates them headlessly first or clean checkouts fail.
+- [Video export pipeline](video-export-pipeline.md) — no platform export tool; screencast-record video artifacts to MP4, aligning capture to a loop boundary via reload + startRecording.

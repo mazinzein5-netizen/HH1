@@ -420,7 +420,7 @@ export default function SettingsScreen() {
 
         <TouchableOpacity activeOpacity={1} onLongPress={handleVersionLongPress} delayLongPress={1200}>
           <Text style={[styles.versionText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            HIVE COMPANION : Patient Portal v2.0 · IbnCeena Ltd.{"\n"}
+            HIVE COMPANION™ : Patient Portal v2.0 · IbnCeena Ltd.{"\n"}
             <Text style={{ color: isDark ? "#E8590C" : "#C2410C", fontFamily: "Inter_500Medium" }}>
               Not a medical device — for information and administrative use only.
             </Text>

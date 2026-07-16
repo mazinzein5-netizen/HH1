@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "HIVE Intake : Patient Portal",
+    "name": "HIVE Companion™ : Patient Portal",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -33,7 +33,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "HIVE Intake uses your location to find pharmacies near you. Your coordinates are sent only to the OpenStreetMap lookup service to run the search, and are never stored or sent to HIVE servers."
+          "locationWhenInUsePermission": "HIVE Companion™ uses your location to find pharmacies near you. Your coordinates are sent only to the OpenStreetMap lookup service to run the search, and are never stored or sent to HIVE servers."
         }
       ]
     ],

@@ -74,7 +74,7 @@ export default function ConsentGate() {
 
         <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
           Welcome to{"\n"}
-          <Text style={{ color: colors.goldLight }}>HIVE COMPANION : Patient Portal</Text>
+          <Text style={{ color: colors.goldLight }}>HIVE COMPANION™ : Patient Portal</Text>
         </Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
           Before you begin, please review how this app works and how your information is handled.

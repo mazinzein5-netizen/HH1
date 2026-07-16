@@ -1,4 +1,4 @@
-export const PRIVACY_POLICY_APP_NAME = "HIVE Intake : Patient Portal";
+export const PRIVACY_POLICY_APP_NAME = "HIVE Companion™ : Patient Portal";
 export const PRIVACY_POLICY_COMPANY = "IbnCeena Ltd.";
 export const PRIVACY_POLICY_LAST_UPDATED = "July 2026";
 
@@ -11,7 +11,7 @@ export const PRIVACY_POLICY_SECTIONS: PrivacyPolicySection[] = [
   {
     heading: "Who we are",
     body:
-      "HIVE Intake : Patient Portal is developed by IbnCeena Ltd. This app is a personal health record organiser and health guideline information viewer.",
+      "HIVE Companion™ : Patient Portal is developed by IbnCeena Ltd. This app is a personal health record organiser and health guideline information viewer.",
   },
   {
     heading: "Not a medical device",

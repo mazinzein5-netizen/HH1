@@ -5,7 +5,7 @@ description: How the marketing site's VideoEmbed pop-out scale and ambient audio
 
 # Website video embed hover/audio pattern
 
-The three video iframes on the website use `VideoEmbed` with hover/focus pop-out and parent-page ambient audio.
+The hub and surgical videos on the website are `VideoEmbed` iframes with hover/focus pop-out and parent-page ambient audio. The Companion promo is different: it is a hosted MP4 export (`public/videos/`, native `<video controls poster>`, soundtrack muxed in) — see the video-export-pipeline memory. Re-export it if the promo artifact's scenes change.
 
 **Rules:**
 - The pop-out scale must live on an UNCLIPPED wrapper; rounded/overflow-hidden framing goes inside via the `frameClassName` prop. If a call site's card must keep clipping (e.g. the surgical browser-chrome card), pass `scaleOnHover={false}` and put `hover:scale-*` on the card itself.
