@@ -529,7 +529,7 @@ export default function Home() {
                 variants={fadeInUp}
                 className="order-2 lg:order-1 relative"
               >
-                <div className="relative rounded-3xl overflow-hidden glass-panel flex flex-col group transition-transform duration-500 hover:scale-[1.03] hover:z-20 motion-reduce:transform-none">
+                <div className="relative rounded-3xl overflow-hidden glass-panel flex flex-col group transition-transform duration-500 hover:scale-[1.06] hover:z-20 motion-reduce:transform-none">
                    {/* Browser chrome */}
                    <div className="h-12 bg-background/50 border-b border-border flex items-center px-4 gap-2">
                      <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
