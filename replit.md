@@ -36,6 +36,7 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 - Elderly-friendly UI: minimalist layouts, big text, large tap targets, high contrast throughout the mobile app.
 - "Not a medical device" fine print should stand out in dark orange (theme-conditional: #E8590C dark mode, #C2410C light mode for contrast).
+- All video voiceovers/narration must use an Irish accent (TTS voice: "John - Irish Man", voice_id GFyWqnwcF2mv6dWlo3u1 — the only Irish-accented voice in the library). App speech already uses en-IE.
 
 ## Gotchas
 
