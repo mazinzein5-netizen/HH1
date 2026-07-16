@@ -1,16 +1,8 @@
 import { Router, type IRouter } from "express";
-import OpenAI from "openai";
 import { logger } from "../lib/logger";
+import { getChatAI, CHAT_MODEL } from "../lib/aiClients";
 
 const router: IRouter = Router();
-
-function getOpenAI(): OpenAI | null {
-  const apiKey =
-    process.env["OPENAI_API_KEY"] ?? process.env["AI_INTEGRATIONS_OPENAI_API_KEY"];
-  if (!apiKey) return null;
-  const baseURL = process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"];
-  return new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
-}
 
 /**
  * Pilot behavior is only served when the request carries the pilot access
@@ -172,7 +164,7 @@ Strict rules — you must follow all of these:
 // ── Routes ─────────────────────────────────────────────────────────────────
 
 router.post("/ai/questions", async (req, res) => {
-  const openai = getOpenAI();
+  const openai = getChatAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
@@ -191,7 +183,7 @@ router.post("/ai/questions", async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: CHAT_MODEL,
       max_tokens: 600,
       messages: [
         { role: "system", content: questionsSystemPrompt },
@@ -226,7 +218,7 @@ router.post("/ai/questions", async (req, res) => {
 });
 
 router.post("/ai/summary", async (req, res) => {
-  const openai = getOpenAI();
+  const openai = getChatAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
@@ -265,7 +257,7 @@ Return ONLY valid JSON. No extra text.`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: CHAT_MODEL,
       max_tokens: 600,
       messages: [
         { role: "system", content: summarySystemPrompt },
@@ -302,7 +294,7 @@ Return ONLY valid JSON. No extra text.`;
  * contraindication flags the UI should surface.
  */
 router.post("/ai/contraindications", async (req, res) => {
-  const openai = getOpenAI();
+  const openai = getChatAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
@@ -339,7 +331,7 @@ Identify all significant contraindications in this profile.`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: CHAT_MODEL,
       max_tokens: 800,
       messages: [
         { role: "system", content: systemPrompt },
@@ -371,7 +363,7 @@ Identify all significant contraindications in this profile.`;
  * system prompt so Queen B can flag contraindications in real-time.
  */
 router.post("/ai/chat", async (req, res) => {
-  const openai = getOpenAI();
+  const openai = getChatAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
@@ -404,7 +396,7 @@ router.post("/ai/chat", async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: CHAT_MODEL,
       max_tokens: 800,
       messages: [
         { role: "system", content: basePrompt },
@@ -441,7 +433,7 @@ router.post("/ai/health-alert", async (req, res) => {
     return;
   }
 
-  const openai = getOpenAI();
+  const openai = getChatAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
@@ -480,7 +472,7 @@ ${readingsText}`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: CHAT_MODEL,
       max_tokens: 300,
       messages: [
         { role: "system", content: systemPrompt },

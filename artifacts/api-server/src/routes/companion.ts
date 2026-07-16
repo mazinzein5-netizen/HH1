@@ -1,16 +1,9 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import OpenAI, { toFile } from "openai";
+import { toFile } from "openai";
 import { logger } from "../lib/logger";
+import { getChatAI, getOpenAI, CHAT_MODEL } from "../lib/aiClients";
 
 const router: IRouter = Router();
-
-function getOpenAI(): OpenAI | null {
-  const apiKey =
-    process.env["OPENAI_API_KEY"] ?? process.env["AI_INTEGRATIONS_OPENAI_API_KEY"];
-  if (!apiKey) return null;
-  const baseURL = process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"];
-  return new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
-}
 
 /** Pilot behavior is only served with the rotatable pilot access code. */
 function isPilotRequest(body: unknown): boolean {
@@ -139,7 +132,7 @@ router.post("/ai/companion", async (req, res) => {
     return;
   }
 
-  const openai = getOpenAI();
+  const openai = getChatAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
@@ -185,7 +178,7 @@ router.post("/ai/companion", async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: CHAT_MODEL,
       max_tokens: 500,
       messages: [
         { role: "system", content: memoryPreamble + COMPANION_TEACHER_PROMPT },
@@ -205,7 +198,7 @@ router.post("/ai/companion", async (req, res) => {
 
     try {
       const review = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: CHAT_MODEL,
         max_tokens: 500,
         messages: [
           { role: "system", content: SUPERVISOR_PROMPT },
@@ -359,7 +352,7 @@ router.post("/ai/translate", async (req, res) => {
     return;
   }
 
-  const openai = getOpenAI();
+  const openai = getChatAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
@@ -380,7 +373,7 @@ router.post("/ai/translate", async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: CHAT_MODEL,
       max_tokens: 900,
       messages: [
         { role: "system", content: systemPrompt },
