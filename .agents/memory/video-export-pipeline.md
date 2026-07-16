@@ -17,3 +17,4 @@ There is no platform/sandbox callback that exports a video artifact. A reusable 
 **Why:** the first export attempt keyed capture off the first `stopRecording` call and produced a video that began and ended in the middle of the privacy scene.
 
 **How to apply:** whenever a video artifact needs to ship as a real MP4/WebM file (website embeds, social media cuts, downloads). Re-run the recorder after any scene change so the hosted file doesn't go stale.
+- The e2e testing browser (Playwright Chromium) lacks the proprietary H.264 codec: hosted MP4s show readyState 0 / never play there while working fine in real browsers. Assert dialog/src/controls behavior instead of currentTime.

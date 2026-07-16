@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { HexagonBackground } from "@/components/HexagonBackground";
 import { TrustStrip } from "@/components/TrustStrip";
 import { VideoEmbed } from "@/components/VideoEmbed";
+import { VideoShowcase } from "@/components/VideoShowcase";
 import { 
   ArrowRight, ShieldCheck, FileText, Smartphone, 
   Stethoscope, Mail, ExternalLink, Activity,
@@ -454,6 +455,50 @@ export default function Home() {
                 </div>
               </div>
             </motion.div>
+          </div>
+        </section>
+
+        {/* Section 4.5: Video Showcase */}
+        <section id="showcase" className="py-20 lg:py-28 relative">
+          <div className="container mx-auto px-6">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+              className="flex flex-col items-center text-center mb-12 max-w-3xl mx-auto"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md glass-panel text-foreground text-xs font-bold tracking-widest uppercase mb-6">
+                <Video className="h-3 w-3 text-primary" />
+                Watch
+              </div>
+              <h2 className="text-4xl md:text-6xl font-bold mb-4 text-foreground">See the HIVE in action</h2>
+              <p className="text-lg md:text-xl text-muted-foreground font-light">
+                Two short films — one for patients and families, one for clinical teams. Select a video to expand and play.
+              </p>
+            </motion.div>
+            <div className="max-w-5xl mx-auto">
+              <VideoShowcase
+                videos={[
+                  {
+                    id: "companion-promo",
+                    title: "HIVE Companion",
+                    tagline: "Your health story, already organised — for patients and families",
+                    src: `${import.meta.env.BASE_URL}videos/hive-companion-promo.mp4`,
+                    poster: `${import.meta.env.BASE_URL}videos/hive-companion-promo-poster.jpg`,
+                    duration: "0:22",
+                  },
+                  {
+                    id: "surgical-assistant",
+                    title: "HIVE Surgical Assistant",
+                    tagline: "Streamlined documentation for surgical and clinical teams",
+                    src: `${import.meta.env.BASE_URL}videos/hive-surgical-assistant.mp4`,
+                    poster: `${import.meta.env.BASE_URL}videos/hive-surgical-assistant-poster.jpg`,
+                    duration: "0:26",
+                  },
+                ]}
+              />
+            </div>
           </div>
         </section>
 
