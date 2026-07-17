@@ -12,8 +12,14 @@
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as LocalAuthentication from "expo-local-authentication";
 import { Platform } from "react-native";
+
+/** True when running inside the shared Expo Go testing app (not an installed build). */
+export function isExpoGo(): boolean {
+  return Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+}
 
 const BIOMETRIC_KEY = "hive_biometric_login_v1";
 
@@ -31,13 +37,18 @@ export interface BiometricSupport {
   /** MDI icon that matches the label. */
   icon: "face-recognition" | "fingerprint";
   /** Why it is unavailable, for honest UI copy. */
-  reason?: "web" | "no-hardware" | "not-enrolled";
+  reason?: "web" | "no-hardware" | "not-enrolled" | "expo-go";
 }
 
 /** What the device can do right now. */
 export async function getBiometricSupport(): Promise<BiometricSupport> {
   if (Platform.OS === "web") {
     return { available: false, label: "biometrics", icon: "fingerprint", reason: "web" };
+  }
+  if (isExpoGo()) {
+    const label = Platform.OS === "ios" ? "Face ID" : "fingerprint";
+    const icon = Platform.OS === "ios" ? ("face-recognition" as const) : ("fingerprint" as const);
+    return { available: false, label, icon, reason: "expo-go" };
   }
   try {
     const hasHardware = await LocalAuthentication.hasHardwareAsync();

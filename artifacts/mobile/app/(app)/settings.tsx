@@ -114,6 +114,7 @@ export default function SettingsScreen() {
     if (bioSupport.available) return `Unlock the app with ${bioSupport.label} instead of your password.`;
     switch (bioSupport.reason) {
       case "web":          return "Works on your phone — Face ID or fingerprint.";
+      case "expo-go":      return "Not available in the Expo Go testing app — install the real HIVE Companion app build to use Face ID or fingerprint sign-in.";
       case "not-enrolled": return "First set up Face ID or a fingerprint in your phone's own settings.";
       default:             return "This device doesn't support biometric sign-in.";
     }
