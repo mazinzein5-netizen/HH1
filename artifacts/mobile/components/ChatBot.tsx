@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import * as Speech from "expo-speech";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -11,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -37,10 +39,19 @@ import {
   relativeDate,
   type MemorySession,
 } from "@/utils/chatMemory";
+import {
+  buildAppContext,
+  detectIntent,
+  runTool,
+  type ToolCard,
+} from "@/utils/companionTools";
+import type { GpLetterContext } from "@/context/HiveBotContext";
 
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  /** On-device tool card (rendered under the message, may deep-link). */
+  card?: ToolCard;
 }
 
 interface Props {
@@ -48,6 +59,7 @@ interface Props {
   onClose: () => void;
   seedContext?: string;
   painHelper?: boolean;
+  gpLetter?: GpLetterContext;
 }
 
 const PILOT_GREETING: ChatMessage = {
@@ -138,7 +150,17 @@ function ContraindictionBubble({
 
 // ── Message bubbles ───────────────────────────────────────────────────────────
 
-function BotBubble({ content, colors }: { content: string; colors: ReturnType<typeof useColors> }) {
+function BotBubble({
+  content,
+  card,
+  colors,
+  onNavigate,
+}: {
+  content: string;
+  card?: ToolCard;
+  colors: ReturnType<typeof useColors>;
+  onNavigate: (route: string) => void;
+}) {
   if (isContraindictionMsg(content)) {
     return <ContraindictionBubble content={content} colors={colors} />;
   }
@@ -155,6 +177,36 @@ function BotBubble({ content, colors }: { content: string; colors: ReturnType<ty
       <Text style={[styles.bubbleText, { color: isRedFlag ? colors.emergency : colors.foreground, fontFamily: "Inter_400Regular" }]}>
         {parseGuidelineChips(content)}
       </Text>
+      {card && (
+        <View style={[styles.toolCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <View style={styles.toolCardHeader}>
+            <MaterialCommunityIcons name={card.icon as any} size={16} color="#C9860A" />
+            <Text style={[styles.toolCardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              {card.title}
+            </Text>
+          </View>
+          {card.lines.map((line, i) => (
+            <Text
+              key={i}
+              style={[styles.toolCardLine, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}
+            >
+              • {line}
+            </Text>
+          ))}
+          {card.route && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => onNavigate(card.route!)}
+              style={[styles.toolCardBtn, { backgroundColor: "rgba(201,134,10,0.12)", borderColor: "rgba(201,134,10,0.4)" }]}
+            >
+              <Text style={[styles.toolCardBtnText, { color: "#C9860A", fontFamily: "Inter_700Bold" }]}>
+                {card.routeLabel ?? "Open"}
+              </Text>
+              <MaterialCommunityIcons name="arrow-right" size={14} color="#C9860A" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -169,7 +221,7 @@ function UserBubble({ content, colors }: { content: string; colors: ReturnType<t
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function ChatBot({ visible, onClose, seedContext, painHelper }: Props) {
+export default function ChatBot({ visible, onClose, seedContext, painHelper, gpLetter }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { data: patient } = usePatient();
@@ -195,6 +247,50 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
 
   // ── Sign language camera ──
   const [showSignLang, setShowSignLang] = useState(false);
+
+  // ── GP letter (pilot-only, consent-gated) ──
+  const [gpLetterDismissed, setGpLetterDismissed] = useState(false);
+  const [gpLetterLoading, setGpLetterLoading] = useState(false);
+  const [gpLetterText, setGpLetterText] = useState<string | null>(null);
+  const [showGpLetterModal, setShowGpLetterModal] = useState(false);
+  const showGpLetterOffer =
+    pilotMode && !!gpLetter && !gpLetterDismissed && !gpLetterText && !gpLetterLoading;
+
+  async function draftGpLetter() {
+    if (!gpLetter || gpLetterLoading) return;
+    setGpLetterLoading(true);
+    try {
+      const domain = process.env.EXPO_PUBLIC_DOMAIN;
+      const res = await fetch(`https://${domain}/api/ai/gp-letter`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pilotCode: PILOT_ACTIVATION_CODE,
+          ...gpLetter,
+          patientContext: {
+            medications: activeMeds.map((m) => ({ name: m.medication, dose: m.dose, frequency: m.frequency })),
+            allergies: patient.allergies.map((a) => ({ drug: a.drug, reaction: a.reaction, severity: a.severity })),
+          },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.letter) {
+        setGpLetterText(String(data.letter));
+        setShowGpLetterModal(true);
+      } else {
+        Alert.alert("GP Letter", "I couldn't draft the letter just now — please try again in a moment.");
+      }
+    } catch {
+      Alert.alert("GP Letter", "I couldn't draft the letter just now — please check your connection and try again.");
+    } finally {
+      setGpLetterLoading(false);
+    }
+  }
+
+  function shareGpLetter() {
+    if (!gpLetterText) return;
+    shareWithHealthServices("Letter for my GP", `${gpLetterText}\n\n${formatPatientCard(patient)}`);
+  }
 
   // ── Conversation memory ──
   const [showMemoryPrompt, setShowMemoryPrompt] = useState(false);
@@ -285,6 +381,15 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
     if (!visible) { memoryAskedRef.current = false; setShowRecallBanner(false); setLastSession(null); }
   }, [visible]);
 
+  // Reset GP-letter state when closed so a fresh questionnaire gets a fresh offer
+  useEffect(() => {
+    if (!visible) {
+      setGpLetterDismissed(false);
+      setGpLetterText(null);
+      setShowGpLetterModal(false);
+    }
+  }, [visible]);
+
   const flatListRef = useRef<FlatList>(null);
   const slideAnim  = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
@@ -370,11 +475,36 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
     const userMsg: ChatMessage = { role: "user", content: trimmed };
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
+
+    // ── On-device tool layer: answer "show me my…" requests locally ──
+    const intent = detectIntent(trimmed);
+    if (intent) {
+      setLoading(true);
+      try {
+        const result = await runTool(intent, patient);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: result.reply, card: result.card },
+        ]);
+        speak(result.reply);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "I had trouble reading that from your records just now — you can find it through the app menu, and I'm happy to try again." },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setLoading(true);
 
+    const appContext = await buildAppContext();
     const domain = process.env.EXPO_PUBLIC_DOMAIN;
     const body = JSON.stringify({
       messages: nextMessages.map(({ role, content }) => ({ role, content })),
+      appContext: appContext || undefined,
       pilotCode: pilotMode ? PILOT_ACTIVATION_CODE : undefined,
       mode: painHelper ? "painDescribe" : undefined,
       // Always send patient context so Sarah can detect interactions in real-time
@@ -421,7 +551,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
         speak(reply);
       } else {
         const fallback =
-          "I'm still right here with you 🐝 — I just couldn't reach my hive for a moment. Give it a few seconds and say that again, and if it keeps happening, it's worth checking your internet connection.";
+          "I'm still right here with you — I just lost my connection for a moment. Give it a few seconds and say that again, and if it keeps happening, it's worth checking your internet connection.";
         setMessages((prev) => [...prev, { role: "assistant", content: fallback }]);
         speak(fallback);
       }
@@ -513,7 +643,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
                   )}
                 </View>
                 <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  {painHelper ? "Helping You Describe Your Pain" : pilotMode ? "Pain & Clinical Guidance" : "Guideline Information"}
+                  {painHelper ? "Helping You Describe Your Pain" : pilotMode ? "Pain & Clinical Guidance" : "Your Health Companion"}
                 </Text>
               </View>
               <TouchableOpacity
@@ -560,7 +690,15 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
               onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
               renderItem={({ item }) =>
                 item.role === "assistant" ? (
-                  <BotBubble content={item.content} colors={colors} />
+                  <BotBubble
+                    content={item.content}
+                    card={item.card}
+                    colors={colors}
+                    onNavigate={(route) => {
+                      onClose();
+                      setTimeout(() => router.push(route as any), 250);
+                    }}
+                  />
                 ) : (
                   <UserBubble content={item.content} colors={colors} />
                 )
@@ -591,6 +729,49 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
                 </TouchableOpacity>
                 <TouchableOpacity hitSlop={10} onPress={() => setShowRecallBanner(false)}>
                   <MaterialCommunityIcons name="close" size={14} color="#C9860A" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* GP letter offer — pilot only, always consent-gated */}
+            {showGpLetterOffer && (
+              <View style={[styles.recallBanner, { backgroundColor: "rgba(79,110,247,0.08)", borderColor: "rgba(79,110,247,0.4)" }]}>
+                <MaterialCommunityIcons name="email-edit-outline" size={16} color="#4F6EF7" />
+                <Text style={[styles.recallText, { color: "#4F6EF7", fontFamily: "Inter_500Medium" }]}>
+                  Would you like me to draft a letter to your GP about these results? You review it before anything is shared.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.recallBtn, { backgroundColor: "rgba(79,110,247,0.18)" }]}
+                  onPress={draftGpLetter}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.recallBtnText, { color: "#4F6EF7", fontFamily: "Inter_700Bold" }]}>Draft Letter</Text>
+                </TouchableOpacity>
+                <TouchableOpacity hitSlop={10} onPress={() => setGpLetterDismissed(true)}>
+                  <MaterialCommunityIcons name="close" size={14} color="#4F6EF7" />
+                </TouchableOpacity>
+              </View>
+            )}
+            {gpLetterLoading && (
+              <View style={[styles.recallBanner, { backgroundColor: "rgba(79,110,247,0.08)", borderColor: "rgba(79,110,247,0.4)" }]}>
+                <ActivityIndicator size="small" color="#4F6EF7" />
+                <Text style={[styles.recallText, { color: "#4F6EF7", fontFamily: "Inter_500Medium" }]}>
+                  Drafting your GP letter…
+                </Text>
+              </View>
+            )}
+            {gpLetterText && !showGpLetterModal && (
+              <View style={[styles.recallBanner, { backgroundColor: "rgba(79,110,247,0.08)", borderColor: "rgba(79,110,247,0.4)" }]}>
+                <MaterialCommunityIcons name="email-check-outline" size={16} color="#4F6EF7" />
+                <Text style={[styles.recallText, { color: "#4F6EF7", fontFamily: "Inter_500Medium" }]}>
+                  Your GP letter draft is ready.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.recallBtn, { backgroundColor: "rgba(79,110,247,0.18)" }]}
+                  onPress={() => setShowGpLetterModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.recallBtnText, { color: "#4F6EF7", fontFamily: "Inter_700Bold" }]}>Review</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -738,6 +919,48 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
         onSubmit={handleSignSubmit}
       />
 
+      {/* ── GP letter review (patient reviews before anything is shared) ─────── */}
+      <Modal visible={showGpLetterModal} transparent animationType="fade" onRequestClose={() => setShowGpLetterModal(false)}>
+        <View style={styles.promptOverlay}>
+          <View style={[styles.promptCard, { backgroundColor: colors.card, borderColor: colors.border, maxHeight: "85%" }]}>
+            <View style={[styles.promptIconBox, { backgroundColor: "rgba(79,110,247,0.12)" }]}>
+              <MaterialCommunityIcons name="email-edit-outline" size={28} color="#4F6EF7" />
+            </View>
+            <Text style={[styles.promptTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              Your GP Letter Draft
+            </Text>
+            <Text style={[styles.promptBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Please read this carefully and only share it if you're happy with it. Nothing is sent unless you choose to share it yourself.
+            </Text>
+            <ScrollView
+              style={[styles.gpLetterScroll, { borderColor: colors.border, backgroundColor: colors.background }]}
+              contentContainerStyle={{ padding: 12 }}
+            >
+              <Text style={[styles.gpLetterText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+                {gpLetterText}
+              </Text>
+            </ScrollView>
+            <View style={styles.promptActions}>
+              <TouchableOpacity
+                style={[styles.promptBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
+                onPress={() => setShowGpLetterModal(false)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.promptBtnText, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.promptBtn, { backgroundColor: "#4F6EF7" }]}
+                onPress={shareGpLetter}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons name="share-variant" size={16} color="#fff" />
+                <Text style={[styles.promptBtnText, { color: "#fff", fontFamily: "Inter_700Bold" }]}>Share Letter</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* ── Memory permission prompt ─────────────────────────────────────────── */}
       <Modal visible={showMemoryPrompt} transparent animationType="fade" onRequestClose={() => { setShowMemoryPrompt(false); setMemoryPermission(false); }}>
         <View style={styles.promptOverlay}>
@@ -867,4 +1090,16 @@ const styles = StyleSheet.create({
   promptActions: { flexDirection: "row", gap: 10, width: "100%" },
   promptBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 13, paddingVertical: 13, borderWidth: 1 },
   promptBtnText: { fontSize: 14 },
+
+  // On-device tool cards
+  toolCard: { marginTop: 10, borderWidth: 1, borderRadius: 12, padding: 12, gap: 5 },
+  toolCardHeader: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 3 },
+  toolCardTitle: { fontSize: 13.5 },
+  toolCardLine: { fontSize: 12.5, lineHeight: 18 },
+  toolCardBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderRadius: 10, paddingVertical: 9, marginTop: 7 },
+  toolCardBtnText: { fontSize: 12.5 },
+
+  // GP letter review
+  gpLetterScroll: { width: "100%", borderWidth: 1, borderRadius: 12, maxHeight: 300 },
+  gpLetterText: { fontSize: 13, lineHeight: 20 },
 });

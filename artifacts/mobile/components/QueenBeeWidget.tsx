@@ -118,27 +118,31 @@ function Antennae({ sway }: { sway: Animated.AnimatedInterpolation<string> }) {
   );
 }
 
-// ── Body ──────────────────────────────────────────────────────────────────────
+// ── Body — laid back behind the head with perspective foreshortening ─────────
 function Body() {
   return (
     <View style={s.bodyOuter}>
-      {/* 3D sphere gradient — light from top-left */}
+      {/* 3D sphere gradient — light from the front (bottom, near the head) */}
       <LinearGradient
-        colors={[G0, G1, G2, G3]}
-        start={{ x: 0.15, y: 0 }}
-        end={{ x: 0.85, y: 1 }}
+        colors={[G3, G2, G1, G0]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
         style={s.bodyGrad}
       >
-        {/* Black stripes */}
-        <View style={[s.stripe, { top: "20%", height: "16%" }]} />
-        <View style={[s.stripe, { top: "44%", height: "16%" }]} />
-        <View style={[s.stripe, { top: "68%", height: "13%" }]} />
-        {/* top-left specular sheen */}
+        {/* Black stripes — foreshortened by the rotateX lay-back */}
+        <View style={[s.stripe, { top: "16%", height: "15%" }]} />
+        <View style={[s.stripe, { top: "42%", height: "16%" }]} />
+        <View style={[s.stripe, { top: "68%", height: "16%" }]} />
+        {/* front sheen, catching light near the head */}
         <View style={s.specular} />
-        {/* soft secondary sheen */}
         <View style={s.specular2} />
-        {/* bottom rim shadow */}
-        <View style={s.rimShadow} />
+        {/* atmospheric depth haze — the far end fades darker */}
+        <LinearGradient
+          colors={["rgba(30,18,4,0.55)", "rgba(30,18,4,0.18)", "transparent"]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 0.85 }}
+          style={StyleSheet.absoluteFillObject}
+        />
       </LinearGradient>
     </View>
   );
@@ -359,7 +363,12 @@ export default function QueenBeeWidget({
         style={[s.shadow, { transform: [{ scaleX: shadowAnim }, { scaleY: 0.4 }] }]}
       />
 
-      <TouchableWithoutFeedback onPress={handlePress}>
+      <TouchableWithoutFeedback
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel="Talk to Sarah"
+        testID="sarah-bee"
+      >
         <Animated.View
           style={{
             transform: [
@@ -371,21 +380,32 @@ export default function QueenBeeWidget({
             ],
           }}
         >
-          {/* Wings sit behind the body — ghost pair first for motion blur */}
-          <View style={s.wingsLayer}>
-            <Wing side="L" anim={flutterAnim} ghost />
-            <Wing side="R" anim={flutterAnim} ghost />
-          </View>
-          <View style={s.wingsLayer}>
-            <Wing side="L" anim={flutterAnim} />
-            <Wing side="R" anim={flutterAnim} />
-          </View>
+          <View style={s.beeStage}>
+            {/* Stinger — furthest away, peeking up behind the body */}
+            <View style={s.stingerLayer}>
+              <Stinger />
+            </View>
 
-          <View style={s.beeCol}>
-            <Antennae sway={antSway} />
-            <Head grabbed={grabbed} blink={blinkAnim} />
-            <Body />
-            <Stinger />
+            {/* Body — laid back and receding behind the head as she flies forward */}
+            <View style={s.bodyLayer}>
+              <Body />
+            </View>
+
+            {/* Wings — behind the head, above the laid-back body */}
+            <View style={s.wingsLayer}>
+              <Wing side="L" anim={flutterAnim} ghost />
+              <Wing side="R" anim={flutterAnim} ghost />
+            </View>
+            <View style={s.wingsLayer}>
+              <Wing side="L" anim={flutterAnim} />
+              <Wing side="R" anim={flutterAnim} />
+            </View>
+
+            {/* Head — biggest and closest, face straight at the user */}
+            <View style={s.headLayer}>
+              <Antennae sway={antSway} />
+              <Head grabbed={grabbed} blink={blinkAnim} />
+            </View>
           </View>
 
           {/* Always-online presence dot */}
@@ -421,15 +441,21 @@ const s = StyleSheet.create({
     alignSelf: "center",
   },
 
-  // Wings layer (absolutely positioned so body renders on top)
+  // Flying-forward stage: everything absolutely layered for depth
+  beeStage: {
+    width: BEE_W,
+    height: BEE_H,
+  },
+
+  // Wings layer — behind the head, above the receding body
   wingsLayer: {
     position: "absolute",
-    top: 12,
+    top: 9,
     left: 0,
     right: 0,
     flexDirection: "row",
     justifyContent: "center",
-    zIndex: 0,
+    zIndex: 2,
   },
   wing: {
     width: 22,
@@ -453,8 +479,42 @@ const s = StyleSheet.create({
     ...(Platform.OS !== "android" && { shadowOpacity: 0 }),
   },
 
-  // Main bee column
-  beeCol: { alignItems: "center", zIndex: 1 },
+  // Head layer — front-most, face towards the user
+  headLayer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 3,
+  },
+
+  // Body layer — laid back with perspective so it recedes behind the head
+  bodyLayer: {
+    position: "absolute",
+    top: 3,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 1,
+    transform: [
+      { perspective: 70 },
+      { rotateX: "54deg" },
+      { scale: 0.98 },
+    ],
+  },
+
+  // Stinger layer — furthest away, tip trailing up behind the body
+  stingerLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 0,
+    opacity: 0.85,
+    transform: [{ rotate: "180deg" }, { scale: 0.8 }],
+  },
 
   // ── Antennae ──
   antRow: {
@@ -491,11 +551,10 @@ const s = StyleSheet.create({
 
   // ── Head ──
   headOuter: {
-    width: 25,
-    height: 23,
-    borderRadius: 13,
+    width: 28,
+    height: 26,
+    borderRadius: 14,
     overflow: "hidden",
-    marginBottom: -3,
     zIndex: 3,
     ...(Platform.OS !== "android" && {
       shadowColor: G3,
@@ -598,18 +657,17 @@ const s = StyleSheet.create({
 
   // ── Body ──
   bodyOuter: {
-    width: 26,
+    width: 24,
     height: 30,
-    borderRadius: 13,
+    borderRadius: 12,
     overflow: "hidden",
-    zIndex: 2,
     ...(Platform.OS !== "android" && {
-      shadowColor: G3,
-      shadowOffset: { width: -2, height: 4 },
-      shadowOpacity: 0.55,
-      shadowRadius: 5,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.45,
+      shadowRadius: 4,
     }),
-    elevation: 8,
+    elevation: 6,
   },
   bodyGrad: { flex: 1, overflow: "hidden" },
   stripe: {
@@ -651,7 +709,7 @@ const s = StyleSheet.create({
   },
 
   // ── Stinger ──
-  stingerWrap: { alignItems: "center", marginTop: -1, zIndex: 1 },
+  stingerWrap: { alignItems: "center" },
   stinger: {
     width: 4.5,
     height: 7,

@@ -65,6 +65,7 @@
     "expo-local-authentication": "~17.0.8",
     "expo-mail-composer": "~15.0.8",
     "expo-media-library": "^57.0.1",
+    "expo-notifications": "~0.32.17",
     "expo-print": "~15.0.8",
     "expo-sharing": "^57.0.2",
     "expo-speech": "~14.0.8",

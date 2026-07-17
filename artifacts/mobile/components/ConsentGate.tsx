@@ -40,9 +40,10 @@ const CONSENT_POINTS = [
   {
     icon: "microphone" as const,
     title: "Talking to Sarah with your voice",
-    body: "You can speak to Sarah, your AI companion, instead of typing. When you do, the short recording is sent to a secure transcription service to turn it into text, then discarded straight away — it is never stored. Your phone will ask for microphone access once, right after this screen.",
+    body: "You can speak to Sarah, your AI companion, instead of typing. When you do, the short recording is sent to a secure transcription service to turn it into text, then discarded straight away — it is never stored. We'll ask for microphone access now so it's ready when you need it.",
   },
 ];
+
 
 export default function ConsentGate() {
   const colors = useColors();
@@ -58,7 +59,8 @@ export default function ConsentGate() {
   async function handleAccept() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     // Ask for the microphone once, right at first launch, so voice chat with
-    // Sarah works immediately (disclosure text is on this screen).
+    // Sarah works immediately (disclosure text is on this screen). This also
+    // records the voice disclosure so the chat never re-prompts.
     await ensureVoiceSetup();
     await acceptConsent();
   }

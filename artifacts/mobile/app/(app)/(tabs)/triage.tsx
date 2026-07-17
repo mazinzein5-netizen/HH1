@@ -2,7 +2,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -195,12 +195,42 @@ export default function TriageScreen() {
       `I completed the ${pathway.name} ${pathway.scoreTool} questionnaire.`,
       `My score was ${pathway.formatScore(total)} (${result.label}), and the suggested next step is: ${result.referral}.`,
       hasRedFlag ? "I also reported red-flag symptoms during screening." : "",
-      "Can you explain what this means and how I should prepare?",
+      "Can you explain what this means, what timeframes I should expect, and how I should prepare?",
     ]
       .filter(Boolean)
       .join(" ");
-    hiveBot.open(seed, { painHelper: true });
+    hiveBot.open(seed, {
+      painHelper: true,
+      gpLetter: {
+        pathwayName: `${pathway.name} — ${pathway.scoreTool}`,
+        resultLabel: result.label + (hasRedFlag ? " (red-flag symptoms reported)" : ""),
+        score: pathway.formatScore(total),
+        referral: result.referral,
+        answers: pathway.questions.map((q, qi) => ({
+          question: q.text.split(" — ")[0].replace(/^\d+\.\s+/, ""),
+          answer:
+            answers[qi] !== null && answers[qi] !== undefined
+              ? String(q.scores[answers[qi]!])
+              : "not answered",
+        })),
+      },
+    });
   }
+
+  // Post-questionnaire presence: Sarah appears automatically with the result
+  // (once per completion — the button below remains as a manual re-open).
+  const resultsHandedOffRef = useRef(false);
+  useEffect(() => {
+    if (step !== "results") {
+      resultsHandedOffRef.current = false;
+      return;
+    }
+    if (resultsHandedOffRef.current || !pathway || !allAnswered()) return;
+    resultsHandedOffRef.current = true;
+    const t = setTimeout(() => askHiveBotAboutResults(calculateScore()), 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -336,7 +366,7 @@ export default function TriageScreen() {
             <TouchableOpacity activeOpacity={0.85} onPress={askHiveBotAboutPathway} style={[styles.botBtn, { borderColor: colors.glassGoldBorder, backgroundColor: colors.glassGold }]}>
               <MaterialCommunityIcons name="bee" size={17} color={colors.gold} />
               <Text style={[styles.botBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
-                Talk to Sarah about these questions
+                Talk to Sarah about these symptoms
               </Text>
             </TouchableOpacity>
 
@@ -551,7 +581,7 @@ export default function TriageScreen() {
               <TouchableOpacity activeOpacity={0.85} onPress={() => askHiveBotAboutResults(total)} style={[styles.botBtn, { borderColor: colors.glassGoldBorder, backgroundColor: colors.glassGold }]}>
                 <MaterialCommunityIcons name="bee" size={17} color={colors.gold} />
                 <Text style={[styles.botBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
-                  Talk to Sarah about this result
+                  Talk to Sarah about my results
                 </Text>
               </TouchableOpacity>
 

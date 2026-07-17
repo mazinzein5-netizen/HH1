@@ -2,16 +2,18 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { disableWatcherMode, enableWatcherMode, isWatcherModeEnabled } from "@/utils/watcherMode";
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
@@ -51,6 +53,37 @@ export default function GeriatricScreen() {
   const [cogScoreShown, setCogScoreShown] = useState(false);
   const [stratifyAnswers, setStratifyAnswers] = useState<(boolean | null)[]>(new Array(STRATIFY_ITEMS.length).fill(null));
   const [stratifyShown, setStratifyShown] = useState(false);
+  const [watcher, setWatcher] = useState(false);
+
+  useEffect(() => {
+    isWatcherModeEnabled().then(setWatcher);
+  }, []);
+
+  async function toggleWatcher(v: boolean) {
+    Haptics.selectionAsync();
+    if (!v) {
+      setWatcher(false);
+      await disableWatcherMode();
+      return;
+    }
+    const res = await enableWatcherMode();
+    if (res.ok) {
+      setWatcher(true);
+      if (res.reason === "web") {
+        Alert.alert(
+          "Watcher Mode",
+          "Watcher Mode is saved. In the browser preview Sarah can only watch while this tab is open — on a phone she'll send daily check-ins even when the app is closed."
+        );
+      }
+    } else if (res.reason === "permission") {
+      Alert.alert(
+        "Watcher Mode",
+        "Sarah needs notification permission to check in while the app is closed. You can enable notifications for HIVE in your device settings."
+      );
+    } else {
+      Alert.alert("Watcher Mode", "Couldn't turn on Watcher Mode just now — please try again.");
+    }
+  }
 
   function setOrientation(i: number, val: string) {
     const next = [...cogAnswers];
@@ -125,6 +158,27 @@ export default function GeriatricScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* ── SARAH WATCHER MODE ── */}
+        <View style={[styles.watcherCard, { backgroundColor: colors.card, borderColor: "rgba(201,134,10,0.4)" }]}>
+          <View style={[styles.watcherIcon, { backgroundColor: "rgba(201,134,10,0.15)" }]}>
+            <MaterialCommunityIcons name="eye-check-outline" size={20} color="#C9860A" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.watcherTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+              Sarah Watcher Mode
+            </Text>
+            <Text style={[styles.watcherSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Sarah keeps watch even when the app is closed — gentle morning and evening check-ins on the phone, ready to chat with one tap. Ideal for older adults living alone.
+            </Text>
+          </View>
+          <Switch
+            value={watcher}
+            onValueChange={toggleWatcher}
+            trackColor={{ false: colors.border, true: "#C9860A" }}
+            thumbColor="#fff"
+          />
+        </View>
 
         {/* ── COGNITIVE SCREENING ── */}
         {activeSection === "cognitive" && (
@@ -335,6 +389,10 @@ const styles = StyleSheet.create({
   tabBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
   tabLabel: { fontSize: 12 },
   scroll: { padding: 16, gap: 14, paddingBottom: 60 },
+  watcherCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, borderWidth: 1, padding: 14 },
+  watcherIcon: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  watcherTitle: { fontSize: 14 },
+  watcherSub: { fontSize: 11.5, lineHeight: 16, marginTop: 2 },
   section: { gap: 14 },
   cogHero: { borderRadius: 20, padding: 24, gap: 10, alignItems: "center" },
   cogHeroTitle: { fontSize: 20, letterSpacing: -0.4 },

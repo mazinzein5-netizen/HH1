@@ -179,3 +179,9 @@ id = "Djl_iMnc0625OXmwpgtz9"
 uri = "file://attached_assets/stock_images/family-tablet.jpg"
 type = "image"
 title = "adult daughter and elderly mother looking at tablet together at home, warm light"
+
+[[outputs]]
+id = "oR3h1EZgM3ggO50xeiM9Q"
+uri = "file://docs/medical-knowledge-data-banks.md"
+type = "text"
+title = "Medical Knowledge Data Banks — Options Compared"

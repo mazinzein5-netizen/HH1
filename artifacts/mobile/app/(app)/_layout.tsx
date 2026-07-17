@@ -30,6 +30,7 @@ export default function AppLayout() {
       <Stack.Screen name="documents" options={{ title: "Documents & Prescription", headerShown: true }} />
       <Stack.Screen name="membership" options={{ title: "Membership & Verification", headerShown: true }} />
       <Stack.Screen name="pharmacies" options={{ title: "Find a Pharmacy", headerShown: true }} />
+      <Stack.Screen name="comms-center" options={{ title: "Comms & Appointments", headerShown: true }} />
       <Stack.Screen name="interpreter" options={{ title: "Live Interpreter", headerShown: true }} />
       <Stack.Screen name="companion" options={{ headerShown: false }} />
       <Stack.Screen name="companion-memory" options={{ headerShown: false }} />
