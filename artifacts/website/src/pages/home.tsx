@@ -196,9 +196,6 @@ export default function Home() {
               <motion.div variants={fadeInUp}>
                 <div className="text-primary font-bold tracking-widest uppercase mb-4 text-[14px]">One Unified HIVE HUB</div>
                 <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight text-foreground">Clinicians receive streamlined and comprehensive data.</h2>
-                <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
-                  Patients can express their symptoms to the HIVE Companion, which can pass information to the GP and help administrative streamlining of acute and chronic joint, neck and back pain. Far less paperwork for primary healthcare professionals in the network, with automated scheduling for video consultations and clinical appointments.
-                </p>
                 <div className="mb-6">
                   <VideoEmbed
                     src="/hub-video/?embed=1"
@@ -207,6 +204,9 @@ export default function Home() {
                     frameClassName="rounded-2xl glass-panel-heavy"
                   />
                 </div>
+                <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
+                  Patients can express their symptoms to the HIVE Companion, which can pass information to the GP and help administrative streamlining of acute and chronic joint, neck and back pain. Far less paperwork for primary healthcare professionals in the network, with automated scheduling for video consultations and clinical appointments.
+                </p>
                 <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
                   With the patient's permission, hospital specialists and first responders can access critical medical history data and current live digital prescription information when it's required.
                 </p>

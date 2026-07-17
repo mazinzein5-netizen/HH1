@@ -327,9 +327,9 @@ export function VideoEmbed({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: reducedMotion ? 0.15 : 0.3 }}
-            className={`fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 ${
-              autoMode ? "bg-black/70" : "bg-black/85"
-            } backdrop-blur-md`}
+            className={`fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 ${
+              autoMode ? "bg-black/40" : "bg-black/60"
+            } backdrop-blur-sm`}
             onClick={() => closeExpanded({ manual: true })}
           >
             <motion.div
@@ -337,7 +337,10 @@ export function VideoEmbed({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 12 }}
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
-              className="relative w-full max-w-5xl"
+              className="relative w-full"
+              style={{
+                maxWidth: "min(92vw, calc((100vh - 8rem) * 16 / 9), 72rem)",
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-3 px-1">
