@@ -491,10 +491,10 @@ export default function Home() {
               </div>
               <h2 className="text-4xl md:text-6xl font-bold mb-4 text-foreground">See the HIVE in action</h2>
               <p className="text-lg md:text-xl text-muted-foreground font-light">
-                Two short films — one for patients and families, one for clinical teams. Select a video to expand and play.
+                A short film for patients and families. Select the video to expand and play.
               </p>
             </motion.div>
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-2xl mx-auto">
               <VideoShowcase
                 videos={[
                   {
@@ -504,14 +504,6 @@ export default function Home() {
                     src: `${import.meta.env.BASE_URL}videos/hive-companion-promo.mp4`,
                     poster: `${import.meta.env.BASE_URL}videos/hive-companion-promo-poster.jpg`,
                     duration: "0:22",
-                  },
-                  {
-                    id: "surgical-assistant",
-                    title: "HIVE Surgical Assistant",
-                    tagline: "Streamlined documentation for surgical and clinical teams",
-                    src: `${import.meta.env.BASE_URL}videos/hive-surgical-assistant.mp4`,
-                    poster: `${import.meta.env.BASE_URL}videos/hive-surgical-assistant-poster.jpg`,
-                    duration: "0:26",
                   },
                 ]}
               />
