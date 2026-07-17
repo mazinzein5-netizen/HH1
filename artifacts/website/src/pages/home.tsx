@@ -177,11 +177,6 @@ export default function Home() {
               <Button asChild size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
                 <a href="#companion">Explore HIVE Companion</a>
               </Button>
-              <Button asChild size="lg" variant="outline" className="glass-panel w-full sm:w-auto h-14 px-8 text-base border-border hover:bg-card/80 transition-all duration-300">
-                <a href="#surgical-assistant">
-                  Surgical Assistant <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
             </motion.div>
           </motion.div>
         </section>
