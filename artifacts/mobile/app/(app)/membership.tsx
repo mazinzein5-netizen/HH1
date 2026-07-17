@@ -180,7 +180,7 @@ export default function MembershipScreen() {
         memberId: memberId.trim() || undefined,
       };
     }
-    const reference = membership?.reference ?? makeReference();
+    let reference = membership?.reference ?? makeReference();
 
     if (method === "online") {
       // Real card payment via Stripe Checkout (through the HIVE api-server —
@@ -198,9 +198,11 @@ export default function MembershipScreen() {
         const pending = await getPendingCheckout(userId, {
           tier: tier as PaidTier,
           billing,
-          reference,
         });
         if (pending) {
+          // Reuse the reference from the in-flight attempt so the retry maps
+          // to the SAME Stripe session (client resume + server idempotency).
+          reference = pending.reference;
           const s = await getCheckoutStatus(pending.sessionId).catch(() => null);
           if (s?.paid) {
             // Payment already went through last time — just activate.

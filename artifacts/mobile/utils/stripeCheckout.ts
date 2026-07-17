@@ -96,16 +96,23 @@ export async function savePendingCheckout(userId: string, p: PendingCheckout): P
   } catch {}
 }
 
+/**
+ * Returns the stored pending checkout for this user if it is still fresh and
+ * matches the chosen tier + billing. The reference is deliberately NOT part of
+ * the match: for a first-time purchase the client generates the reference, so
+ * a retry would otherwise produce a new one and orphan the pending session
+ * (risking a second charge). Callers must reuse `pending.reference`.
+ */
 export async function getPendingCheckout(
   userId: string,
-  match: { tier: PaidTier; billing: BillingCycle; reference: string },
+  match: { tier: PaidTier; billing: BillingCycle },
 ): Promise<PendingCheckout | null> {
   try {
     const raw = await AsyncStorage.getItem(PENDING_KEY(userId));
     if (!raw) return null;
     const p = JSON.parse(raw) as PendingCheckout;
     const fresh = Date.now() - new Date(p.createdAt).getTime() < PENDING_MAX_AGE_MS;
-    if (!fresh || p.tier !== match.tier || p.billing !== match.billing || p.reference !== match.reference) {
+    if (!fresh || p.tier !== match.tier || p.billing !== match.billing) {
       await AsyncStorage.removeItem(PENDING_KEY(userId));
       return null;
     }
