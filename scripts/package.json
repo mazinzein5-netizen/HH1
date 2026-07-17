@@ -16,6 +16,8 @@
     "tsx": "catalog:"
   },
   "dependencies": {
-    "puppeteer-core": "^25.3.0"
+    "puppeteer-core": "^25.3.0",
+    "stripe": "^22.3.2",
+    "stripe-replit-sync": "^1.0.0"
   }
 }

@@ -288,6 +288,21 @@ export default function BookConsultationScreen() {
             </View>
           )}
 
+          {allowance && !isUnlimited(allowance) && (allowance.tier === "blue" || allowance.remaining === 0) && (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => { Haptics.selectionAsync(); router.push("/(app)/membership"); }}
+              style={[styles.upgradeBtn, { borderColor: "#D4A017", backgroundColor: "#D4A0171a" }]}
+            >
+              <MaterialCommunityIcons name="crown-outline" size={17} color="#D4A017" />
+              <Text style={[styles.upgradeBtnText, { color: "#D4A017", fontFamily: "Inter_600SemiBold" }]}>
+                {allowance.tier === "blue"
+                  ? "Upgrade your card for free consultations each month"
+                  : "Upgrade or manage your card for more each month"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity activeOpacity={0.85} onPress={confirm} disabled={!canConfirm} style={{ opacity: canConfirm ? 1 : 0.4 }}>
             <LinearGradient colors={["#0a2818", "#22c55e"]} style={styles.confirmBtn}>
               <MaterialCommunityIcons name="calendar-check" size={20} color="#fff" />
@@ -322,6 +337,8 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13 },
   coverageRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 12, borderWidth: 1, padding: 12, marginTop: 4 },
   coverageText: { flex: 1, fontSize: 12.5, lineHeight: 18 },
+  upgradeBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 14 },
+  upgradeBtnText: { fontSize: 13 },
   confirmBtn: { borderRadius: 14, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 8 },
   confirmBtnText: { color: "#fff", fontSize: 15 },
   footNote: { fontSize: 11, lineHeight: 17, textAlign: "center", marginTop: 4 },

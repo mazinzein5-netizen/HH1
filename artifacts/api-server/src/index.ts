@@ -16,6 +16,38 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+/**
+ * Initialize the Stripe schema, managed webhook and data sync.
+ * Non-fatal: the rest of the API keeps working until Stripe is connected.
+ */
+async function initStripe() {
+  const databaseUrl = process.env["DATABASE_URL"];
+  if (!databaseUrl) {
+    logger.warn("DATABASE_URL not set — Stripe payments disabled");
+    return;
+  }
+  try {
+    const { runMigrations } = await import("stripe-replit-sync");
+    await runMigrations({ databaseUrl });
+    const { getStripeSync } = await import("./stripeClient");
+    const stripeSync = await getStripeSync();
+    const webhookBaseUrl = `https://${process.env["REPLIT_DOMAINS"]?.split(",")[0]}`;
+    await stripeSync.findOrCreateManagedWebhook(`${webhookBaseUrl}/api/stripe/webhook`);
+    logger.info("Stripe webhook configured");
+    stripeSync
+      .syncBackfill()
+      .then(() => logger.info("Stripe data synced"))
+      .catch((err) => logger.error({ err }, "Error syncing Stripe data"));
+  } catch (err) {
+    logger.warn(
+      { err },
+      "Stripe not initialized (connect the Stripe integration to enable card payments)",
+    );
+  }
+}
+
+await initStripe();
+
 try {
   await hydratePracStores();
 } catch (err) {

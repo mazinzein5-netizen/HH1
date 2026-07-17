@@ -22,6 +22,14 @@ import { useAuth } from "@/context/AuthContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
 import {
+  Allowance,
+  OVERAGE_LABEL,
+  TIER_LABEL,
+  getAllowance,
+  isUnlimited,
+  recordUsage,
+} from "@/utils/entitlements";
+import {
   bookHiveSlot,
   type HivePractitioner,
   type HiveSlot,
@@ -58,6 +66,15 @@ export default function HiveBookScreen() {
   const [patientName, setPatientName] = useState(user?.fullName ?? "");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [allowance, setAllowance] = useState<Allowance | null>(null);
+
+  const userId = user?.id ?? "unknown";
+
+  const loadAllowance = useCallback(async () => {
+    try {
+      setAllowance(await getAllowance(userId, "consultations"));
+    } catch {}
+  }, [userId]);
 
   const loadPractitioners = useCallback(async () => {
     setLoading(true);
@@ -74,7 +91,8 @@ export default function HiveBookScreen() {
   useFocusEffect(
     useCallback(() => {
       loadPractitioners();
-    }, [loadPractitioners]),
+      loadAllowance();
+    }, [loadPractitioners, loadAllowance]),
   );
 
   useEffect(() => {
@@ -115,6 +133,12 @@ export default function HiveBookScreen() {
         reason: reason.trim() || undefined,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Count this consultation against the card's monthly free allowance.
+      if (allowance && allowance.tier !== "blue" && allowance.remaining > 0 && !isUnlimited(allowance)) {
+        try {
+          await recordUsage(userId, "consultations");
+        } catch {}
+      }
       const appt = await createAppointment({
         clinicianType: clinicianTypeForRole(selected.role),
         reason: reason.trim()
@@ -295,6 +319,40 @@ export default function HiveBookScreen() {
                 }]}
               />
 
+              {allowance && (
+                <View style={[styles.coverageRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <MaterialCommunityIcons
+                    name={allowance.tier !== "blue" && (allowance.remaining > 0 || isUnlimited(allowance)) ? "shield-check" : "shield-alert-outline"}
+                    size={18}
+                    color={allowance.tier !== "blue" && (allowance.remaining > 0 || isUnlimited(allowance)) ? "#22c55e" : colors.gold}
+                  />
+                  <Text style={[styles.coverageText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                    {allowance.tier === "blue"
+                      ? `${TIER_LABEL.blue}: consultations are billed at ${OVERAGE_LABEL.blue}, settled at your HIVE node.`
+                      : isUnlimited(allowance)
+                        ? `${TIER_LABEL[allowance.tier]}: unlimited consultations included.`
+                        : allowance.remaining > 0
+                          ? `${TIER_LABEL[allowance.tier]}: ${allowance.remaining} of ${allowance.limit} free consultation${allowance.limit === 1 ? "" : "s"} left this month.`
+                          : `${TIER_LABEL[allowance.tier]}: monthly free allowance used — this consultation is billed at ${OVERAGE_LABEL[allowance.tier]}.`}
+                  </Text>
+                </View>
+              )}
+
+              {allowance && !isUnlimited(allowance) && (allowance.tier === "blue" || allowance.remaining === 0) && (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => { Haptics.selectionAsync(); router.push("/(app)/membership"); }}
+                  style={[styles.upgradeBtn, { borderColor: "#D4A017", backgroundColor: "#D4A0171a" }]}
+                >
+                  <MaterialCommunityIcons name="crown-outline" size={17} color="#D4A017" />
+                  <Text style={[styles.upgradeBtnText, { color: "#D4A017", fontFamily: "Inter_600SemiBold" }]}>
+                    {allowance.tier === "blue"
+                      ? "Upgrade your card for free consultations each month"
+                      : "Upgrade or manage your card for more each month"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity activeOpacity={0.85} onPress={confirm} disabled={!canConfirm} style={{ opacity: canConfirm ? 1 : 0.4 }}>
                 <LinearGradient colors={["#0a2818", "#22c55e"]} style={styles.confirmBtn}>
                   {saving ? (
@@ -342,6 +400,10 @@ const styles = StyleSheet.create({
   slotText: { fontSize: 13.5, flex: 1 },
   slotKind: { fontSize: 12 },
   input: { borderRadius: 14, borderWidth: 1, padding: 14, fontSize: 14 },
+  coverageRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 12, borderWidth: 1, padding: 12, marginTop: 4 },
+  coverageText: { flex: 1, fontSize: 12.5, lineHeight: 18 },
+  upgradeBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 14 },
+  upgradeBtnText: { fontSize: 13 },
   confirmBtn: { borderRadius: 14, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 8 },
   confirmBtnText: { color: "#fff", fontSize: 15 },
   footNote: { fontSize: 11, lineHeight: 17, textAlign: "center", marginTop: 4 },

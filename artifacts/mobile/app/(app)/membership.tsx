@@ -15,7 +15,16 @@ import {
   View,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
+import * as WebBrowser from "expo-web-browser";
 import { useAuth } from "@/context/AuthContext";
+import {
+  clearPendingCheckout,
+  getCheckoutStatus,
+  getPendingCheckout,
+  savePendingCheckout,
+  startStripeCheckout,
+  waitForCheckoutResult,
+} from "@/utils/stripeCheckout";
 import { useColors } from "@/hooks/useColors";
 import { AllowanceSummary, getAllowanceSummary } from "@/utils/entitlements";
 import { MemberCode, getMemberCode, memberQrPayload, regenerateMemberCode } from "@/utils/memberCode";
@@ -53,7 +62,7 @@ export default function MembershipScreen() {
   const [usage, setUsage] = useState<AllowanceSummary | null>(null);
   const [memberCode, setMemberCode] = useState<MemberCode | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const [busy, setBusy] = useState<"selfie" | "id" | "confirm" | "downgrade" | "qr" | null>(null);
+  const [busy, setBusy] = useState<"selfie" | "id" | "confirm" | "downgrade" | "qr" | "paying" | null>(null);
   const [editing, setEditing] = useState(false);
 
   const [tier, setTier] = useState<PlanTier>("gold");
@@ -171,6 +180,113 @@ export default function MembershipScreen() {
         memberId: memberId.trim() || undefined,
       };
     }
+    const reference = membership?.reference ?? makeReference();
+
+    if (method === "online") {
+      // Real card payment via Stripe Checkout (through the HIVE api-server —
+      // the accepted server exception). Membership only activates when
+      // Stripe confirms the payment; a failed or abandoned checkout leaves
+      // the current card unchanged.
+      try {
+        setBusy("paying");
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+        // Resume an earlier checkout for the same choice if one is pending —
+        // this guarantees a retry can never charge twice.
+        let sessionId: string;
+        let sessionUrl: string | null = null;
+        const pending = await getPendingCheckout(userId, {
+          tier: tier as PaidTier,
+          billing,
+          reference,
+        });
+        if (pending) {
+          const s = await getCheckoutStatus(pending.sessionId).catch(() => null);
+          if (s?.paid) {
+            // Payment already went through last time — just activate.
+            await clearPendingCheckout(userId);
+            const rec: MembershipRecord = {
+              userId,
+              plan: tier as PaidTier,
+              billing,
+              method: "online",
+              reference,
+              status: "active",
+              chosenAt: new Date().toISOString(),
+            };
+            await saveMembership(rec);
+            setEditing(false);
+            await refresh();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            setBusy(null);
+            return;
+          }
+          if (s && s.status === "open") {
+            sessionId = pending.sessionId;
+            sessionUrl = pending.url;
+          } else {
+            await clearPendingCheckout(userId);
+            sessionId = "";
+          }
+        } else {
+          sessionId = "";
+        }
+
+        if (!sessionId) {
+          const session = await startStripeCheckout({
+            tier: tier as PaidTier,
+            billing,
+            reference,
+            userId,
+          });
+          sessionId = session.sessionId;
+          sessionUrl = session.url;
+          await savePendingCheckout(userId, {
+            sessionId,
+            url: session.url,
+            tier: tier as PaidTier,
+            billing,
+            reference,
+            createdAt: new Date().toISOString(),
+          });
+        }
+
+        if (sessionUrl) {
+          WebBrowser.openBrowserAsync(sessionUrl).catch(() => {});
+        }
+        const result = await waitForCheckoutResult(sessionId);
+        if (Platform.OS !== "web") {
+          try { WebBrowser.dismissBrowser(); } catch {}
+        }
+        if (result === "paid") {
+          await clearPendingCheckout(userId);
+          const rec: MembershipRecord = {
+            userId,
+            plan: tier as PaidTier,
+            billing,
+            method: "online",
+            reference,
+            status: "active",
+            chosenAt: new Date().toISOString(),
+          };
+          await saveMembership(rec);
+          setEditing(false);
+          await refresh();
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else if (result === "expired") {
+          await clearPendingCheckout(userId);
+          setError("The payment wasn't completed and no charge was made. Your current card is unchanged — you can try again any time.");
+        } else {
+          setError("We couldn't confirm the payment yet. If you completed it, come back in a moment and press the button again — nothing is lost. Your current card is unchanged.");
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not start the card payment. Please try again.");
+      } finally {
+        setBusy(null);
+      }
+      return;
+    }
+
     try {
       setBusy("confirm");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -180,7 +296,7 @@ export default function MembershipScreen() {
         billing,
         method,
         insurance,
-        reference: membership?.reference ?? makeReference(),
+        reference,
         status: membership?.status ?? "pending",
         chosenAt: new Date().toISOString(),
       };
@@ -228,7 +344,9 @@ export default function MembershipScreen() {
   function paymentInstructions(rec: MembershipRecord): string {
     switch (rec.method) {
       case "online":
-        return "Online card payment activates with the pilot programme. Keep your reference — you can also settle it at any partner HIVE node.";
+        return rec.status === "active"
+          ? "Paid securely online by card. Keep your reference — it identifies your membership at any HIVE node."
+          : "Card payment not completed yet — choose your card again to finish paying online, or settle it at any partner HIVE node.";
       case "insurance":
         return `Your ${rec.insurance?.provider ?? "insurer"} details are saved on this device. Staff at your HIVE node will confirm cover using your reference.`;
       case "cash":
@@ -712,14 +830,23 @@ export default function MembershipScreen() {
                         end={{ x: 1, y: 0 }}
                         style={styles.confirmBtn}
                       >
-                        {busy === "confirm"
-                          ? <ActivityIndicator color="#fff" />
+                        {busy === "confirm" || busy === "paying"
+                          ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                              <ActivityIndicator color="#fff" />
+                              {busy === "paying" ? (
+                                <Text style={[styles.confirmText, { fontFamily: "Inter_700Bold" }]}>
+                                  Waiting for your payment…
+                                </Text>
+                              ) : null}
+                            </View>
                           : <Text style={[styles.confirmText, { fontFamily: "Inter_700Bold" }]}>
-                              {currentTier === tier
-                                ? "Update My Membership"
-                                : onPaid
-                                  ? `Switch to the ${PLAN_META[tier].label}`
-                                  : `Upgrade to the ${PLAN_META[tier].label}`}
+                              {method === "online"
+                                ? `Pay ${TIER_PRICING[tier as PaidTier][billing].price} by card`
+                                : currentTier === tier
+                                  ? "Update My Membership"
+                                  : onPaid
+                                    ? `Switch to the ${PLAN_META[tier].label}`
+                                    : `Upgrade to the ${PLAN_META[tier].label}`}
                             </Text>}
                       </LinearGradient>
                     </TouchableOpacity>

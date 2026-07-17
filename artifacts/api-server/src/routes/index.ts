@@ -8,6 +8,7 @@ import emergencyShareRouter from "./emergencyShare";
 import portalAuthRouter from "./portalAuth";
 import practitionerRouter from "./practitioner";
 import hiveBookingRouter from "./hiveBooking";
+import stripeRouter from "./stripe";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(emergencyShareRouter);
 router.use(portalAuthRouter);
 router.use(practitionerRouter);
 router.use(hiveBookingRouter);
+router.use(stripeRouter);
 
 export default router;

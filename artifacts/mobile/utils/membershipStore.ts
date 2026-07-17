@@ -104,9 +104,9 @@ export const METHOD_META: Record<
   { label: string; icon: string; blurb: string }
 > = {
   online: {
-    label: "Pay online",
+    label: "Pay online by card",
     icon: "credit-card-outline",
-    blurb: "Buy your monthly or yearly membership online by card, using your reference.",
+    blurb: "Pay securely by card on Stripe's checkout page — your card activates the moment payment is confirmed.",
   },
   insurance: {
     label: "Link my health insurance",

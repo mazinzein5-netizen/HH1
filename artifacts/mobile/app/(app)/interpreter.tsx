@@ -1,7 +1,7 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
@@ -360,6 +360,20 @@ export default function InterpreterScreen() {
             </Text>
           </View>
         ) : null}
+        {allowance && (allowance.tier === "blue" || allowance.remaining === 0) ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => { Haptics.selectionAsync(); router.push("/(app)/membership"); }}
+            style={[styles.upgradeBtn, { borderColor: "#D4A017", backgroundColor: "#D4A0171a" }]}
+          >
+            <MaterialCommunityIcons name="crown-outline" size={17} color="#D4A017" />
+            <Text style={[styles.upgradeBtnText, { color: "#D4A017", fontFamily: "Inter_600SemiBold" }]}>
+              {allowance.tier === "blue"
+                ? "Upgrade your card for free sessions each month"
+                : "Upgrade or manage your card for more each month"}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
 
         {/* Submit */}
         <TouchableOpacity activeOpacity={0.85} onPress={submit} disabled={!canSubmit || submitting}>
@@ -533,6 +547,8 @@ const styles = StyleSheet.create({
   submitText: { color: "#fff", fontSize: 15.5 },
   coverageRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderRadius: 12, borderWidth: 1, padding: 12, marginTop: 12 },
   coverageText: { flex: 1, fontSize: 12.5, lineHeight: 18 },
+  upgradeBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 12, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 14, marginTop: 8 },
+  upgradeBtnText: { fontSize: 13 },
   zeroServerNote: { fontSize: 11, lineHeight: 16, textAlign: "center", paddingHorizontal: 10 },
   emptyCard: { borderRadius: 14, borderWidth: 1, padding: 22, alignItems: "center", gap: 8 },
   emptyText: { fontSize: 12.5, textAlign: "center" },

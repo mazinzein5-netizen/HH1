@@ -10,6 +10,7 @@
 - [OpenAI config](openai-config.md) — chat = OpenRouter GLM 5.2 via AI Integrations proxy; OpenAI proxy kept only for transcription; no user API keys; re-run setup instead of requesting a key.
 - [Emergency portal auth](portal-auth.md) — portal relay endpoints need server-issued Bearer sessions; demo sessions only see canned demo codes; signup never pre-authenticates.
 - [Companion supervisor pattern](companion-supervisor.md) — pilot AI replies pass a second safety-review model call; on failure serve reply flagged supervised:false, never block.
+- [Stripe checkout idempotency](stripe-checkout-idempotency.md) — checkout retries must reuse the same session (server idempotency key + client-side pending-session store) or timeouts can double-charge.
 - [AI proxy thinking tokens](ai-thinking-tokens.md) — reasoning silently eats max_tokens on structured calls; disable thinking via chat_template_kwargs or truncation follows.
 - [Website video embeds](website-video-embeds.md) — pop-out scale needs unclipped wrapper (frameClassName); audio lives in parent page; promo clip at 0.8x must span scenes 1-3 exactly.
 - [Expo route typegen](expo-route-typegen.md) — router.d.ts/expo-env.d.ts are gitignored dev-server artifacts; mobile typecheck regenerates them headlessly first or clean checkouts fail.
