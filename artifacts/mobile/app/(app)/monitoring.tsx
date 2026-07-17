@@ -15,6 +15,7 @@ import {
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import { RedUpgradeCard, usePlanTier } from "@/components/RedTierGate";
 import { useHiveBot } from "@/context/HiveBotContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { usePatient } from "@/context/PatientContext";
@@ -198,6 +199,36 @@ export default function MonitoringScreen() {
 
   const hrMax = Math.max(...hrBars);
   const hrMin = Math.min(...hrBars);
+  const tier = usePlanTier();
+
+  // Live monitoring is part of the Red Geriatric Safety Pack.
+  if (tier !== "red") {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        <ThemedStatusBar />
+        <HoneycombWallpaper density={prefs.density} />
+        <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          {router.canGoBack() && (
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+              <Feather name="arrow-left" size={20} color={colors.foreground} />
+            </TouchableOpacity>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              Live HIVE
+            </Text>
+            <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Live wearable monitoring
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="heart-pulse" size={26} color="#E5294E" />
+        </View>
+        {tier === null ? null : (
+          <RedUpgradeCard blurb="Live heart-rate, sleep and wearable monitoring is included with the Red Geriatric Safety Pack — the complete elder-care membership." />
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>

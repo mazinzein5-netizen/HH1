@@ -14,6 +14,7 @@ import {
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
+import { RedUpgradeCard, usePlanTier } from "@/components/RedTierGate";
 import { useSmartDevices, type VitalSummary } from "@/context/SmartDevicesContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useAppMode } from "@/context/AppModeContext";
@@ -119,26 +120,45 @@ export default function SmartDevicesScreen() {
     toggleDevice(id);
   }
 
+  const tier = usePlanTier();
+
+  const header = (
+    <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+        <Feather name="arrow-left" size={20} color={colors.foreground} />
+      </TouchableOpacity>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+          Smart Devices
+        </Text>
+        <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+          ECG · Blood Pressure · CGM · HRV
+        </Text>
+      </View>
+      <MaterialCommunityIcons name="devices" size={26} color="#22c55e" />
+    </View>
+  );
+
+  // Smart-device monitoring is part of the Red Geriatric Safety Pack.
+  if (tier !== "red") {
+    return (
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        <ThemedStatusBar />
+        <HoneycombWallpaper density={prefs.density} />
+        {header}
+        {tier === null ? null : (
+          <RedUpgradeCard blurb="ECG, blood-pressure, glucose and HRV monitoring from smart devices is included with the Red Geriatric Safety Pack — the complete elder-care membership." />
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ThemedStatusBar />
       <HoneycombWallpaper density={prefs.density} />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <Feather name="arrow-left" size={20} color={colors.foreground} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-            Smart Devices
-          </Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            ECG · Blood Pressure · CGM · HRV
-          </Text>
-        </View>
-        <MaterialCommunityIcons name="devices" size={26} color="#22c55e" />
-      </View>
+      {header}
 
       <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
