@@ -527,7 +527,6 @@ export default function Home() {
                      src="/surgical-video/?embed=1"
                      title="HIVE Hospital Surgical Assistant video"
                      audioSrc={`${import.meta.env.BASE_URL}audio/surgical-ambient.mp3`}
-                     scaleOnHover={false}
                      expandable={false}
                    />
                 </div>

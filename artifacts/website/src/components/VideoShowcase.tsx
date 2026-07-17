@@ -27,13 +27,17 @@ export function VideoShowcase({ videos }: { videos: ShowcaseVideo[] }) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
+    const onScroll = () => close();
     document.addEventListener("keydown", onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onScroll, { passive: true });
+    window.addEventListener("touchmove", onScroll, { passive: true });
     closeButtonRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onScroll);
+      window.removeEventListener("touchmove", onScroll);
     };
   }, [expanded, close]);
 
@@ -97,7 +101,7 @@ export function VideoShowcase({ videos }: { videos: ShowcaseVideo[] }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: reducedMotion ? 0.15 : 0.3 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-black/85 backdrop-blur-md"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10"
             onClick={close}
           >
             <motion.div
@@ -105,7 +109,10 @@ export function VideoShowcase({ videos }: { videos: ShowcaseVideo[] }) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 12 }}
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
-              className="relative w-full max-w-5xl"
+              className="relative w-full"
+              style={{
+                maxWidth: "min(92vw, calc((100vh - 8rem) * 16 / 9), 72rem)",
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-3 px-1">

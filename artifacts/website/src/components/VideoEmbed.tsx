@@ -7,7 +7,6 @@ interface VideoEmbedProps {
   title: string;
   audioSrc?: string;
   frameClassName?: string;
-  scaleOnHover?: boolean;
   expandable?: boolean;
 }
 
@@ -18,24 +17,20 @@ export function VideoEmbed({
   title,
   audioSrc,
   frameClassName = "",
-  scaleOnHover = true,
   expandable = true,
 }: VideoEmbedProps) {
   const ref = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fadeFrame = useRef<number | null>(null);
-  const inView = useInView(ref, { once: false, amount: 0.45 });
+  const inView = useInView(ref, { once: true, amount: 0.25 });
   const reducedMotion = useReducedMotion();
   const [revealed, setRevealed] = useState(false);
-  const [active, setActive] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [needsTap, setNeedsTap] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [autoMode, setAutoMode] = useState(false);
-  const activeRef = useRef(false);
   const soundOnRef = useRef(true);
   const expandedRef = useRef(false);
-  const dismissedRef = useRef(false);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
 
@@ -66,9 +61,8 @@ export function VideoEmbed({
       .play()
       .then(() => {
         setNeedsTap(false);
-        // Intent may have changed while the play() promise was pending
-        // (e.g. rapid hover off) — never leave audio playing when inactive.
-        if ((activeRef.current || expandedRef.current) && soundOnRef.current) {
+        // Audio only ever plays while the video is expanded and sound is on.
+        if (expandedRef.current && soundOnRef.current) {
           fadeTo(AUDIO_VOLUME);
         } else {
           fadeTo(0, () => audioRef.current?.pause());
@@ -80,26 +74,15 @@ export function VideoEmbed({
   const stopAudio = () => {
     const audio = audioRef.current;
     if (!audio || audio.paused) return;
-    fadeTo(0, () => audio.pause());
-  };
-
-  const activate = () => {
-    activeRef.current = true;
-    setActive(true);
-    if (soundOnRef.current && audioSrc) tryPlay();
-  };
-
-  const deactivate = () => {
-    activeRef.current = false;
-    setActive(false);
-    if (!expandedRef.current) stopAudio();
+    if (fadeFrame.current !== null) cancelAnimationFrame(fadeFrame.current);
+    audio.pause();
+    audio.volume = 0;
   };
 
   const openExpanded = (e: React.MouseEvent | React.KeyboardEvent) => {
     if (!expandable) return;
     triggerRef.current = e.currentTarget as HTMLElement;
     expandedRef.current = true;
-    setAutoMode(false);
     setExpanded(true);
     if (soundOnRef.current && audioSrc) tryPlay();
   };
@@ -107,58 +90,33 @@ export function VideoEmbed({
   const closeExpanded = useCallback((opts?: { manual?: boolean }) => {
     expandedRef.current = false;
     setExpanded(false);
-    setAutoMode(false);
-    if (opts?.manual) dismissedRef.current = true;
-    if (!activeRef.current) {
-      const audio = audioRef.current;
-      if (audio && !audio.paused) {
-        if (fadeFrame.current !== null) cancelAnimationFrame(fadeFrame.current);
-        audio.pause();
-        audio.volume = 0;
-      }
-    }
+    stopAudio();
     if (opts?.manual) triggerRef.current?.focus();
   }, []);
 
-  // Auto-open centered overlay when the embed scrolls into view;
-  // auto-minimize (and silence audio) when the user scrolls away.
   useEffect(() => {
-    if (inView) {
-      setRevealed(true);
-      if (expandable && !expandedRef.current && !dismissedRef.current) {
-        expandedRef.current = true;
-        setAutoMode(true);
-        setExpanded(true);
-        if (soundOnRef.current && audioSrc) tryPlay();
-      }
-    } else {
-      dismissedRef.current = false;
-      if (expandedRef.current) {
-        closeExpanded();
-        stopAudio();
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (inView) setRevealed(true);
   }, [inView]);
 
+  // While expanded: Escape closes; scrolling away minimizes and silences.
   useEffect(() => {
     if (!expanded) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeExpanded({ manual: true });
     };
+    const onScroll = () => closeExpanded();
     document.addEventListener("keydown", onKey);
-    if (autoMode) {
-      // Keep the page scrollable so scrolling away naturally minimizes the video.
-      return () => document.removeEventListener("keydown", onKey);
-    }
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onScroll, { passive: true });
+    window.addEventListener("touchmove", onScroll, { passive: true });
     closeButtonRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onScroll);
+      window.removeEventListener("touchmove", onScroll);
     };
-  }, [expanded, autoMode, closeExpanded]);
+  }, [expanded, closeExpanded]);
 
   const toggleSound = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -169,7 +127,7 @@ export function VideoEmbed({
     } else {
       soundOnRef.current = true;
       setSoundOn(true);
-      tryPlay();
+      if (expandedRef.current) tryPlay();
     }
   };
 
@@ -183,39 +141,36 @@ export function VideoEmbed({
 
   const soundLabel = soundOn ? (needsTap ? "Tap for sound" : "Sound on") : "Muted";
 
-  const soundButton = (visible: boolean) =>
-    audioSrc ? (
-      <button
-        type="button"
-        onClick={toggleSound}
-        aria-label={soundOn && !needsTap ? `Mute ${title} audio` : `Play ${title} audio`}
-        className={`absolute bottom-3 right-3 z-30 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur-md transition-all duration-300 ${
-          visible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        } ${
-          soundOn && !needsTap
-            ? "bg-[#f5c518]/15 border-[#f5c518]/50 text-[#f5c518]"
-            : "bg-black/60 border-white/15 text-white/85 hover:border-[#f5c518]/50"
-        }`}
-      >
-        {soundOn && !needsTap ? (
-          <Volume2 className="h-3.5 w-3.5" />
-        ) : (
-          <VolumeX className="h-3.5 w-3.5" />
-        )}
-        {soundLabel}
-      </button>
-    ) : null;
+  const soundButton = audioSrc ? (
+    <button
+      type="button"
+      onClick={toggleSound}
+      aria-label={soundOn && !needsTap ? `Mute ${title} audio` : `Play ${title} audio`}
+      className={`absolute bottom-3 right-3 z-30 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium backdrop-blur-md transition-all duration-300 ${
+        soundOn && !needsTap
+          ? "bg-[#f5c518]/15 border-[#f5c518]/50 text-[#f5c518]"
+          : "bg-black/60 border-white/15 text-white/85 hover:border-[#f5c518]/50"
+      }`}
+    >
+      {soundOn && !needsTap ? (
+        <Volume2 className="h-3.5 w-3.5" />
+      ) : (
+        <VolumeX className="h-3.5 w-3.5" />
+      )}
+      {soundLabel}
+    </button>
+  ) : null;
 
   return (
     <>
-      <motion.div
+      <div
         ref={ref}
         tabIndex={0}
         role={expandable ? "button" : undefined}
         aria-label={expandable ? `${title} — expand video` : title}
         aria-haspopup={expandable ? "dialog" : undefined}
-        onMouseEnter={activate}
-        onMouseLeave={deactivate}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         onClick={openExpanded}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -223,29 +178,12 @@ export function VideoEmbed({
             openExpanded(e);
           }
         }}
-        onFocus={(e) => {
-          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-          activate();
-        }}
-        onBlur={(e) => {
-          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-          deactivate();
-        }}
-        animate={
-          scaleOnHover && !reducedMotion ? { scale: active ? 1.12 : 1 } : undefined
-        }
-        transition={{ type: "spring", stiffness: 220, damping: 26 }}
-        className={`relative outline-none ${expandable ? "cursor-zoom-in" : ""} ${active ? "z-20" : "z-0"}`}
+        className={`relative outline-none ${expandable ? "cursor-zoom-in" : ""}`}
       >
         <div
           className={`relative aspect-video bg-[#07070f] overflow-hidden transition-shadow duration-500 ${frameClassName} ${
-            active ? "ring-1 ring-[#f5c518]/50" : "ring-1 ring-transparent"
+            hovered && expandable ? "ring-1 ring-[#f5c518]/50" : "ring-1 ring-transparent"
           }`}
-          style={
-            active
-              ? { boxShadow: "0 24px 80px -12px rgba(245,197,24,0.45)" }
-              : undefined
-          }
         >
           {/* Idle state — pulsing hive mark until the section scrolls into view */}
           {!revealed && (
@@ -283,7 +221,7 @@ export function VideoEmbed({
             </div>
           )}
 
-          {/* Activated on scroll — sleek reveal once in view, stays mounted */}
+          {/* Video preview (silent) once in view */}
           {revealed && (
             <motion.div
               initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.04 }}
@@ -307,17 +245,15 @@ export function VideoEmbed({
             <div
               aria-hidden="true"
               className={`absolute top-3 right-3 z-30 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-md transition-all duration-300 ${
-                active ? "opacity-100" : "opacity-0"
+                hovered ? "opacity-100" : "opacity-0"
               }`}
             >
               <Maximize2 className="h-3.5 w-3.5" />
-              Expand
+              Play
             </div>
           )}
         </div>
-
-        {soundButton(active)}
-      </motion.div>
+      </div>
 
       {audioSrc && <audio ref={audioRef} src={audioSrc} preload="none" />}
 
@@ -325,22 +261,20 @@ export function VideoEmbed({
         {expanded && (
           <motion.div
             key={`${title}-lightbox`}
-            role={autoMode ? "region" : "dialog"}
-            aria-modal={autoMode ? undefined : "true"}
+            role="dialog"
+            aria-modal="true"
             aria-label={title}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reducedMotion ? 0.15 : 0.3 }}
-            className={`fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 ${
-              autoMode ? "bg-black/40" : "bg-black/60"
-            } backdrop-blur-sm`}
+            transition={{ duration: reducedMotion ? 0.15 : 0.25 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6"
             onClick={() => closeExpanded({ manual: true })}
           >
             <motion.div
-              initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 12 }}
+              initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
               className="relative w-full"
               style={{
@@ -349,25 +283,25 @@ export function VideoEmbed({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-3 px-1">
-                <h3 className="text-base md:text-xl font-bold text-white">{title}</h3>
+                <h3 className="text-base md:text-xl font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">{title}</h3>
                 <button
                   ref={closeButtonRef}
                   type="button"
                   onClick={() => closeExpanded({ manual: true })}
                   aria-label="Close video"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90 backdrop-blur-md transition-colors hover:border-[#f5c518]/60 hover:text-[#f5c518] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c518]"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90 transition-colors hover:border-[#f5c518]/60 hover:text-[#f5c518] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c518]"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="relative aspect-video overflow-hidden rounded-2xl bg-[#07070f] ring-1 ring-[#f5c518]/30 shadow-[0_24px_100px_-12px_rgba(245,197,24,0.4)]">
+              <div className="relative aspect-video overflow-hidden rounded-2xl bg-[#07070f] ring-1 ring-[#f5c518]/30 shadow-[0_24px_100px_-12px_rgba(0,0,0,0.9)]">
                 <iframe
                   src={src}
                   title={`${title} (expanded)`}
                   className="w-full h-full border-0 pointer-events-none"
                   scrolling="no"
                 />
-                {soundButton(true)}
+                {soundButton}
               </div>
             </motion.div>
           </motion.div>
