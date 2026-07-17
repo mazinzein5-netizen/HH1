@@ -387,6 +387,13 @@ export interface PortalSessionInfo {
   accountId: string | null;
   accountType: "healthcare" | "caretaker" | null;
   role: string | null;
+  /** Normalised (lowercase) account email — stable across restarts. */
+  email: string | null;
+}
+
+/** Normalised email for an account id (stable identity across restarts). */
+export function portalAccountEmail(accountId: string): string | null {
+  return accountById(accountId)?.email ?? null;
 }
 
 export function getPortalSession(req: Request): PortalSessionInfo | null {
@@ -401,6 +408,7 @@ export function getPortalSession(req: Request): PortalSessionInfo | null {
     accountId: session.accountId,
     accountType: account?.accountType ?? null,
     role: account?.role ?? null,
+    email: account?.email ?? null,
   };
 }
 

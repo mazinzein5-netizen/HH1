@@ -16,4 +16,5 @@
 - [Video export pipeline](video-export-pipeline.md) — no platform export tool; screencast-record video artifacts to MP4, aligning capture to a loop boundary via reload + startRecording.
 - [expo-audio voice](expo-audio-voice.md) — presets leave metering OFF; spread isMeteringEnabled:true or silence auto-stop is dead code; proxy transcription = gpt-4o-mini-transcribe, not whisper-1.
 - [Promo narration & captions](promo-narration.md) — per-scene TTS clips must fit fixed scene slots (trim+atempo ≤1.15x); captions burned in; store-safe wording only.
+- [Practitioner store persistence](practitioner-store-persistence.md) — stores persist as one JSONB doc per account; every mutation must call persistPracStore or it's lost on restart.
 - [Sarah companion](sarah-companion.md) — on-device intent layer for personal data; pilot+consent-gated GP letter; mic consent at first launch; legacy queenb_* keys kept.

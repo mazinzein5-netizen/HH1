@@ -6,6 +6,7 @@ import {
 import {
   getPracStoreById,
   newEntityId,
+  persistPracStore,
   type AvailabilitySlot,
   type Booking,
 } from "./practitioner";
@@ -148,6 +149,7 @@ router.post("/hive/practitioners/:id/book", (req, res) => {
     ...(reason ? { reason } : {}),
   };
   store.bookings.unshift(booking);
+  persistPracStore(entry.id);
   res.json({
     booking: {
       id: booking.id,
