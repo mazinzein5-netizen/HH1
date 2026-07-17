@@ -22,9 +22,9 @@ import {
   getCheckoutStatus,
   getPendingCheckout,
   savePendingCheckout,
-  startStripeCheckout,
+  startWhopCheckout,
   waitForCheckoutResult,
-} from "@/utils/stripeCheckout";
+} from "@/utils/whopCheckout";
 import { useColors } from "@/hooks/useColors";
 import { AllowanceSummary, getAllowanceSummary } from "@/utils/entitlements";
 import { MemberCode, getMemberCode, memberQrPayload, regenerateMemberCode } from "@/utils/memberCode";
@@ -183,10 +183,10 @@ export default function MembershipScreen() {
     let reference = membership?.reference ?? makeReference();
 
     if (method === "online") {
-      // Real card payment via Stripe Checkout (through the HIVE api-server —
-      // the accepted server exception). Membership only activates when
-      // Stripe confirms the payment; a failed or abandoned checkout leaves
-      // the current card unchanged.
+      // Real card payment via Whop hosted checkout (through the HIVE
+      // api-server — the accepted server exception). Membership only
+      // activates when Whop confirms the payment; a failed or abandoned
+      // checkout leaves the current card unchanged.
       try {
         setBusy("paying");
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -201,7 +201,7 @@ export default function MembershipScreen() {
         });
         if (pending) {
           // Reuse the reference from the in-flight attempt so the retry maps
-          // to the SAME Stripe session (client resume + server idempotency).
+          // to the SAME Whop checkout (client resume + server idempotency).
           reference = pending.reference;
           const s = await getCheckoutStatus(pending.sessionId).catch(() => null);
           if (s?.paid) {
@@ -235,7 +235,7 @@ export default function MembershipScreen() {
         }
 
         if (!sessionId) {
-          const session = await startStripeCheckout({
+          const session = await startWhopCheckout({
             tier: tier as PaidTier,
             billing,
             reference,

@@ -185,3 +185,9 @@ id = "oR3h1EZgM3ggO50xeiM9Q"
 uri = "file://docs/medical-knowledge-data-banks.md"
 type = "text"
 title = "Medical Knowledge Data Banks — Options Compared"
+
+[[outputs]]
+id = "Hs8Urf_jjm0ODH68ITuc_"
+uri = "file://attached_assets/hive-apk-qr.png"
+type = "image"
+title = "HIVE Companion APK — scan to download"

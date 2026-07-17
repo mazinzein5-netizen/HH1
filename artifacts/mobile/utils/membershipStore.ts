@@ -106,7 +106,7 @@ export const METHOD_META: Record<
   online: {
     label: "Pay online by card",
     icon: "credit-card-outline",
-    blurb: "Pay securely by card on Stripe's checkout page — your card activates the moment payment is confirmed.",
+    blurb: "Pay securely by card on Whop's checkout page — your card activates the moment payment is confirmed.",
   },
   insurance: {
     label: "Link my health insurance",

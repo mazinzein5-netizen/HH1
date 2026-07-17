@@ -9,6 +9,7 @@ import portalAuthRouter from "./portalAuth";
 import practitionerRouter from "./practitioner";
 import hiveBookingRouter from "./hiveBooking";
 import stripeRouter from "./stripe";
+import whopRouter from "./whop";
 
 const router: IRouter = Router();
 
@@ -21,6 +22,9 @@ router.use(emergencyShareRouter);
 router.use(portalAuthRouter);
 router.use(practitionerRouter);
 router.use(hiveBookingRouter);
+// Stripe routes stay registered so previously installed builds keep working;
+// new builds pay through Whop (routes/whop.ts).
 router.use(stripeRouter);
+router.use(whopRouter);
 
 export default router;

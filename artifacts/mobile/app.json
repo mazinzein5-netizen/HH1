@@ -24,7 +24,8 @@
         "android.permission.USE_FINGERPRINT",
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {
@@ -78,6 +79,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3371abf0-8ca1-4164-aa9e-65af52714bfd"
+      }
+    },
+    "owner": "ibnceena"
   }
 }

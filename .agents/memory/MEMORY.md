@@ -11,6 +11,7 @@
 - [Emergency portal auth](portal-auth.md) — portal relay endpoints need server-issued Bearer sessions; demo sessions only see canned demo codes; signup never pre-authenticates.
 - [Companion supervisor pattern](companion-supervisor.md) — pilot AI replies pass a second safety-review model call; on failure serve reply flagged supervised:false, never block.
 - [Stripe connector credentials](stripe-connector-credentials.md) — proxy needs `connector_name` (singular) and key lives in `settings.secret`; plural param silently returns 0 items.
+- [Whop connector](whop-connector.md) — proxy can ignore connector filter (pick item by name!); checkout create rejects company_id; membership plans in WHOP_PLAN_* env vars.
 - [Stripe checkout idempotency](stripe-checkout-idempotency.md) — checkout retries must reuse the same session (server idempotency key + client-side pending-session store) or timeouts can double-charge.
 - [AI proxy thinking tokens](ai-thinking-tokens.md) — reasoning silently eats max_tokens on structured calls; disable thinking via chat_template_kwargs or truncation follows.
 - [Website video embeds](website-video-embeds.md) — pop-out scale needs unclipped wrapper (frameClassName); audio lives in parent page; promo clip at 0.8x must span scenes 1-3 exactly.

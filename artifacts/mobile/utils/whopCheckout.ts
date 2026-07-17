@@ -1,7 +1,7 @@
 /* ────────────────────────────────────────────────────────────────────────────
- * Stripe checkout client (the accepted server exception to Zero-Server:
- * payments go through the HIVE api-server, which talks to Stripe).
- * No card details ever touch the app — Stripe hosts the payment page.
+ * Whop checkout client (the accepted server exception to Zero-Server:
+ * payments go through the HIVE api-server, which talks to Whop).
+ * No card details ever touch the app — Whop hosts the payment page.
  * ──────────────────────────────────────────────────────────────────────────── */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -29,13 +29,13 @@ async function parseOrThrow<T>(res: Response): Promise<T> {
   return data as T;
 }
 
-export async function startStripeCheckout(args: {
+export async function startWhopCheckout(args: {
   tier: PaidTier;
   billing: BillingCycle;
   reference: string;
   userId: string;
 }): Promise<CheckoutSession> {
-  const res = await fetch(`${API()}/stripe/checkout`, {
+  const res = await fetch(`${API()}/whop/checkout`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(args),
@@ -44,13 +44,13 @@ export async function startStripeCheckout(args: {
 }
 
 export async function getCheckoutStatus(sessionId: string): Promise<CheckoutStatus> {
-  const res = await fetch(`${API()}/stripe/checkout-status/${encodeURIComponent(sessionId)}`);
+  const res = await fetch(`${API()}/whop/checkout-status/${encodeURIComponent(sessionId)}`);
   return parseOrThrow<CheckoutStatus>(res);
 }
 
 /**
- * Polls the checkout session until it is paid, expired, or the timeout
- * elapses. Returns the final state ("timeout" when we gave up waiting).
+ * Polls the checkout until it is paid, expired, or the timeout elapses.
+ * Returns the final state ("timeout" when we gave up waiting).
  */
 export async function waitForCheckoutResult(
   sessionId: string,
@@ -75,7 +75,7 @@ export async function waitForCheckoutResult(
 
 /* ── Pending checkout persistence ───────────────────────────────────────────
  * If polling times out (e.g. the app was closed mid-payment) we remember the
- * session so a retry resumes the SAME checkout instead of creating a new one,
+ * checkout so a retry resumes the SAME one instead of creating a new one,
  * which prevents any chance of a double charge. */
 
 export interface PendingCheckout {
@@ -87,8 +87,8 @@ export interface PendingCheckout {
   createdAt: string;
 }
 
-const PENDING_KEY = (userId: string) => `hive.stripe.pendingCheckout.${userId}`;
-const PENDING_MAX_AGE_MS = 23 * 60 * 60 * 1000; // Stripe sessions expire after 24h
+const PENDING_KEY = (userId: string) => `hive.whop.pendingCheckout.${userId}`;
+const PENDING_MAX_AGE_MS = 23 * 60 * 60 * 1000; // matches the server's 24h reuse window
 
 export async function savePendingCheckout(userId: string, p: PendingCheckout): Promise<void> {
   try {
@@ -100,7 +100,7 @@ export async function savePendingCheckout(userId: string, p: PendingCheckout): P
  * Returns the stored pending checkout for this user if it is still fresh and
  * matches the chosen tier + billing. The reference is deliberately NOT part of
  * the match: for a first-time purchase the client generates the reference, so
- * a retry would otherwise produce a new one and orphan the pending session
+ * a retry would otherwise produce a new one and orphan the pending checkout
  * (risking a second charge). Callers must reuse `pending.reference`.
  */
 export async function getPendingCheckout(

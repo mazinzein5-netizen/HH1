@@ -34,7 +34,7 @@ isValidation = true
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
-integrations = ["stripe:1.0.0"]
+integrations = ["stripe:1.0.0", "whop:1.0.0"]
 
 [postMerge]
 path = "scripts/post-merge.sh"
@@ -42,3 +42,12 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+WHOP_COMPANY_ID = "biz_mjz96vMfyMl2nB"
+WHOP_PLAN_GOLD_MONTHLY = "plan_vqCtx62oTlrWN"
+WHOP_PLAN_GOLD_YEARLY = "plan_O7zITndGBC8hb"
+WHOP_PLAN_RED_MONTHLY = "plan_Ouq7pAqHcH7gK"
+WHOP_PLAN_RED_YEARLY = "plan_UyYEJnA7SVwbR"
