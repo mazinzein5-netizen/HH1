@@ -1,5 +1,5 @@
 /**
- * useVoiceInput — cross-platform voice input for Queen B.
+ * useVoiceInput — cross-platform voice input for Sarah.
  *
  * Web:    browser SpeechRecognition (live interim transcripts, no audio upload).
  * Native: expo-audio microphone recording → api-server /ai/transcribe
@@ -20,6 +20,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Platform } from "react-native";
 
 const DISCLOSURE_KEY = "@hive_voice_disclosure_v1";
+
+/**
+ * One-time voice setup, called from the consent screen at first launch:
+ * requests the native microphone permission and marks the voice disclosure
+ * as shown (the disclosure text is part of the consent screen itself).
+ * Safe to call multiple times — the OS only ever prompts once.
+ */
+export async function ensureVoiceSetup(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(DISCLOSURE_KEY, "true");
+  } catch {}
+  if (Platform.OS === "web") return;
+  try {
+    await AudioModule.requestRecordingPermissionsAsync();
+  } catch {}
+}
 
 // Silence auto-stop tuning (native only)
 const METER_POLL_MS = 350;
@@ -166,14 +182,16 @@ export function useVoiceInput(options: UseVoiceInputOptions): VoiceInput {
       return;
     }
 
-    // One-time plain-language disclosure (Zero-Server rule: be explicit
-    // whenever anything leaves the device).
+    // One-time plain-language disclosure fallback (Zero-Server rule: be
+    // explicit whenever anything leaves the device). Normally already shown
+    // and accepted on the consent screen at first launch (ensureVoiceSetup),
+    // so this only appears for users who consented before that existed.
     try {
       const seen = await AsyncStorage.getItem(DISCLOSURE_KEY);
       if (!seen) {
         const proceed = await new Promise<boolean>((resolve) => {
           Alert.alert(
-            "Talking to Queen B",
+            "Talking to Sarah",
             "When you use your voice, the short recording is sent to a secure transcription service to turn it into text, then discarded straight away. Nothing is stored.",
             [
               { text: "Not now", style: "cancel", onPress: () => resolve(false) },

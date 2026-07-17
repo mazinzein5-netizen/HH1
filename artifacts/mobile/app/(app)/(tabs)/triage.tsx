@@ -1,7 +1,7 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Platform,
@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
 import { PATHWAYS, PathwayKey, RED_FLAG_QUESTIONS } from "@/data/pathwayQuestions";
+import { useAppMode } from "@/context/AppModeContext";
 import { useHiveBot } from "@/context/HiveBotContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { usePatient } from "@/context/PatientContext";
@@ -46,6 +47,7 @@ export default function TriageScreen() {
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
   const hiveBot = useHiveBot();
+  const { pilotMode } = useAppMode();
   const { data: patient } = usePatient();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 + 68 : insets.bottom + 64;
@@ -167,6 +169,28 @@ export default function TriageScreen() {
   function askHiveBotAboutResults(total: number) {
     if (!pathway) return;
     const result = pathway.getResult(total);
+
+    // Pilot mode: hand over to Sarah, who acknowledges the result and offers
+    // to draft a GP letter (with consent and clear timeframes).
+    if (pilotMode) {
+      const flags = positiveRedFlags();
+      const summary = [
+        `Pathway: ${pathway.name}. Questionnaire: ${pathway.scoreTool}.`,
+        `Score: ${pathway.formatScore(total)} (${result.label}).`,
+        `Suggested next step: ${result.referral}.`,
+        flags.length ? `Red flags reported: ${flags.join("; ")}.` : "No red flags reported.",
+      ].join(" ");
+      router.push({
+        pathname: "/(app)/companion",
+        params: {
+          triage: summary,
+          urgency: hasRedFlag ? "urgent" : "routine",
+          ts: String(Date.now()),
+        },
+      });
+      return;
+    }
+
     const seed = [
       `I completed the ${pathway.name} ${pathway.scoreTool} questionnaire.`,
       `My score was ${pathway.formatScore(total)} (${result.label}), and the suggested next step is: ${result.referral}.`,
@@ -312,7 +336,7 @@ export default function TriageScreen() {
             <TouchableOpacity activeOpacity={0.85} onPress={askHiveBotAboutPathway} style={[styles.botBtn, { borderColor: colors.glassGoldBorder, backgroundColor: colors.glassGold }]}>
               <MaterialCommunityIcons name="bee" size={17} color={colors.gold} />
               <Text style={[styles.botBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
-                Ask Queen B about guideline information
+                Talk to Sarah about these questions
               </Text>
             </TouchableOpacity>
 
@@ -527,7 +551,7 @@ export default function TriageScreen() {
               <TouchableOpacity activeOpacity={0.85} onPress={() => askHiveBotAboutResults(total)} style={[styles.botBtn, { borderColor: colors.glassGoldBorder, backgroundColor: colors.glassGold }]}>
                 <MaterialCommunityIcons name="bee" size={17} color={colors.gold} />
                 <Text style={[styles.botBtnText, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>
-                  Ask Queen B about guideline information
+                  Talk to Sarah about this result
                 </Text>
               </TouchableOpacity>
 

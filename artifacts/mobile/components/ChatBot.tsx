@@ -53,19 +53,19 @@ interface Props {
 const PILOT_GREETING: ChatMessage = {
   role: "assistant",
   content:
-    "Hi there 🐝 I'm Queen B — your companion on this health journey.\n\nFirst things first — how are you feeling right now, in yourself? Not just physically, but how are you doing today?",
+    "Hi there 🐝 I'm Sarah — your companion on this health journey.\n\nFirst things first — how are you feeling right now, in yourself? Not just physically, but how are you doing today?",
 };
 
 const CLEAN_GREETING: ChatMessage = {
   role: "assistant",
   content:
-    "Hi there 🐝 I'm Queen B — I'm here as your companion. Think of me as a warm friend who's walked this road before and wants to help you feel a little less alone on yours.\n\nI won't give medical advice — your doctor is the right person for that — but I can listen, help you make sense of things, and be here with you.\n\nHow are you feeling today?",
+    "Hi there 🐝 I'm Sarah — I'm here as your companion. Think of me as a warm friend who's walked this road before and wants to help you feel a little less alone on yours.\n\nI won't give medical advice — your doctor is the right person for that — but I can listen, help you make sense of things, and be here with you.\n\nHow are you feeling today?",
 };
 
 const PAIN_HELPER_GREETING: ChatMessage = {
   role: "assistant",
   content:
-    "Hi there 🐝 I'm Queen B. I can hear that something's not quite right, and I want to help.\n\nLet's take it gently. Tell me, in your own words — what's been bothering you? There's no rush, and nothing is too small to mention.",
+    "Hi there 🐝 I'm Sarah. I can hear that something's not quite right, and I want to help.\n\nLet's take it gently. Tell me, in your own words — what's been bothering you? There's no rush, and nothing is too small to mention.",
 };
 
 function toSpeakable(text: string): string {
@@ -377,7 +377,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
       messages: nextMessages.map(({ role, content }) => ({ role, content })),
       pilotCode: pilotMode ? PILOT_ACTIVATION_CODE : undefined,
       mode: painHelper ? "painDescribe" : undefined,
-      // Always send patient context so Queen B can detect interactions in real-time
+      // Always send patient context so Sarah can detect interactions in real-time
       patientContext: {
         medications: activeMeds.map((m) => ({
           name: m.medication,
@@ -440,7 +440,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
   function handleShareToServices() {
     const transcript = messages
       .slice(1)
-      .map((m) => `${m.role === "user" ? "Patient" : "Queen B"}: ${m.content}`)
+      .map((m) => `${m.role === "user" ? "Patient" : "Sarah"}: ${m.content}`)
       .join("\n\n");
 
     const body = [
@@ -452,7 +452,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
     ].join("\n");
 
     shareWithHealthServices(
-      painHelper || pilotMode ? "Queen B — Clinical Handover Summary" : "Queen B — Conversation Summary",
+      painHelper || pilotMode ? "Sarah — Clinical Handover Summary" : "Sarah — Conversation Summary",
       body,
     );
   }
@@ -503,7 +503,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                    Queen B
+                    Sarah
                   </Text>
                   {hasContraindiction && (
                     <View style={styles.contraindictionHeaderBadge}>
@@ -749,7 +749,7 @@ export default function ChatBot({ visible, onClose, seedContext, painHelper }: P
               Remember Our Conversations?
             </Text>
             <Text style={[styles.promptBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Queen B can remember what we talk about so she can pick up where we left off next time.{"\n\n"}
+              Sarah can remember what we talk about so she can pick up where we left off next time.{"\n\n"}
               Everything is stored only on your device — nothing is sent anywhere. You can turn this off at any time in Settings.
             </Text>
             <View style={styles.promptActions}>

@@ -35,20 +35,26 @@ function sanitizeStringArray(v: unknown, max = 20): string[] {
 
 // ── Prompts ──────────────────────────────────────────────────────────────────
 
-const COMPANION_TEACHER_PROMPT = `You are the HIVE Companion — a warm, patient, voice-first AI companion for middle-aged and older adults living in care facilities or under hospital-group care. Your replies are SPOKEN ALOUD to the patient, so write the way a kind, unhurried person talks.
+const COMPANION_TEACHER_PROMPT = `You are Sarah — the warm, quick-minded bee companion who lives inside the HIVE COMPANION health app. You are the friendly brain of the whole app: you know the patient, you know what the app can do, and you help them get where they need to go. Your replies are SPOKEN ALOUD to the patient, so write the way a kind, unhurried person talks.
 
 Who you are:
-- A gentle teacher and companion who knows a great deal about medicine, pharmacology (how medicines work), and musculoskeletal health (muscles, bones, joints, and pain).
-- You explain things in plain, everyday English — short sentences, familiar words, one idea at a time.
+- Sarah: a genuine conversational companion, not a question-answering machine. You chat the way a caring, knowledgeable friend does — naturally, following the thread of the conversation wherever the patient takes it.
+- You are broadly versed across the medical sciences: internal medicine, surgical medicine, obstetrics and gynaecology, psychiatry, paediatrics, geriatric medicine, cardiology, and gastroenterology — as well as pharmacology and musculoskeletal health. You can explain and educate across all of these in plain, everyday English.
 - You are never condescending. You treat the patient as a capable adult who deserves clear answers.
 
-Teaching style (very important):
+Guideline awareness (keep it invisible):
+- You quietly know mainstream clinical guidance (HSE Ireland, NICE UK and similar) and you keep it in perspective of where the conversation is going — the patient's direction, their situation, and their timeline.
+- NEVER ask the patient whether they want guideline information, and never quote guideline names or codes at them. Instead, let that knowledge shape what you say naturally: "something like that is usually looked at within a couple of weeks" or "that's the kind of thing a doctor would want to see sooner rather than later."
+- Whenever you suggest any action — seeing a GP, getting something checked, waiting and watching — attach a clear, honest timeframe in plain words.
+
+Conversation style (very important):
+- Free-flowing and warm. Follow up on what they actually said, remember the thread, and let one topic lead into the next like a real conversation.
 - Answer the question first, simply. Then offer a little more depth if they want it.
-- After explaining something, check understanding gently: "Does that make sense so far?" or "Would you like me to say that a simpler way?"
 - Use everyday comparisons: "Think of your knee cartilage like the rubber sole of a shoe — it cushions each step."
-- Keep replies short enough to listen to comfortably — usually 3 to 6 spoken sentences. Never produce long lists or walls of text.
+- Keep replies comfortable to listen to — usually 3 to 7 spoken sentences, a little longer when the moment calls for it. Never produce long lists or walls of text.
 - Never use markdown, bullet points, asterisks, or headings — plain spoken sentences only.
 - Speak at a calm pace. One question at a time, never several.
+- You can also help them get things done in the app: if they want their prescriptions, medical history, appointments, messages, or to book an appointment, the app shows those for you — acknowledge it naturally and talk them through what they're looking at.
 
 Strict safety rules (non-negotiable):
 - You NEVER diagnose. You explain conditions and possibilities in general terms only.
@@ -58,7 +64,7 @@ Strict safety rules (non-negotiable):
 - If they mention feeling hopeless or thoughts of self-harm, respond with warmth and give the Samaritans number, 116 123.
 
 Using what you remember:
-- If the patient's memory notes are provided below, use them naturally — greet them by name, recall their conditions and preferences, and connect new explanations to past topics. Never recite the notes back mechanically.
+- If the patient's memory notes or current app context (recent questionnaire results, upcoming appointments, medications) are provided below, use them naturally — greet them by name, recall their conditions and preferences, keep their timeline in view, and connect new explanations to past topics. Never recite the notes back mechanically.
 
 End health-topic conversations with a gentle reminder that their own care team is the right place for personal medical decisions.`;
 
@@ -116,6 +122,17 @@ Rules:
 - Keep it under 200 words. Plain text only, no markdown symbols.
 - End with the line: "Source: patient self-report via HIVE Companion; not clinically verified."`;
 
+const GP_LETTER_PROMPT = `You draft a short, formally correct letter from a patient to their GP inside a patient health app. The patient has just completed a validated symptom questionnaire and has agreed to send a letter describing the situation.
+
+Rules:
+- Write in the first person as the patient, in a simple formal register a GP would take seriously — polite, factual, no legal jargon, no dramatics.
+- Structure (plain text, no markdown): sender placeholder lines ("[Your name]", "[Your address]", "[Your phone number]"), the date line "[Date]", "Dear Doctor,", then 2-4 short paragraphs, then "Yours sincerely," and "[Your name]".
+- Paragraph 1: why the patient is writing — the questionnaire completed, the score/result, and the main symptoms in plain clinical wording.
+- Paragraph 2: relevant details from the result (red flags if any, duration, impact on daily life). NEVER invent symptoms, history, or measurements not provided.
+- Final paragraph: a clear, specific request with a timeframe — e.g. an appointment within 2 weeks, or urgent review within 48 hours if red flags are present. Always state the timeframe plainly.
+- Include the line "This summary was generated with the help of my health app from a standardised questionnaire; the details reflect my own answers." near the end.
+- Keep the whole letter under 300 words. Plain text only.`;
+
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 /**
@@ -138,9 +155,12 @@ router.post("/ai/companion", async (req, res) => {
     return;
   }
 
-  const { messages, memory } = req.body as {
+  const { messages, memory, appContext } = req.body as {
     messages?: ChatMsg[];
     memory?: CompanionMemoryPayload;
+    /** On-device app context assembled by the client per-request (triage
+     *  results, upcoming appointments, active medications). Never stored. */
+    appContext?: string;
   };
 
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -176,12 +196,23 @@ router.post("/ai/companion", async (req, res) => {
     }
   }
 
+  let contextPreamble = "";
+  if (typeof appContext === "string" && appContext.trim()) {
+    contextPreamble =
+      "CURRENT APP CONTEXT (from the patient's device, shared only for this reply):\n" +
+      appContext.trim().slice(0, 3000) +
+      "\n\n";
+  }
+
   try {
     const completion = await openai.chat.completions.create({
       model: CHAT_MODEL,
-      max_tokens: 500,
+      max_tokens: 800,
+      // Deeper reasoning for conversation and context understanding
+      // (OpenRouter reasoning parameter; ignored by non-reasoning models).
+      ...({ reasoning: { effort: "medium" } } as object),
       messages: [
-        { role: "system", content: memoryPreamble + COMPANION_TEACHER_PROMPT },
+        { role: "system", content: memoryPreamble + contextPreamble + COMPANION_TEACHER_PROMPT },
         ...recent,
       ],
     });
@@ -199,7 +230,10 @@ router.post("/ai/companion", async (req, res) => {
     try {
       const review = await openai.chat.completions.create({
         model: CHAT_MODEL,
-        max_tokens: 500,
+        max_tokens: 1000,
+        // Structured JSON output — skip internal reasoning so the token
+        // budget goes to the JSON itself (reasoning otherwise truncates it).
+        ...({ chat_template_kwargs: { enable_thinking: false } } as object),
         messages: [
           { role: "system", content: SUPERVISOR_PROMPT },
           {
@@ -390,6 +424,68 @@ router.post("/ai/translate", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "AI translate error");
     res.status(500).json({ error: "Failed to generate translation" });
+  }
+});
+
+/**
+ * POST /ai/gp-letter
+ * Pilot-only. Drafts a simple formal GP letter from a completed questionnaire
+ * result, always with an explicit requested timeframe. The patient reviews
+ * and approves the draft on-device before anything is shared.
+ */
+router.post("/ai/gp-letter", async (req, res) => {
+  if (!isPilotRequest(req.body)) {
+    res.status(403).json({ error: "PILOT_REQUIRED" });
+    return;
+  }
+
+  const openai = getChatAI();
+  if (!openai) {
+    res.status(503).json({ error: "AI_NOT_CONFIGURED" });
+    return;
+  }
+
+  const { resultSummary, urgency } = req.body as {
+    /** Plain-text questionnaire result summary assembled on-device. */
+    resultSummary?: string;
+    /** "urgent" when red flags were reported, else "routine". */
+    urgency?: string;
+  };
+
+  if (!resultSummary?.trim()) {
+    res.status(400).json({ error: "resultSummary is required" });
+    return;
+  }
+
+  const timeframeHint =
+    urgency === "urgent"
+      ? "Red flags were reported — the letter must request an urgent review within 48 hours and remind the patient that emergency services (112/999) are the right choice if symptoms worsen."
+      : "No red flags were reported — the letter should request a routine appointment within 2 weeks.";
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: CHAT_MODEL,
+      max_tokens: 1400,
+      // Skip internal reasoning so the token budget goes to the letter itself.
+      ...({ chat_template_kwargs: { enable_thinking: false } } as object),
+      messages: [
+        { role: "system", content: GP_LETTER_PROMPT },
+        {
+          role: "user",
+          content: `QUESTIONNAIRE RESULT (patient's own answers):\n${resultSummary.trim().slice(0, 6000)}\n\nTIMEFRAME GUIDANCE: ${timeframeHint}`,
+        },
+      ],
+    });
+
+    const letter = completion.choices[0]?.message?.content?.trim();
+    if (!letter) {
+      res.status(500).json({ error: "Failed to draft the letter" });
+      return;
+    }
+    res.json({ letter });
+  } catch (err) {
+    logger.error({ err }, "AI gp-letter error");
+    res.status(500).json({ error: "Failed to draft the letter" });
   }
 });
 

@@ -89,7 +89,7 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      {/* Queen B — draggable Pixar bee companion */}
+      {/* Sarah — draggable Pixar bee companion */}
       <QueenBeeWidget
         onPress={() => hiveBot.open()}
         initialBottom={fabBottom}

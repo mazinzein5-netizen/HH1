@@ -274,13 +274,13 @@ export default function MonitoringScreen() {
               </Text>
               <Text style={[styles.monAlertBody, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
                 {monitoringAlert.type === "spo2"
-                  ? `SpO₂ reading of ${monitoringAlert.value}% noted — relevant given your blood thinner medication. Tap to ask Queen B.`
-                  : `Heart rate of ${monitoringAlert.value} bpm noted with your current medications. Tap to ask Queen B.`}
+                  ? `SpO₂ reading of ${monitoringAlert.value}% noted — relevant given your blood thinner medication. Tap to ask Sarah.`
+                  : `Heart rate of ${monitoringAlert.value} bpm noted with your current medications. Tap to ask Sarah.`}
               </Text>
             </View>
             <View style={styles.monAlertBeeCol}>
               <MaterialCommunityIcons name="bee" size={20} color="#d97706" />
-              <Text style={[styles.monAlertAsk, { color: "#d97706", fontFamily: "Inter_600SemiBold" }]}>Ask Queen B</Text>
+              <Text style={[styles.monAlertAsk, { color: "#d97706", fontFamily: "Inter_600SemiBold" }]}>Ask Sarah</Text>
             </View>
             <TouchableOpacity
               hitSlop={10}

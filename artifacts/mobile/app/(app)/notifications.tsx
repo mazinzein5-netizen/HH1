@@ -179,13 +179,13 @@ export default function NotificationsScreen() {
           />
         </View>
 
-        {/* Queen B memory */}
+        {/* Sarah memory */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: "rgba(201,134,10,0.4)" }]}>
-          <Text style={[styles.cardLabel, { color: "#C9860A" }]}>QUEEN B COMPANION</Text>
+          <Text style={[styles.cardLabel, { color: "#C9860A" }]}>SARAH COMPANION</Text>
           <PrefRow
             icon="brain" iconColor="#C9860A"
             label="Remember conversations"
-            sub="Queen B recalls past conversations and continues where you left off. Stored only on this device."
+            sub="Sarah recalls past conversations and continues where you left off. Stored only on this device."
             value={prefs.queenBMemory}
             onToggle={(v) => toggle("queenBMemory", v)}
             colors={colors}

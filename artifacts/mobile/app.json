@@ -39,7 +39,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "HIVE Companion™ uses your microphone so you can talk to Queen B instead of typing. Your voice is turned into text by a secure transcription service and the recording is discarded straight away — it is never stored."
+          "microphonePermission": "HIVE Companion™ uses your microphone so you can talk to Sarah instead of typing. Your voice is turned into text by a secure transcription service and the recording is discarded straight away — it is never stored."
         }
       ]
     ],

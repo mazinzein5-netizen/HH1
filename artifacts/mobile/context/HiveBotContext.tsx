@@ -2,12 +2,12 @@ import React, { createContext, useCallback, useContext, useState } from "react";
 import ChatBot from "@/components/ChatBot";
 
 interface OpenOptions {
-  /** When true, Queen B focuses on helping the patient describe their pain for health practitioners. */
+  /** When true, Sarah focuses on helping the patient describe their pain for health practitioners. */
   painHelper?: boolean;
 }
 
 interface HiveBotContextType {
-  /** Open Queen B. Optionally seed her with clinical context (e.g. triage results). */
+  /** Open Sarah. Optionally seed her with clinical context (e.g. triage results). */
   open: (seedContext?: string, options?: OpenOptions) => void;
   close: () => void;
   visible: boolean;

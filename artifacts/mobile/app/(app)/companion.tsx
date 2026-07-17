@@ -5,7 +5,7 @@
  * (with supervisor guardrail) → text-to-speech reply.
  */
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as Speech from "expo-speech";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -22,19 +22,32 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { PILOT_ACTIVATION_CODE, useAppMode } from "@/context/AppModeContext";
+import { usePatient } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
 import { useVoiceInput, type VoiceInput } from "@/hooks/useVoiceInput";
-import { callEmergencyServices, EMERGENCY_NUMBER } from "@/utils/healthShare";
+import { callEmergencyServices, EMERGENCY_NUMBER, shareWithHealthServices } from "@/utils/healthShare";
 import {
   getCompanionMemory,
   mergeCompanionMemory,
   type CompanionMemory,
 } from "@/utils/companionMemory";
+import {
+  buildSarahAppContext,
+  buildSarahCard,
+  detectSarahIntent,
+  type SarahCard,
+} from "@/utils/sarahTools";
+import { listAppointments, type Appointment } from "@/utils/telemedicineStore";
 
 interface Msg {
   role: "user" | "assistant";
   content: string;
   supervised?: boolean;
+  /** On-device data card shown alongside Sarah's reply. */
+  card?: SarahCard;
+  /** Special interactive blocks for the GP-letter flow. */
+  letterOffer?: boolean;
+  letterText?: string;
 }
 
 function toSpeakable(text: string): string {
@@ -54,6 +67,8 @@ export default function CompanionScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { pilotMode } = useAppMode();
+  const { data: patientData } = usePatient();
+  const params = useLocalSearchParams<{ triage?: string; urgency?: string; ts?: string }>();
 
   const [messages, setMessages] = useState<Msg[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,6 +79,10 @@ export default function CompanionScreen() {
   const [showTyping, setShowTyping] = useState(false);
 
   const memoryRef = useRef<CompanionMemory | null>(null);
+  const patientRef = useRef(patientData);
+  patientRef.current = patientData;
+  const triageRef = useRef<{ summary: string; urgency: string } | null>(null);
+  const [draftingLetter, setDraftingLetter] = useState(false);
   const handsFreeRef = useRef(handsFree);
   handsFreeRef.current = handsFree;
   const loadingRef = useRef(loading);
@@ -113,9 +132,14 @@ export default function CompanionScreen() {
       memoryRef.current = mem;
       const name = mem.name ? `, ${mem.name}` : "";
       const returning = mem.topics.length > 0;
+
+      // A triage handoff greeting is handled by the params-reactive effect
+      // below; skip the generic greeting when one is arriving.
+      if (typeof params.triage === "string" && params.triage.trim()) return;
+
       const greeting = returning
-        ? `Hello again${name}. It's lovely to talk with you. Last time we spoke about ${mem.topics[mem.topics.length - 1]?.toLowerCase()}. Would you like to carry on with that, or is something else on your mind today?`
-        : `Hello${name}. I'm your HIVE Companion. You can press the big button and just talk to me — ask me anything about your health, your medicines, or aches and pains, and I'll explain it in plain English. What would you like to talk about?`;
+        ? `Hello again${name}, it's Sarah. It's lovely to talk with you. Last time we spoke about ${mem.topics[mem.topics.length - 1]?.toLowerCase()}. Would you like to carry on with that, or is something else on your mind today?`
+        : `Hello${name}, I'm Sarah — your companion here in the HIVE. You can press the big button and just talk to me. Ask me anything about your health or your medicines, or ask me to show your prescriptions, your appointments, or to book one — I'll take you right there. What would you like to talk about?`;
       if (mountedRef.current) {
         setMessages([{ role: "assistant", content: greeting, supervised: true }]);
         speakText(greeting);
@@ -128,6 +152,33 @@ export default function CompanionScreen() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Triage handoff (reactive: re-fires when a new questionnaire result
+  // arrives, keyed by its `ts` freshness param) ──
+  const processedTriageTsRef = useRef<string | null>(null);
+  useEffect(() => {
+    const triageSummary = typeof params.triage === "string" && params.triage.trim() ? params.triage.trim() : null;
+    if (!triageSummary) return;
+    const ts = typeof params.ts === "string" ? params.ts : "";
+    if (processedTriageTsRef.current === ts) return;
+    processedTriageTsRef.current = ts;
+
+    triageRef.current = {
+      summary: triageSummary,
+      urgency: params.urgency === "urgent" ? "urgent" : "routine",
+    };
+    const name = memoryRef.current?.name ? `, ${memoryRef.current.name}` : "";
+    const urgent = triageRef.current.urgency === "urgent";
+    const greeting = urgent
+      ? `Hello${name}, I'm Sarah. I've seen your questionnaire result, and because of the answers you gave, this is something a doctor should look at urgently — within the next day or two, or call 112 if things get worse. If you'd like, I can write a short letter to your GP about it right now — it only goes anywhere if you approve it and share it yourself. Shall I draft it?`
+      : `Hello${name}, I'm Sarah. Well done for completing that questionnaire — that takes care and patience. Based on your result, it would be worth having your GP look at this within the next couple of weeks. If you'd like, I can write a short letter to your GP for you — you'd read it first, and nothing is sent unless you choose to share it. Shall I draft it?`;
+    setMessages((prev) => [
+      ...prev.map((m) => ({ ...m, letterOffer: false })),
+      { role: "assistant" as const, content: greeting, supervised: true, letterOffer: true },
+    ]);
+    speakText(greeting);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.triage, params.urgency, params.ts]);
 
   function speakText(text: string) {
     try {
@@ -197,15 +248,35 @@ export default function CompanionScreen() {
     if (!trimmed || loadingRef.current) return;
 
     const userMsg: Msg = { role: "user", content: trimmed };
-    const next = [...messagesRef.current, userMsg];
+    let next = [...messagesRef.current, userMsg];
     setMessages(next);
     setLoading(true);
+
+    // On-device tool layer: fetch local data for the request, show it as a
+    // card, and let Sarah talk the patient through it. Data stays on-device;
+    // only a compact text summary rides along with the AI request.
+    let appointments: Appointment[] = [];
+    try {
+      appointments = await listAppointments();
+    } catch {}
+    let card: SarahCard | null = null;
+    const intent = detectSarahIntent(trimmed);
+    if (intent) {
+      card = buildSarahCard(intent, patientRef.current, appointments);
+    }
+    const appContext = buildSarahAppContext(
+      patientRef.current,
+      appointments,
+      card,
+      triageRef.current?.summary ?? null
+    );
 
     const domain = process.env.EXPO_PUBLIC_DOMAIN;
     const body = JSON.stringify({
       pilotCode: PILOT_ACTIVATION_CODE,
       messages: next.map(({ role, content }) => ({ role, content })),
       memory: memoryRef.current ?? undefined,
+      appContext: appContext || undefined,
     });
 
     // Always-there companion: quietly retry transient hiccups before
@@ -238,7 +309,7 @@ export default function CompanionScreen() {
       if (data?.message) {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: data!.message!, supervised: data!.supervised },
+          { role: "assistant", content: data!.message!, supervised: data!.supervised, card: card ?? undefined },
         ]);
         speakText(data.message);
         if (data.memoryUpdates) {
@@ -247,12 +318,65 @@ export default function CompanionScreen() {
       } else {
         const fallback =
           "I'm still right here with you — I just couldn't hear from my helpers for a moment. Take a breath, and let's try that again together in a few seconds.";
-        setMessages((prev) => [...prev, { role: "assistant", content: fallback, supervised: true }]);
+        setMessages((prev) => [...prev, { role: "assistant", content: fallback, supervised: true, card: card ?? undefined }]);
         speakText(fallback);
       }
     } finally {
       setLoading(false);
     }
+  }
+
+  // ── GP letter flow (post-questionnaire, always with consent) ──
+  async function draftGpLetter() {
+    const triage = triageRef.current;
+    if (!triage || draftingLetter) return;
+    setDraftingLetter(true);
+    setMessages((prev) => prev.map((m) => ({ ...m, letterOffer: false })));
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    try {
+      const res = await fetch(`https://${domain}/api/ai/gp-letter`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pilotCode: PILOT_ACTIVATION_CODE,
+          resultSummary: triage.summary,
+          urgency: triage.urgency,
+        }),
+      });
+      const data = res.ok ? ((await res.json()) as { letter?: string }) : null;
+      if (data?.letter) {
+        const intro =
+          "Here's the letter I've drafted for your GP. Have a read through it — if you're happy, tap Share to send it however suits you. Nothing goes anywhere without you.";
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: intro, supervised: true, letterText: data.letter },
+        ]);
+        speakText(intro);
+        // Letter drafted — stop carrying the triage context into later turns.
+        triageRef.current = null;
+      } else {
+        const oops =
+          "I'm sorry — I couldn't put the letter together just now. We can try again in a moment, or you can use the Send to Health Services button on your questionnaire result instead.";
+        setMessages((prev) => [...prev, { role: "assistant", content: oops, supervised: true }]);
+        speakText(oops);
+      }
+    } catch {
+      const oops =
+        "I'm sorry — I couldn't put the letter together just now. We can try again in a moment.";
+      setMessages((prev) => [...prev, { role: "assistant", content: oops, supervised: true }]);
+      speakText(oops);
+    } finally {
+      setDraftingLetter(false);
+    }
+  }
+
+  function declineGpLetter() {
+    triageRef.current = null;
+    setMessages((prev) => prev.map((m) => ({ ...m, letterOffer: false })));
+    const reply =
+      "Of course — no letter, no bother. It's all saved on your phone if you change your mind. Now, is there anything about the result you'd like me to explain, or anything else on your mind?";
+    setMessages((prev) => [...prev, { role: "assistant", content: reply, supervised: true }]);
+    speakText(reply);
   }
 
   function handleTypedSend() {
@@ -286,7 +410,7 @@ export default function CompanionScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-            Companion
+            Sarah
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
             <MaterialCommunityIcons
@@ -365,6 +489,85 @@ export default function CompanionScreen() {
               >
                 {m.content}
               </Text>
+
+              {/* On-device data card (Sarah's tool layer) */}
+              {m.card && (
+                <View style={[styles.toolCard, { backgroundColor: colors.background, borderColor: colors.goldBorder ?? colors.border }]}>
+                  <View style={styles.toolCardHeader}>
+                    <MaterialCommunityIcons name={m.card.icon as any} size={22} color={colors.gold} />
+                    <Text style={[styles.toolCardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                      {m.card.title}
+                    </Text>
+                  </View>
+                  {m.card.lines.map((line, li) => (
+                    <Text key={li} style={[styles.toolCardLine, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
+                      {line}
+                    </Text>
+                  ))}
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => router.push(m.card!.route as any)}
+                    style={[styles.toolCardBtn, { backgroundColor: colors.gold }]}
+                  >
+                    <Text style={[styles.toolCardBtnText, { fontFamily: "Inter_700Bold" }]}>
+                      {m.card.routeLabel}
+                    </Text>
+                    <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* GP letter offer buttons */}
+              {m.letterOffer && (
+                <View style={styles.letterBtnRow}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={draftGpLetter}
+                    disabled={draftingLetter}
+                    style={[styles.letterBtn, { backgroundColor: colors.gold }]}
+                  >
+                    <MaterialCommunityIcons name="email-edit" size={22} color="#fff" />
+                    <Text style={[styles.letterBtnText, { fontFamily: "Inter_700Bold" }]}>
+                      Yes, draft the letter
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={declineGpLetter}
+                    disabled={draftingLetter}
+                    style={[styles.letterBtn, { backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.border }]}
+                  >
+                    <Text style={[styles.letterBtnText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                      No thanks
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Drafted GP letter */}
+              {m.letterText && (
+                <View style={[styles.toolCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <View style={styles.toolCardHeader}>
+                    <MaterialCommunityIcons name="email-outline" size={22} color={colors.gold} />
+                    <Text style={[styles.toolCardTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                      Letter to your GP
+                    </Text>
+                  </View>
+                  <Text style={[styles.letterBody, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+                    {m.letterText}
+                  </Text>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => shareWithHealthServices("Letter to my GP", m.letterText!)}
+                    style={[styles.toolCardBtn, { backgroundColor: "#1fa35c" }]}
+                  >
+                    <MaterialCommunityIcons name="share-variant" size={20} color="#fff" />
+                    <Text style={[styles.toolCardBtnText, { fontFamily: "Inter_700Bold" }]}>
+                      Share this letter
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           ) : (
             <View key={i} style={[styles.userBubble, { backgroundColor: colors.primary }]}>
@@ -615,4 +818,31 @@ const styles = StyleSheet.create({
   talkBtnText: { color: "#fff", fontSize: 19, textAlign: "center", paddingHorizontal: 12 },
 
   footNote: { fontSize: 13, lineHeight: 18, textAlign: "center" },
+
+  toolCard: { marginTop: 14, borderWidth: 1.5, borderRadius: 16, padding: 14, gap: 8 },
+  toolCardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  toolCardTitle: { fontSize: 18, flex: 1 },
+  toolCardLine: { fontSize: 17, lineHeight: 25 },
+  toolCardBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 6,
+  },
+  toolCardBtnText: { color: "#fff", fontSize: 17 },
+  letterBtnRow: { flexDirection: "row", gap: 10, marginTop: 14 },
+  letterBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 14,
+    paddingVertical: 16,
+  },
+  letterBtnText: { color: "#fff", fontSize: 16, textAlign: "center" },
+  letterBody: { fontSize: 16, lineHeight: 24 },
 });

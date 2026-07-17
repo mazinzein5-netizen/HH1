@@ -18,6 +18,7 @@ import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useAppMode } from "@/context/AppModeContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
+import { ensureVoiceSetup } from "@/hooks/useVoiceInput";
 import { useTheme } from "@/context/ThemeContext";
 
 const CONSENT_POINTS = [
@@ -36,6 +37,11 @@ const CONSENT_POINTS = [
     title: "Delete everything, any time",
     body: "A \"Delete all my data\" option in Settings permanently erases all stored information.",
   },
+  {
+    icon: "microphone" as const,
+    title: "Talking to Sarah with your voice",
+    body: "You can speak to Sarah, your AI companion, instead of typing. When you do, the short recording is sent to a secure transcription service to turn it into text, then discarded straight away — it is never stored. Your phone will ask for microphone access once, right after this screen.",
+  },
 ];
 
 export default function ConsentGate() {
@@ -51,6 +57,9 @@ export default function ConsentGate() {
 
   async function handleAccept() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Ask for the microphone once, right at first launch, so voice chat with
+    // Sarah works immediately (disclosure text is on this screen).
+    await ensureVoiceSetup();
     await acceptConsent();
   }
 

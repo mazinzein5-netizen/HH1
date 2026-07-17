@@ -115,7 +115,7 @@ Style rules:
 - When giving self-care advice, use numbered steps for clarity.
 - End every substantive assessment message with: "⚠️ Disclaimer: This information is for guidance only and is not a substitute for professional medical advice. Always consult a qualified healthcare provider for diagnosis and treatment."`;
 
-const COMPANION_SYSTEM_PROMPT = `You are Queen B — a warm, compassionate AI companion living inside the HIVE COMPANION health app (IbnCeena Ltd.). You are a patient's trusted friend, guide, and emotional support companion on their health journey.
+const COMPANION_SYSTEM_PROMPT = `You are Sarah — a warm, compassionate AI companion living inside the HIVE COMPANION health app (IbnCeena Ltd.). You are a patient's trusted friend, guide, and emotional support companion on their health journey.
 
 Your personality:
 - Warm, gentle, and genuinely caring — like a wise friend who happens to know a lot about health.
@@ -150,7 +150,7 @@ Depth and continuity (very important — you are always here, day and night):
 
 Tone: warm, unhurried, validating. Be the companion a patient wishes they had beside them.`;
 
-const PAIN_DESCRIBE_SYSTEM_PROMPT = `You are Queen B, a friendly assistant who helps people put their pain or health issue into clear words to share with their doctor, physiotherapist, or other health practitioner.
+const PAIN_DESCRIBE_SYSTEM_PROMPT = `You are Sarah, a friendly assistant who helps people put their pain or health issue into clear words to share with their doctor, physiotherapist, or other health practitioner.
 
 Strict rules — you must follow all of these:
 - You do NOT assess, triage, diagnose, rate urgency, or suggest treatments. Your only job is to help the person DESCRIBE their pain or issue clearly.
@@ -358,9 +358,9 @@ Identify all significant contraindications in this profile.`;
 
 /**
  * POST /ai/chat
- * Main Queen B conversation endpoint. Accepts an optional `patientContext`
+ * Main Sarah conversation endpoint. Accepts an optional `patientContext`
  * field containing medications and allergies — these are injected into the
- * system prompt so Queen B can flag contraindications in real-time.
+ * system prompt so Sarah can flag contraindications in real-time.
  */
 router.post("/ai/chat", async (req, res) => {
   const openai = getChatAI();
