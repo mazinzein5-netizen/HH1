@@ -89,6 +89,23 @@ export default function TelemedicinePortalScreen() {
 
         <TouchableOpacity
           activeOpacity={0.85}
+          onPress={() => { Haptics.selectionAsync(); router.push("/(app)/telemedicine/hive-book"); }}
+          style={[styles.reminderRow, { backgroundColor: colors.card, borderColor: "#22c55e55" }]}
+        >
+          <MaterialCommunityIcons name="calendar-search" size={18} color="#22c55e" />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.reminderText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+              Book a HIVE Practitioner
+            </Text>
+            <Text style={[styles.reminderSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Browse open video & audio slots published by practitioners
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.85}
           onPress={() => { Haptics.selectionAsync(); router.push("/(app)/my-gps"); }}
           style={[styles.reminderRow, { backgroundColor: colors.card, borderColor: colors.border }]}
         >
@@ -202,6 +219,7 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 1.4, marginTop: 4 },
   reminderRow: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, borderWidth: 1, padding: 12 },
   reminderText: { fontSize: 13, flex: 1 },
+  reminderSub: { fontSize: 11, marginTop: 2 },
   emptyCard: { borderRadius: 14, borderWidth: 1, padding: 20, alignItems: "center", gap: 8 },
   emptyText: { fontSize: 13, textAlign: "center", lineHeight: 19 },
   apptCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14, borderWidth: 1.5, padding: 14 },

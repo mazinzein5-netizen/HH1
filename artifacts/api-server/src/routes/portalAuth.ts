@@ -404,6 +404,42 @@ export function getPortalSession(req: Request): PortalSessionInfo | null {
   };
 }
 
+/** Minimal public directory info for a healthcare account (patient-facing booking). */
+export interface PractitionerDirectoryEntry {
+  id: string;
+  fullName: string;
+  role: string;
+  workplace: string;
+  verified: boolean;
+}
+
+export function listHealthcarePractitioners(): PractitionerDirectoryEntry[] {
+  const out: PractitionerDirectoryEntry[] = [];
+  for (const a of accounts.values()) {
+    if (a.accountType !== "healthcare") continue;
+    out.push({
+      id: a.id,
+      fullName: a.fullName,
+      role: a.role ?? "Healthcare practitioner",
+      workplace: a.workplace,
+      verified: a.status === "verified",
+    });
+  }
+  return out;
+}
+
+export function practitionerDirectoryEntry(accountId: string): PractitionerDirectoryEntry | null {
+  const a = accountById(accountId);
+  if (!a || a.accountType !== "healthcare") return null;
+  return {
+    id: a.id,
+    fullName: a.fullName,
+    role: a.role ?? "Healthcare practitioner",
+    workplace: a.workplace,
+    verified: a.status === "verified",
+  };
+}
+
 /** Express middleware: requires any valid portal session (incl. demo). */
 export function requirePortalSession(req: Request, res: Response, next: NextFunction): void {
   const session = getPortalSession(req);

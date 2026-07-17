@@ -80,7 +80,7 @@ interface PracPatient {
   notes: PatientNote[];
 }
 
-interface AvailabilitySlot {
+export interface AvailabilitySlot {
   id: string;
   day: string;
   start: string;
@@ -88,23 +88,27 @@ interface AvailabilitySlot {
   kind: "video" | "audio" | "clinic";
 }
 
-interface PracSettings {
+export interface PracSettings {
   bookingEnabled: boolean;
   videoConsultations: boolean;
   audioConsultations: boolean;
   slots: AvailabilitySlot[];
 }
 
-interface Booking {
+export interface Booking {
   id: string;
   patientName: string;
   kind: "video" | "audio";
   when: string;
   status: "confirmed" | "pending";
   demo: boolean;
+  /** Availability slot this booking occupies (patient bookings via HIVE). */
+  slotId?: string;
+  /** Patient-provided reason for the consultation. */
+  reason?: string;
 }
 
-interface PracStore {
+export interface PracStore {
   patients: PracPatient[];
   settings: PracSettings;
   bookings: Booking[];
@@ -114,6 +118,16 @@ const stores = new Map<string, PracStore>(); // keyed by accountId
 
 function id(): string {
   return randomBytes(8).toString("hex");
+}
+
+/** Read-only access for the patient-facing HIVE booking directory. */
+export function getPracStoreById(accountId: string): PracStore | null {
+  return stores.get(accountId) ?? null;
+}
+
+/** Generate an id for entities created outside this router (e.g. patient bookings). */
+export function newEntityId(): string {
+  return id();
 }
 
 function seedStore(): PracStore {

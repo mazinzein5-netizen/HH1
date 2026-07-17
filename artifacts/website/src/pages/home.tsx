@@ -96,6 +96,7 @@ export default function Home() {
             <a href="#companion" className="hover:text-primary transition-colors">HIVE Companion</a>
             <a href="#surgical-assistant" className="hover:text-primary transition-colors">Surgical Assistant</a>
             <a href="#enterprise" className="hover:text-primary transition-colors">For Hospitals &amp; GPs</a>
+            <Link href="/book" className="hover:text-primary transition-colors">Book a Consultation</Link>
           </nav>
           <div className="flex items-center gap-4">
             <ThemeToggle />
@@ -128,6 +129,9 @@ export default function Home() {
               <a href="#companion" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">HIVE Companion</a>
               <a href="#surgical-assistant" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Surgical Assistant</a>
               <a href="#enterprise" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">For Hospitals &amp; GPs</a>
+              <Link href="/book" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">
+                Book a Consultation
+              </Link>
               <Link href="/portal/practitioner" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
                 Clinician Sign In
               </Link>
