@@ -83,8 +83,20 @@ export default function TelemedicinePortalScreen() {
         >
           <LinearGradient colors={["#0a2818", "#22c55e"]} style={styles.bookBtn}>
             <MaterialCommunityIcons name="calendar-plus" size={20} color="#fff" />
-            <Text style={[styles.bookBtnText, { fontFamily: "Inter_700Bold" }]}>Book a Video Consultation</Text>
+            <Text style={[styles.bookBtnText, { fontFamily: "Inter_700Bold" }]}>Book an Appointment</Text>
           </LinearGradient>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => { Haptics.selectionAsync(); router.push("/(app)/my-gps"); }}
+          style={[styles.reminderRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <MaterialCommunityIcons name="doctor" size={18} color={colors.gold} />
+          <Text style={[styles.reminderText, { color: colors.foreground, fontFamily: "Inter_600SemiBold", flex: 1 }]}>
+            My GPs & Practices
+          </Text>
+          <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
         </TouchableOpacity>
 
         {/* Reminders */}

@@ -200,6 +200,10 @@ export default function AppointmentDetailScreen() {
           <Text style={[styles.heroSub, { color: "rgba(255,255,255,0.6)", fontFamily: "Inter_400Regular" }]}>
             {appt.reason || meta.subtitle}
           </Text>
+          <Text style={[styles.heroSub, { color: "rgba(255,255,255,0.75)", fontFamily: "Inter_600SemiBold" }]}>
+            {appt.mode === "in_person" ? "In-person visit" : "Video consultation"}
+            {appt.gpName ? ` · ${appt.gpName}` : ""}
+          </Text>
           <View style={[styles.statusChip, {
             backgroundColor: isUpcoming ? "#22c55e22" : "rgba(255,255,255,0.08)",
             borderColor: isUpcoming ? "#22c55e55" : "rgba(255,255,255,0.15)",

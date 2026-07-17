@@ -19,9 +19,16 @@ export interface AppointmentAttachments {
   documentIds: string[];
 }
 
+export type AppointmentMode = "video" | "in_person";
+
 export interface Appointment {
   id: string;
   clinicianType: ClinicianType;
+  /** Video consultation (default) or an in-person visit at a partner clinic. */
+  mode?: AppointmentMode;
+  /** Chosen partner GP from the patient's "My GPs" list, if any. */
+  gpId?: string;
+  gpName?: string;
   reason: string;
   /** ISO date (yyyy-mm-dd) of the appointment day. */
   dateISO: string;
@@ -84,10 +91,16 @@ export async function createAppointment(input: {
   reason: string;
   dateISO: string;
   time: string;
+  mode?: AppointmentMode;
+  gpId?: string;
+  gpName?: string;
 }): Promise<Appointment> {
   const appt: Appointment = {
     id: makeId(),
     clinicianType: input.clinicianType,
+    mode: input.mode ?? "video",
+    ...(input.gpId ? { gpId: input.gpId } : {}),
+    ...(input.gpName ? { gpName: input.gpName } : {}),
     reason: input.reason,
     dateISO: input.dateISO,
     time: input.time,

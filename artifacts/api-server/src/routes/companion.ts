@@ -133,6 +133,15 @@ Rules:
 - Include the line "This summary was generated with the help of my health app from a standardised questionnaire; the details reflect my own answers." near the end.
 - Keep the whole letter under 300 words. Plain text only.`;
 
+const OUTREACH_EMAIL_PROMPT = `You draft a short, formally correct appointment-request email from a patient to a GP practice, inside a patient health app. The practice is NOT part of the app's network, so the patient will send this email from their own mail app after reviewing it.
+
+Rules:
+- Write in the first person as the patient, in a simple formal register a GP practice would take seriously — polite, factual, no jargon, no dramatics.
+- Output the email BODY only (no subject line, no markdown). Start with the salutation ("Dear Dr. [name]," if a doctor's name is given, otherwise "Dear Doctor," or "Dear Practice Team,"), then 2-3 short paragraphs, then "Yours sincerely," and the placeholder lines "[Your name]" and "[Your phone number]".
+- Paragraph 1: the request — a video or in-person appointment at the named practice, and the reason in the patient's plain words. NEVER invent symptoms, history, or details not provided.
+- Final paragraph: a clear, specific requested response timeframe — a routine appointment within 2 weeks, or an urgent review within 48 hours when the request is urgent — and ask the practice to confirm by reply or phone.
+- Keep the whole email under 180 words. Plain text only.`;
+
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 /**
@@ -486,6 +495,75 @@ router.post("/ai/gp-letter", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "AI gp-letter error");
     res.status(500).json({ error: "Failed to draft the letter" });
+  }
+});
+
+/**
+ * POST /ai/outreach-email
+ * Pilot-only. Drafts a simple formal appointment-request email to a
+ * non-partner GP practice, always with an explicit requested response
+ * timeframe. The patient reviews and approves on-device, then sends it from
+ * their own mail app — the server never sends anything.
+ */
+router.post("/ai/outreach-email", async (req, res) => {
+  if (!isPilotRequest(req.body)) {
+    res.status(403).json({ error: "PILOT_REQUIRED" });
+    return;
+  }
+
+  const openai = getChatAI();
+  if (!openai) {
+    res.status(503).json({ error: "AI_NOT_CONFIGURED" });
+    return;
+  }
+
+  const { practice, gpName, reason, urgency, appointmentType } = req.body as {
+    practice?: string;
+    gpName?: string;
+    /** The patient's own plain-words reason for the appointment. */
+    reason?: string;
+    /** "urgent" → 48-hour review request, else routine within 2 weeks. */
+    urgency?: string;
+    /** "video" | "in_person" */
+    appointmentType?: string;
+  };
+
+  if (!practice?.trim()) {
+    res.status(400).json({ error: "practice is required" });
+    return;
+  }
+
+  const details = [
+    `Practice name: ${practice.trim().slice(0, 200)}`,
+    gpName?.trim() ? `Doctor's name: ${gpName.trim().slice(0, 120)}` : "Doctor's name: not given",
+    `Appointment type requested: ${appointmentType === "video" ? "video appointment" : "in-person appointment"}`,
+    `Patient's reason, in their own words: ${(reason ?? "").trim().slice(0, 2000) || "not stated — keep the reason general"}`,
+    urgency === "urgent"
+      ? "Urgency: URGENT — request a review within 48 hours."
+      : "Urgency: routine — request an appointment within 2 weeks.",
+  ].join("\n");
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: CHAT_MODEL,
+      max_tokens: 900,
+      // Skip internal reasoning so the token budget goes to the email itself.
+      ...({ chat_template_kwargs: { enable_thinking: false } } as object),
+      messages: [
+        { role: "system", content: OUTREACH_EMAIL_PROMPT },
+        { role: "user", content: details },
+      ],
+    });
+
+    const email = completion.choices[0]?.message?.content?.trim();
+    if (!email) {
+      res.status(500).json({ error: "Failed to draft the email" });
+      return;
+    }
+    res.json({ email });
+  } catch (err) {
+    logger.error({ err }, "AI outreach-email error");
+    res.status(500).json({ error: "Failed to draft the email" });
   }
 });
 

@@ -8,6 +8,7 @@
  * Sarah can talk about what the patient is looking at.
  */
 import type { PatientData } from "@/context/PatientContext";
+import type { GPRecord } from "@/utils/gpStore";
 import {
   type Appointment,
   clinicianMeta,
@@ -19,6 +20,7 @@ export type SarahIntent =
   | "history"
   | "appointments"
   | "booking"
+  | "gps"
   | "communications";
 
 export interface SarahCard {
@@ -37,6 +39,12 @@ export function detectSarahIntent(text: string): SarahIntent | null {
   // Booking first — "book an appointment" must not match plain "appointments".
   if (/\b(book|schedule|arrange|set up|make)\b[\s\S]{0,40}\b(appointment|consultation|video call|doctor|gp|nurse|physio)\b/.test(t)) {
     return "booking";
+  }
+  // GP list / practice outreach — before generic appointment matching.
+  if (/\b(my|our|a|the|find|add|save|contact|email|write to|reach)\b[\s\S]{0,30}\b(gp|gps|doctor|doctors|practice|practices|surgery|surgeries)\b/.test(t) &&
+      /\b(gp|gps|practice|practices|surgery|surgeries|doctor list|my doctors?)\b/.test(t) &&
+      !/\b(book|schedule|arrange|set up|make)\b/.test(t)) {
+    return "gps";
   }
   if (/\b(appointment|appointments|consultation|consultations)\b/.test(t) &&
       /\b(my|next|upcoming|when|what|show|see|check|list|have|any)\b/.test(t)) {
@@ -62,7 +70,8 @@ export function detectSarahIntent(text: string): SarahIntent | null {
 export function buildSarahCard(
   intent: SarahIntent,
   patient: PatientData,
-  appointments: Appointment[]
+  appointments: Appointment[],
+  gps: GPRecord[] = []
 ): SarahCard {
   switch (intent) {
     case "prescriptions": {
@@ -115,10 +124,28 @@ export function buildSarahCard(
         intent,
         title: "Book an appointment",
         icon: "calendar-plus",
-        lines: ["I can take you straight to booking — you choose the clinician, day and time."],
+        lines: ["I can take you straight to booking — video or in-person, you choose the clinician, day and time."],
         route: "/(app)/telemedicine/book",
         routeLabel: "Start booking",
       };
+    case "gps": {
+      const partners = gps.filter((g) => g.isPartner);
+      const others = gps.filter((g) => !g.isPartner);
+      const lines = gps.length
+        ? [
+            ...partners.map((g) => `${g.name || g.practice} — partner, bookable in the app`),
+            ...others.map((g) => `${g.name || g.practice} — reachable by email or phone`),
+          ].slice(0, 5)
+        : ["No GPs saved yet — you can add your own GP or find a practice on the map."];
+      return {
+        intent,
+        title: "Your GPs & practices",
+        icon: "doctor",
+        lines,
+        route: "/(app)/my-gps",
+        routeLabel: "Open my GPs",
+      };
+    }
     case "communications":
       return {
         intent,
@@ -136,7 +163,8 @@ export function buildSarahAppContext(
   patient: PatientData,
   appointments: Appointment[],
   card?: SarahCard | null,
-  triageSummary?: string | null
+  triageSummary?: string | null,
+  gps: GPRecord[] = []
 ): string {
   const parts: string[] = [];
 
@@ -157,6 +185,9 @@ export function buildSarahAppContext(
     .slice(0, 2);
   if (upcoming.length) {
     parts.push(`Upcoming appointments: ${upcoming.map((a) => `${clinicianMeta(a.clinicianType).label} on ${formatApptDate(a.dateISO)} at ${a.time}`).join("; ")}.`);
+  }
+  if (gps.length) {
+    parts.push(`Saved GPs & practices (on-device list): ${gps.slice(0, 5).map((g) => `${g.name || g.practice}${g.isPartner ? " (partner — bookable in app)" : " (not a partner — reachable via an email the patient reviews and sends themselves)"}`).join("; ")}.`);
   }
   if (triageSummary) {
     parts.push(`The patient just completed a symptom questionnaire. Result: ${triageSummary}`);

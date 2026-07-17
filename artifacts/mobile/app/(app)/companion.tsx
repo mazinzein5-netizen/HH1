@@ -37,6 +37,7 @@ import {
   detectSarahIntent,
   type SarahCard,
 } from "@/utils/sarahTools";
+import { type GPRecord, listGps } from "@/utils/gpStore";
 import { listAppointments, type Appointment } from "@/utils/telemedicineStore";
 
 interface Msg {
@@ -256,19 +257,24 @@ export default function CompanionScreen() {
     // card, and let Sarah talk the patient through it. Data stays on-device;
     // only a compact text summary rides along with the AI request.
     let appointments: Appointment[] = [];
+    let gps: GPRecord[] = [];
     try {
       appointments = await listAppointments();
+    } catch {}
+    try {
+      gps = await listGps();
     } catch {}
     let card: SarahCard | null = null;
     const intent = detectSarahIntent(trimmed);
     if (intent) {
-      card = buildSarahCard(intent, patientRef.current, appointments);
+      card = buildSarahCard(intent, patientRef.current, appointments, gps);
     }
     const appContext = buildSarahAppContext(
       patientRef.current,
       appointments,
       card,
-      triageRef.current?.summary ?? null
+      triageRef.current?.summary ?? null,
+      gps
     );
 
     const domain = process.env.EXPO_PUBLIC_DOMAIN;

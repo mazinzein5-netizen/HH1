@@ -26,7 +26,7 @@ export const PRIVACY_POLICY_SECTIONS: PrivacyPolicySection[] = [
   {
     heading: "What leaves your device",
     body:
-      "If you use the HIVE Bot guideline assistant or the guided intake organiser, the text of your questions is sent to an AI service to generate a response. This text is not linked to your identity and is not stored by the app's servers. If you use the pharmacy finder, your coordinates (or the town or Eircode you type) are sent only to the OpenStreetMap lookup service to run the search — never to HIVE servers, and the app does not store your location. Everything else stays on your device.",
+      "If you use the HIVE Bot guideline assistant or the guided intake organiser, the text of your questions is sent to an AI service to generate a response. This text is not linked to your identity and is not stored by the app's servers. If you use the pharmacy finder or the GP practice finder, your coordinates or the search text you type (such as a practice name and town) are sent only to the OpenStreetMap lookup service to run the search — never to HIVE servers, and never any of your health information. If you ask the app to draft an appointment-request email to a GP practice, only the practice name and the short reason you typed are sent to the AI service to write the draft; the email is never sent for you — you review it and send it yourself from your own email app. Everything else stays on your device.",
   },
   {
     heading: "Sharing is always your choice",

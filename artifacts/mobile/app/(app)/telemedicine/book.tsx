@@ -28,7 +28,9 @@ import {
   isUnlimited,
   recordUsage,
 } from "@/utils/entitlements";
+import { listGps, type GPRecord } from "@/utils/gpStore";
 import {
+  type AppointmentMode,
   CLINICIAN_TYPES,
   type ClinicianType,
   createAppointment,
@@ -57,6 +59,9 @@ export default function BookConsultationScreen() {
   const topPad = Platform.OS === "web" ? 0 : insets.top;
 
   const [clinicianType, setClinicianType] = useState<ClinicianType | null>(null);
+  const [mode, setMode] = useState<AppointmentMode>("video");
+  const [partnerGps, setPartnerGps] = useState<GPRecord[]>([]);
+  const [gpId, setGpId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [dateISO, setDateISO] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
@@ -73,6 +78,7 @@ export default function BookConsultationScreen() {
   useFocusEffect(
     useCallback(() => {
       loadAllowance();
+      listGps().then((gps) => setPartnerGps(gps.filter((g) => g.isPartner)));
     }, [loadAllowance]),
   );
 
@@ -94,7 +100,15 @@ export default function BookConsultationScreen() {
         await recordUsage(userId, "consultations");
       } catch {}
     }
-    const appt = await createAppointment({ clinicianType, reason: reason.trim(), dateISO, time });
+    const chosenGp = partnerGps.find((g) => g.id === gpId) ?? null;
+    const appt = await createAppointment({
+      clinicianType,
+      reason: reason.trim(),
+      dateISO,
+      time,
+      mode,
+      ...(chosenGp ? { gpId: chosenGp.id, gpName: chosenGp.name || chosenGp.practice } : {}),
+    });
     router.replace({ pathname: "/(app)/telemedicine/appointment", params: { id: appt.id } });
   }
 
@@ -108,9 +122,9 @@ export default function BookConsultationScreen() {
           <Feather name="arrow-left" size={20} color={colors.foreground} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Book a Video Consultation</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Book an Appointment</Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Choose a clinician, reason, and time
+            Video or in-person — choose a clinician, reason, and time
           </Text>
         </View>
       </View>
@@ -139,7 +153,72 @@ export default function BookConsultationScreen() {
             </TouchableOpacity>
           ))}
 
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>2 · REASON FOR CONSULTATION</Text>
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>2 · APPOINTMENT TYPE</Text>
+          <View style={styles.chipWrap}>
+            {([
+              { key: "video" as const, label: "Video consultation", icon: "video" },
+              { key: "in_person" as const, label: "In-person visit", icon: "hospital-building" },
+            ]).map((m) => (
+              <TouchableOpacity
+                key={m.key}
+                activeOpacity={0.85}
+                onPress={() => { Haptics.selectionAsync(); setMode(m.key); }}
+                style={[styles.chip, {
+                  flexDirection: "row", alignItems: "center", gap: 6,
+                  backgroundColor: mode === m.key ? "#0f1a5a" : colors.card,
+                  borderColor: mode === m.key ? colors.primary : colors.border,
+                }]}
+              >
+                <MaterialCommunityIcons name={m.icon as never} size={15} color={mode === m.key ? "#fff" : colors.mutedForeground} />
+                <Text style={[styles.chipText, { color: mode === m.key ? "#fff" : colors.foreground, fontFamily: "Inter_500Medium" }]}>
+                  {m.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>3 · YOUR GP (OPTIONAL)</Text>
+          {partnerGps.length === 0 ? (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => { Haptics.selectionAsync(); router.push("/(app)/my-gps"); }}
+              style={[styles.consultCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+            >
+              <View style={[styles.consultIcon, { backgroundColor: colors.gold + "22" }]}>
+                <MaterialCommunityIcons name="account-plus" size={24} color={colors.gold} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.consultLabel, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>No partner GP saved yet</Text>
+                <Text style={[styles.consultSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  Add your GPs in “My GPs & Practices” — partner GPs can be booked directly here.
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.chipWrap}>
+              {partnerGps.map((g) => {
+                const selected = gpId === g.id;
+                return (
+                  <TouchableOpacity
+                    key={g.id}
+                    activeOpacity={0.85}
+                    onPress={() => { Haptics.selectionAsync(); setGpId(selected ? null : g.id); }}
+                    style={[styles.chip, {
+                      backgroundColor: selected ? "#0f1a5a" : colors.card,
+                      borderColor: selected ? colors.primary : colors.border,
+                    }]}
+                  >
+                    <Text style={[styles.chipText, { color: selected ? "#fff" : colors.foreground, fontFamily: "Inter_500Medium" }]}>
+                      {g.name || g.practice}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>4 · REASON FOR CONSULTATION</Text>
           <TextInput
             value={reason}
             onChangeText={setReason}
@@ -154,7 +233,7 @@ export default function BookConsultationScreen() {
             }]}
           />
 
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>3 · DATE</Text>
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>5 · DATE</Text>
           <View style={styles.chipWrap}>
             {days.map((d) => (
               <TouchableOpacity
@@ -173,7 +252,7 @@ export default function BookConsultationScreen() {
             ))}
           </View>
 
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>4 · TIME</Text>
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>6 · TIME</Text>
           <View style={styles.chipWrap}>
             {TIME_SLOTS.map((t) => (
               <TouchableOpacity
@@ -217,7 +296,7 @@ export default function BookConsultationScreen() {
           </TouchableOpacity>
 
           <Text style={[styles.footNote, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Pilot programme: appointments are stored only on this device. After booking you can attach your health card, symptom summary, and prescription for the clinician.
+            Pilot programme: appointments are stored only on this device. Your booking is confirmed immediately, and the clinic will contact you within 1 working day if the slot needs to change. After booking you can attach your health card, symptom summary, and prescription for the clinician.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
