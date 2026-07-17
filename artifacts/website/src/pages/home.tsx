@@ -194,7 +194,7 @@ export default function Home() {
               className="grid md:grid-cols-2 gap-16 items-center glass-panel-heavy p-8 md:p-16 rounded-[3rem]"
             >
               <motion.div variants={fadeInUp}>
-                <div className="text-primary font-bold tracking-widest uppercase text-xs mb-4">One Unified HIVE</div>
+                <div className="text-primary font-bold tracking-widest uppercase mb-4 text-[14px]">One Unified HIVE HUB</div>
                 <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight text-foreground">Clinicians receive streamlined and comprehensive data.</h2>
                 <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
                   Patients can express their symptoms to the HIVE Companion, which can pass information to the GP and help administrative streamlining of acute and chronic joint, neck and back pain. Far less paperwork for primary healthcare professionals in the network, with automated scheduling for video consultations and clinical appointments.
