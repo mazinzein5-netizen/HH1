@@ -1,10 +1,12 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AccessibilityInfo,
   Animated,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -47,6 +49,107 @@ export default function DashboardScreen() {
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  // displayedKey stays set while the card animates out
+  const [displayedKey, setDisplayedKey] = useState<string | null>(null);
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => {
+      if (mounted) setReduceMotion(v);
+    });
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
+  }, []);
+
+  const cardRef = useRef<View>(null);
+  const originRef = useRef<{ x: number; y: number } | null>(null);
+  const cardOffset = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+
+  // Animate the card growing out of the tapped hexagon.
+  const runOpenAnim = useCallback(() => {
+    if (reduceMotion) {
+      cardOffset.setValue({ x: 0, y: 0 });
+      cardAnim.setValue(1);
+      return;
+    }
+    const start = () => {
+      cardAnim.setValue(0);
+      Animated.spring(cardAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 16,
+        bounciness: 7,
+      }).start();
+    };
+    const origin = originRef.current;
+    const node = cardRef.current;
+    if (origin && node?.measureInWindow) {
+      node.measureInWindow((x, y, w, h) => {
+        if (w && h) {
+          cardOffset.setValue({ x: origin.x - (x + w / 2), y: origin.y - (y + h / 2) });
+        } else {
+          cardOffset.setValue({ x: 0, y: -40 });
+        }
+        start();
+      });
+    } else {
+      cardOffset.setValue({ x: 0, y: -40 });
+      start();
+    }
+  }, [cardAnim, cardOffset, reduceMotion]);
+
+  const collapseCard = useCallback(
+    (after?: () => void) => {
+      if (reduceMotion) {
+        cardAnim.setValue(0);
+        setDisplayedKey(null);
+        after?.();
+        return;
+      }
+      Animated.timing(cardAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setDisplayedKey(null);
+        after?.();
+      });
+    },
+    [cardAnim, reduceMotion]
+  );
+
+  const selectHex = useCallback(
+    (key: string | null, originX?: number, originY?: number) => {
+      setExpandedKey((current) => {
+        const next = current === key ? null : key;
+        if (next) {
+          originRef.current =
+            originX != null && originY != null ? { x: originX, y: originY } : null;
+          setDisplayedKey(next);
+          // Card mounts (or re-renders) on the next frame; measure then animate.
+          requestAnimationFrame(() => runOpenAnim());
+        } else if (current) {
+          collapseCard();
+        }
+        return next;
+      });
+    },
+    [collapseCard, runOpenAnim]
+  );
+
+  // Collapse first, then navigate, so the card visibly minimises.
+  const openRoute = useCallback(
+    (route: string) => {
+      setExpandedKey(null);
+      collapseCard(() => router.push(route as never));
+    },
+    [collapseCard]
+  );
 
   const headerBgOpacity = scrollY.interpolate({
     inputRange: [0, HEADER_SCROLL_DISTANCE],
@@ -186,7 +289,7 @@ export default function DashboardScreen() {
     return out;
   }, [items]);
 
-  const expanded = items.find((i) => i.key === expandedKey) ?? null;
+  const expanded = items.find((i) => i.key === (displayedKey ?? expandedKey)) ?? null;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -282,9 +385,8 @@ export default function DashboardScreen() {
           </LinearGradient>
         </View>
 
-        {/* ── The Hive: honeycomb formation of large 3D icons ── */}
-        <View style={styles.hiveWrap}>
-          <HiveCardBg />
+        {/* ── The Hive: quiet honeycomb of small glass nodes ── */}
+        <Pressable style={styles.hiveWrap} onPress={() => selectHex(null)}>
           {rows.map((row, rIdx) => (
             <View
               key={rIdx}
@@ -299,24 +401,49 @@ export default function DashboardScreen() {
                   active={expandedKey === item.key}
                   badge={item.key === "devices" && connectedCount > 0}
                   labelColor={colors.mutedForeground}
-                  onPress={() =>
-                    setExpandedKey((k) => (k === item.key ? null : item.key))
-                  }
+                  reduceMotion={reduceMotion}
+                  onPress={(x, y) => selectHex(item.key, x, y)}
                 />
               ))}
             </View>
           ))}
-          <Text style={[styles.hiveHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Tap a hexagon to see more
-          </Text>
-        </View>
+          {!expandedKey && (
+            <Text style={[styles.hiveHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Tap a hexagon to see more
+            </Text>
+          )}
+        </Pressable>
 
         {/* ── Expanded card for the selected hexagon ── */}
         {expanded && (
-          <View
+          <Animated.View
+            ref={cardRef}
             style={[
               styles.sectionCard,
               { backgroundColor: colors.card, borderColor: expanded.color + "55" },
+              {
+                opacity: cardAnim,
+                transform: [
+                  {
+                    translateX: Animated.multiply(
+                      cardOffset.x,
+                      cardAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] })
+                    ),
+                  },
+                  {
+                    translateY: Animated.multiply(
+                      cardOffset.y,
+                      cardAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] })
+                    ),
+                  },
+                  {
+                    scale: cardAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.25, 1],
+                    }),
+                  },
+                ],
+              },
             ]}
           >
             <HiveCardBg gradientColors={[expanded.color + "1A", "rgba(0,0,0,0.12)", "transparent"]} />
@@ -325,7 +452,7 @@ export default function DashboardScreen() {
                 <MaterialCommunityIcons name={expanded.icon} size={22} color={expanded.color} />
               </View>
               <TouchableOpacity
-                onPress={() => setExpandedKey(null)}
+                onPress={() => selectHex(null)}
                 activeOpacity={0.7}
                 style={[styles.closeBtn, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}
                 accessibilityLabel="Close"
@@ -370,7 +497,7 @@ export default function DashboardScreen() {
 
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => router.push(expanded.route as never)}
+              onPress={() => openRoute(expanded.route)}
               style={[styles.openBtn, { backgroundColor: expanded.color + "22", borderColor: expanded.color + "66" }]}
             >
               <Text style={[styles.sectionLinkText, { color: expanded.color, fontFamily: "Inter_600SemiBold" }]}>
@@ -378,7 +505,7 @@ export default function DashboardScreen() {
               </Text>
               <Feather name="chevron-right" size={15} color={expanded.color} />
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         )}
       </Animated.ScrollView>
 
@@ -418,14 +545,14 @@ const styles = StyleSheet.create({
   heroCta: { flexDirection: "row", alignItems: "center", gap: 9, alignSelf: "flex-start", borderRadius: 100, borderWidth: 1, paddingHorizontal: 20, paddingVertical: 12, marginTop: 4 },
   heroCtaText: { fontSize: 15 },
 
-  hiveWrap: { paddingVertical: 10, borderRadius: 22, overflow: "hidden" },
+  hiveWrap: { paddingVertical: 8 },
   hiveRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 10,
+    gap: 14,
   },
-  hiveRowOverlap: { marginTop: -18 },
-  hiveHint: { textAlign: "center", fontSize: 11.5, marginTop: 10, opacity: 0.8 },
+  hiveRowOverlap: { marginTop: -8 },
+  hiveHint: { textAlign: "center", fontSize: 11, marginTop: 12, opacity: 0.65 },
 
   sectionCard: { borderRadius: 18, borderWidth: 1, padding: 20, gap: 10, overflow: "hidden" },
   sectionIcon: { width: 46, height: 46, borderRadius: 13, alignItems: "center", justifyContent: "center" },
