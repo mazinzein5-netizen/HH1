@@ -12,7 +12,7 @@ import {
   Stethoscope, Mail, ExternalLink, Activity,
   AlertCircle, Heart, Shield,
   MapPin, Pill, Video, Users,
-  Menu, X
+  Menu, X, Building2, ClipboardList, Sparkles, Clock, Euro
 } from "lucide-react";
 
 // Shared, deliberate easing — a soft "settle" curve used across the whole page
@@ -97,6 +97,7 @@ export default function Home() {
             <a href="#ecosystem" className="hover:text-primary transition-colors">Ecosystem</a>
             <a href="#companion" className="hover:text-primary transition-colors">HIVE Companion</a>
             <a href="#surgical-assistant" className="hover:text-primary transition-colors">Surgical Assistant</a>
+            <a href="#enterprise" className="hover:text-primary transition-colors">For Hospitals &amp; GPs</a>
           </nav>
           <div className="flex items-center gap-4">
             <ThemeToggle />
@@ -128,6 +129,7 @@ export default function Home() {
               <a href="#ecosystem" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Ecosystem</a>
               <a href="#companion" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">HIVE Companion</a>
               <a href="#surgical-assistant" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Surgical Assistant</a>
+              <a href="#enterprise" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">For Hospitals &amp; GPs</a>
               <a href="https://surg-assist-copy-89eb0714.base44.app" target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
                 Clinician Sign In
               </a>
@@ -614,6 +616,128 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Section 5.5: Enterprise — Hospitals & GP Practices */}
+        <section id="enterprise" className="py-24 lg:py-36 relative overflow-hidden">
+          <div className="container mx-auto px-6 relative z-10">
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+              className="flex flex-col items-center text-center mb-14 max-w-3xl mx-auto"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md glass-panel text-foreground text-xs font-bold tracking-widest uppercase mb-6">
+                <Building2 className="h-3 w-3 text-primary" />
+                Enterprise
+              </div>
+              <h2 className="text-4xl md:text-6xl font-bold mb-6 text-foreground leading-tight">
+                For hospitals &amp; established GP practices
+              </h2>
+              <p className="text-lg md:text-xl text-muted-foreground font-light glass-panel px-6 py-3 rounded-2xl">
+                Cut the paperwork, not the care. Health HIVE streamlines patient-data
+                input and augments documentation with AI — saving your teams time and
+                your organisation money on administration.
+              </p>
+            </motion.div>
+
+            <div className="grid lg:grid-cols-2 gap-10 items-center glass-panel-heavy p-8 md:p-14 rounded-[3rem] max-w-6xl mx-auto">
+              <motion.div
+                initial={{ opacity: 0, x: -24 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.9, ease: SMOOTH_EASE }}
+                className="relative rounded-[2rem] overflow-hidden glass-panel group h-72 sm:h-96 lg:h-[30rem]"
+              >
+                <img
+                  src={`${import.meta.env.BASE_URL}images/gp-consult.webp`}
+                  alt="GP consulting with a patient, supported by digital documentation"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transform-none"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent"></div>
+                <div className="absolute bottom-6 left-6 right-6">
+                  <p className="text-foreground font-semibold text-lg flex items-center gap-2">
+                    <Stethoscope className="h-5 w-5 text-primary" />
+                    More time with patients. Less time on paperwork.
+                  </p>
+                </div>
+              </motion.div>
+
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-80px" }}
+                className="space-y-5"
+              >
+                {[
+                  {
+                    icon: <ClipboardList className="h-5 w-5" />,
+                    title: "Structured intake before the appointment",
+                    desc: "Patients arrive with standardised questionnaires and an organised history already completed — easy, streamlined input of patient information instead of forms in the waiting room.",
+                  },
+                  {
+                    icon: <Sparkles className="h-5 w-5" />,
+                    title: "AI-augmented documentation",
+                    desc: "Referral letters, clinic summaries and consultation notes drafted faster with AI assistance — clinicians review and sign off, the HIVE does the heavy typing.",
+                  },
+                  {
+                    icon: <Clock className="h-5 w-5" />,
+                    title: "Less admin per consultation",
+                    desc: "Streamlined workflows shorten the administrative tail of every visit, freeing clinical and secretarial time across the practice or department.",
+                  },
+                  {
+                    icon: <Euro className="h-5 w-5" />,
+                    title: "Time and money saved on paperwork",
+                    desc: "Fewer transcription hours, faster turnaround on letters and discharge summaries, and reduced duplicate data entry — measurable savings on administration.",
+                  },
+                ].map((item, idx) => (
+                  <motion.div
+                    key={idx}
+                    variants={fadeInUp}
+                    className="flex items-start gap-4 p-5 rounded-2xl glass-panel border-transparent hover:border-primary/30 transition-colors"
+                  >
+                    <div className="mt-0.5 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary border border-primary/20">
+                      {item.icon}
+                    </div>
+                    <div>
+                      <h3 className="text-foreground font-semibold text-lg mb-1">{item.title}</h3>
+                      <p className="text-muted-foreground text-sm leading-relaxed">{item.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </div>
+
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+              className="max-w-3xl mx-auto mt-12 text-center glass-panel-heavy rounded-[2rem] p-8 md:p-12 border-primary/20"
+            >
+              <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
+                Interested in Health HIVE for your organisation?
+              </h3>
+              <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+                Tell us about your hospital department or GP practice and we'll get
+                back to you about a tailored enterprise rollout.
+              </p>
+              <Button
+                asChild
+                size="lg"
+                className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-auto min-h-14 whitespace-normal px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300"
+              >
+                <a href="mailto:info@ibnceena.ie?subject=Enterprise%20enquiry%20%E2%80%94%20Health%20HIVE">
+                  <Mail aria-hidden="true" className="mr-2 h-4 w-4 flex-shrink-0" /> Contact us about enterprise
+                </a>
+              </Button>
+              <p className="text-xs text-muted-foreground mt-6">
+                Enquiries only — no pricing commitments. We'll follow up by email.
+              </p>
+            </motion.div>
+          </div>
+        </section>
+
         {/* Section 6: Footer */}
         <footer className="py-16 relative overflow-hidden border-t border-border/40 glass-panel-heavy rounded-t-[3rem] mt-24">
           <div className="container mx-auto px-6 relative z-10">
@@ -638,6 +762,7 @@ export default function Home() {
                 <ul className="space-y-3 text-sm">
                   <li><a href="#companion" className="text-muted-foreground hover:text-primary transition-colors">HIVE Companion App</a></li>
                   <li><a href="#surgical-assistant" className="text-muted-foreground hover:text-primary transition-colors">Surgical Assistant</a></li>
+                  <li><a href="#enterprise" className="text-muted-foreground hover:text-primary transition-colors">For Hospitals &amp; GP Practices</a></li>
                   <li><a href={`${import.meta.env.BASE_URL}portal`} className="text-muted-foreground hover:text-primary transition-colors">Emergency Portal</a></li>
                 </ul>
               </div>
