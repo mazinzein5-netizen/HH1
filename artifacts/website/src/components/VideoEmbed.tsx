@@ -22,15 +22,18 @@ export function VideoEmbed({
   const ref = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fadeFrame = useRef<number | null>(null);
-  const inView = useInView(ref, { once: true, margin: "-15% 0px -15% 0px" });
+  const inView = useInView(ref, { once: false, amount: 0.45 });
   const reducedMotion = useReducedMotion();
+  const [revealed, setRevealed] = useState(false);
   const [active, setActive] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [needsTap, setNeedsTap] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [autoMode, setAutoMode] = useState(false);
   const activeRef = useRef(false);
   const soundOnRef = useRef(true);
   const expandedRef = useRef(false);
+  const dismissedRef = useRef(false);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
 
@@ -93,13 +96,16 @@ export function VideoEmbed({
   const openExpanded = (e: React.MouseEvent | React.KeyboardEvent) => {
     triggerRef.current = e.currentTarget as HTMLElement;
     expandedRef.current = true;
+    setAutoMode(false);
     setExpanded(true);
     if (soundOnRef.current && audioSrc) tryPlay();
   };
 
-  const closeExpanded = useCallback(() => {
+  const closeExpanded = useCallback((opts?: { manual?: boolean }) => {
     expandedRef.current = false;
     setExpanded(false);
+    setAutoMode(false);
+    if (opts?.manual) dismissedRef.current = true;
     if (!activeRef.current) {
       const audio = audioRef.current;
       if (audio && !audio.paused) {
@@ -108,15 +114,40 @@ export function VideoEmbed({
         audio.volume = 0;
       }
     }
-    triggerRef.current?.focus();
+    if (opts?.manual) triggerRef.current?.focus();
   }, []);
+
+  // Auto-open centered overlay when the embed scrolls into view;
+  // auto-minimize (and silence audio) when the user scrolls away.
+  useEffect(() => {
+    if (inView) {
+      setRevealed(true);
+      if (!expandedRef.current && !dismissedRef.current) {
+        expandedRef.current = true;
+        setAutoMode(true);
+        setExpanded(true);
+        if (soundOnRef.current && audioSrc) tryPlay();
+      }
+    } else {
+      dismissedRef.current = false;
+      if (expandedRef.current) {
+        closeExpanded();
+        stopAudio();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inView]);
 
   useEffect(() => {
     if (!expanded) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeExpanded();
+      if (e.key === "Escape") closeExpanded({ manual: true });
     };
     document.addEventListener("keydown", onKey);
+    if (autoMode) {
+      // Keep the page scrollable so scrolling away naturally minimizes the video.
+      return () => document.removeEventListener("keydown", onKey);
+    }
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     closeButtonRef.current?.focus();
@@ -124,7 +155,7 @@ export function VideoEmbed({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
     };
-  }, [expanded, closeExpanded]);
+  }, [expanded, autoMode, closeExpanded]);
 
   const toggleSound = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -214,7 +245,7 @@ export function VideoEmbed({
           }
         >
           {/* Idle state — pulsing hive mark until the section scrolls into view */}
-          {!inView && (
+          {!revealed && (
             <div
               className="absolute inset-0 flex items-center justify-center"
               aria-hidden="true"
@@ -250,7 +281,7 @@ export function VideoEmbed({
           )}
 
           {/* Activated on scroll — sleek reveal once in view, stays mounted */}
-          {inView && (
+          {revealed && (
             <motion.div
               initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.04 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -289,15 +320,17 @@ export function VideoEmbed({
         {expanded && (
           <motion.div
             key={`${title}-lightbox`}
-            role="dialog"
-            aria-modal="true"
+            role={autoMode ? "region" : "dialog"}
+            aria-modal={autoMode ? undefined : "true"}
             aria-label={title}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: reducedMotion ? 0.15 : 0.3 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-black/85 backdrop-blur-md"
-            onClick={closeExpanded}
+            className={`fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 ${
+              autoMode ? "bg-black/70" : "bg-black/85"
+            } backdrop-blur-md`}
+            onClick={() => closeExpanded({ manual: true })}
           >
             <motion.div
               initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92, y: 20 }}
@@ -312,7 +345,7 @@ export function VideoEmbed({
                 <button
                   ref={closeButtonRef}
                   type="button"
-                  onClick={closeExpanded}
+                  onClick={() => closeExpanded({ manual: true })}
                   aria-label="Close video"
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/90 backdrop-blur-md transition-colors hover:border-[#f5c518]/60 hover:text-[#f5c518] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f5c518]"
                 >
