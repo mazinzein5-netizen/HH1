@@ -69,6 +69,28 @@ export default function ConsultationScreen() {
           </Text>
         </LinearGradient>
 
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>HIVE DOC APPOINTMENTS</Text>
+
+        {/* HIVE Doc — 10-minute practitioner appointments with tier pricing */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => { Haptics.selectionAsync(); router.push("/(app)/membership"); }}
+          style={[styles.interpreterCard, { backgroundColor: colors.card, borderColor: "#22c55e44" }]}
+        >
+          <View style={[styles.interpreterIcon, { backgroundColor: "#22c55e1e" }]}>
+            <MaterialCommunityIcons name="stethoscope" size={24} color="#22c55e" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.interpreterTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              HIVE Doc — 10-Minute Appointment
+            </Text>
+            <Text style={[styles.interpreterSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              10-minute HIVE Doc appointments — €55 on Blue Card, included with Gold membership (3 per month) and the Geriatric Pack (10 per month). See membership options for details.
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={18} color="#22c55e" />
+        </TouchableOpacity>
+
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>APPOINTMENT SUPPORT</Text>
 
         {/* Interpreter booking (administrative scheduling) */}

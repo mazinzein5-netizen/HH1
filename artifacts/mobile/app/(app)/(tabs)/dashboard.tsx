@@ -72,6 +72,23 @@ export default function DashboardScreen() {
   const originRef = useRef<{ x: number; y: number } | null>(null);
   const cardOffset = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
+  // Scroll choreography: opening a card brings it into view, closing
+  // returns the user to the hexagon panel. Layout y values are relative
+  // to the outer content Pressable, which sits exactly at scroll offset 0.
+  const scrollRef = useRef<any>(null);
+  const hiveYRef = useRef(0);
+  const cardYRef = useRef(0);
+
+  const scrollToCard = useCallback(() => {
+    if (cardYRef.current > 0) {
+      scrollRef.current?.scrollTo({ y: Math.max(0, cardYRef.current - 96), animated: !reduceMotion });
+    }
+  }, [reduceMotion]);
+
+  const scrollToHive = useCallback(() => {
+    scrollRef.current?.scrollTo({ y: Math.max(0, hiveYRef.current - 24), animated: !reduceMotion });
+  }, [reduceMotion]);
+
   // Animate the card growing out of the tapped hexagon.
   const runOpenAnim = useCallback(() => {
     if (reduceMotion) {
@@ -134,14 +151,20 @@ export default function DashboardScreen() {
             originX != null && originY != null ? { x: originX, y: originY } : null;
           setDisplayedKey(next);
           // Card mounts (or re-renders) on the next frame; measure then animate.
-          requestAnimationFrame(() => runOpenAnim());
+          requestAnimationFrame(() => {
+            runOpenAnim();
+            // If the card is already laid out, bring it into view now;
+            // first-time opens scroll from the card's onLayout instead.
+            scrollToCard();
+          });
         } else if (current) {
           collapseCard();
+          scrollToHive();
         }
         return next;
       });
     },
-    [collapseCard, runOpenAnim]
+    [collapseCard, runOpenAnim, scrollToCard, scrollToHive]
   );
 
   // Collapse first, then navigate, so the card visibly minimises.
@@ -205,9 +228,9 @@ export default function DashboardScreen() {
         route: pilotMode ? "/(app)/telemedicine" : "/(app)/consultation",
         title: pilotMode ? "Telemedicine Portal" : "Consultations",
         body: pilotMode
-          ? "Book a video consultation, prepare your handover pack, and join your session with your GP, Physiotherapist, or Specialist."
+          ? "Book a 10-minute HIVE Doc appointment with a registered practitioner — €55 on Blue Card, or covered by your Gold and Geriatric Pack allowances."
           : "Video consultations are coming soon. Arrange interpreter support for your appointments in the meantime.",
-        linkText: pilotMode ? "Open Portal" : "Learn More",
+        linkText: pilotMode ? "Book with HIVE Doc" : "Learn More",
       },
       {
         key: "healthcard",
@@ -353,6 +376,7 @@ export default function DashboardScreen() {
       </View>
 
       <Animated.ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.scroll,
           { paddingTop: HEADER_TOP + HEADER_HEIGHT + 14, paddingBottom: bottomPad + 16 },
@@ -396,7 +420,11 @@ export default function DashboardScreen() {
         </View>
 
         {/* ── The Hive: quiet honeycomb of small glass nodes ── */}
-        <Pressable style={styles.hiveWrap} onPress={() => selectHex(null)}>
+        <Pressable
+          style={styles.hiveWrap}
+          onPress={() => selectHex(null)}
+          onLayout={(e) => { hiveYRef.current = e.nativeEvent.layout.y; }}
+        >
           {rows.map((row, rIdx) => (
             <View
               key={rIdx}
@@ -428,6 +456,12 @@ export default function DashboardScreen() {
         {expanded && (
           <AnimatedPressable
             ref={cardRef}
+            onLayout={(e: { nativeEvent: { layout: { y: number } } }) => {
+              cardYRef.current = e.nativeEvent.layout.y;
+              // First open: the card only gets a layout after mounting, so
+              // scroll down to it as soon as we know where it is.
+              if (expandedKey) scrollToCard();
+            }}
             onPress={(e) => {
               // Taps on the card itself shouldn't bubble to the outside-tap collapse layer.
               e.stopPropagation?.();

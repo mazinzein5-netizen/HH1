@@ -3,6 +3,7 @@ import React, { useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, {
   Defs,
+  Ellipse,
   LinearGradient,
   Polygon,
   RadialGradient,
@@ -18,20 +19,33 @@ const hexPoints = (cx: number, cy: number, r: number) =>
 
 const HEX_OUTER = hexPoints(50, 50, 46);
 const HEX_BODY = hexPoints(50, 50, 43);
-const HEX_INNER = hexPoints(50, 50, 36);
 const HEX_TOP_FACET = "50,7 87.2,28.5 50,50 12.8,28.5";
 
+// Blend a #rrggbb colour toward white (amt > 0) or black (amt < 0).
+function shade(hex: string, amt: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const mix = (c: number) =>
+    Math.round(amt >= 0 ? c + (255 - c) * amt : c * (1 + amt));
+  const r = mix((n >> 16) & 255);
+  const g = mix((n >> 8) & 255);
+  const b = mix(n & 255);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
 /**
- * Small "3D glass" hexagon node for the dashboard hive.
- * SVG gradients build the glass: a translucent tinted body, a top facet
- * catching the light, an inner refraction ring, and a soft rim. The active
- * node gets a gold glow.
+ * Candy-glossy "Pixar" hexagon node for the dashboard hive.
+ * A vivid colour body shaded light-to-dark, a big soft gloss highlight,
+ * a bright rounded rim and a soft drop shadow give it a toy-like 3D feel.
+ * The whole tile is slightly translucent so the honeycomb wallpaper
+ * shows through. The active node gets a gold glow.
  */
 export default function HexIcon({
   icon,
   label,
   color,
-  size = 74,
+  size = 85,
   active = false,
   badge,
   onPress,
@@ -45,7 +59,7 @@ export default function HexIcon({
   active?: boolean;
   badge?: boolean;
   onPress: (originX?: number, originY?: number) => void;
-  labelColor: string;
+  labelColor?: string;
   reduceMotion?: boolean;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
@@ -60,7 +74,10 @@ export default function HexIcon({
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 5 }).start();
   };
 
-  const iconSize = Math.round(size * 0.32);
+  const iconSize = Math.round(size * 0.34);
+  const light = shade(color, 0.55);
+  const mid = shade(color, 0.08);
+  const dark = shade(color, -0.42);
 
   return (
     <Pressable
@@ -77,55 +94,50 @@ export default function HexIcon({
       accessibilityLabel={label}
     >
       <Animated.View style={{ width: size, height: size, transform: [{ scale }] }}>
-        <Svg width={size} height={size} viewBox="0 0 100 100">
+        {/* ~15% translucent so the wallpaper glows through the candy shell */}
+        <Svg width={size} height={size} viewBox="0 0 100 100" opacity={0.85}>
           <Defs>
-            <LinearGradient id={`body-${gid}`} x1="0" y1="0" x2="0.35" y2="1">
-              <Stop offset="0" stopColor="#ffffff" stopOpacity={0.16} />
-              <Stop offset="0.4" stopColor={color} stopOpacity={active ? 0.30 : 0.16} />
-              <Stop offset="1" stopColor="#000000" stopOpacity={0.38} />
+            <LinearGradient id={`body-${gid}`} x1="0" y1="0" x2="0.25" y2="1">
+              <Stop offset="0" stopColor={light} stopOpacity={0.95} />
+              <Stop offset="0.45" stopColor={mid} stopOpacity={0.9} />
+              <Stop offset="1" stopColor={dark} stopOpacity={0.95} />
             </LinearGradient>
             <LinearGradient id={`facet-${gid}`} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#ffffff" stopOpacity={0.30} />
+              <Stop offset="0" stopColor="#ffffff" stopOpacity={0.6} />
               <Stop offset="1" stopColor="#ffffff" stopOpacity={0.02} />
             </LinearGradient>
             <LinearGradient id={`rim-${gid}`} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#ffffff" stopOpacity={active ? 0.9 : 0.45} />
-              <Stop offset="0.5" stopColor={active ? "#F5C518" : color} stopOpacity={active ? 0.95 : 0.55} />
-              <Stop offset="1" stopColor={color} stopOpacity={active ? 0.8 : 0.30} />
+              <Stop offset="0" stopColor="#ffffff" stopOpacity={active ? 0.95 : 0.85} />
+              <Stop offset="0.5" stopColor={active ? "#F5C518" : light} stopOpacity={active ? 0.95 : 0.7} />
+              <Stop offset="1" stopColor={active ? "#F5C518" : dark} stopOpacity={active ? 0.85 : 0.6} />
             </LinearGradient>
             <RadialGradient id={`glow-${gid}`} cx="0.5" cy="0.42" r="0.62">
-              <Stop offset="0" stopColor={active ? "#F5C518" : color} stopOpacity={active ? 0.30 : 0.14} />
+              <Stop offset="0" stopColor={active ? "#F5C518" : light} stopOpacity={active ? 0.4 : 0.2} />
               <Stop offset="1" stopColor={color} stopOpacity={0} />
+            </RadialGradient>
+            <RadialGradient id={`gloss-${gid}`} cx="0.5" cy="0.35" r="0.65">
+              <Stop offset="0" stopColor="#ffffff" stopOpacity={0.55} />
+              <Stop offset="0.7" stopColor="#ffffff" stopOpacity={0.06} />
+              <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
             </RadialGradient>
           </Defs>
 
           {/* soft drop shadow for depth */}
-          <Polygon
-            points={hexPoints(51.5, 53, 43)}
-            fill="#000000"
-            opacity={0.28}
-          />
-          {/* soft inner glow behind the glass */}
+          <Polygon points={hexPoints(51.5, 54, 43)} fill="#000000" opacity={0.3} />
+          {/* soft glow behind the shell */}
           <Polygon points={HEX_OUTER} fill={`url(#glow-${gid})`} />
-          {/* glass body */}
+          {/* candy body */}
           <Polygon
             points={HEX_BODY}
             fill={`url(#body-${gid})`}
             stroke={`url(#rim-${gid})`}
-            strokeWidth={active ? 2.4 : 1.6}
+            strokeWidth={active ? 3 : 2.4}
             strokeLinejoin="round"
           />
           {/* top facet catching the light */}
-          <Polygon points={HEX_TOP_FACET} fill={`url(#facet-${gid})`} opacity={0.55} />
-          {/* inner refraction line */}
-          <Polygon
-            points={HEX_INNER}
-            fill="none"
-            stroke="#ffffff"
-            strokeOpacity={active ? 0.22 : 0.10}
-            strokeWidth={1}
-            strokeLinejoin="round"
-          />
+          <Polygon points={HEX_TOP_FACET} fill={`url(#facet-${gid})`} opacity={0.7} />
+          {/* big soft gloss blob — the toy-like sheen */}
+          <Ellipse cx="42" cy="30" rx="26" ry="16" fill={`url(#gloss-${gid})`} />
         </Svg>
 
         {/* centre glyph */}
@@ -133,7 +145,8 @@ export default function HexIcon({
           <MaterialCommunityIcons
             name={icon}
             size={iconSize}
-            color={active ? "#F5C518" : color}
+            color={active ? "#F5C518" : "#ffffff"}
+            style={styles.glyphShadow}
           />
         </View>
         {badge && (
@@ -141,10 +154,13 @@ export default function HexIcon({
         )}
       </Animated.View>
       <Text
-        style={[styles.label, { color: active ? "#F5C518" : labelColor, fontFamily: "Inter_600SemiBold" }]}
+        style={[
+          styles.label,
+          { color: active ? "#F5C518" : shade(color, 0.35), fontFamily: "Inter_700Bold" },
+        ]}
         numberOfLines={2}
       >
-        {label}
+        {label.toUpperCase()}
       </Text>
     </Pressable>
   );
@@ -152,6 +168,11 @@ export default function HexIcon({
 
 const styles = StyleSheet.create({
   center: { alignItems: "center", justifyContent: "center" },
+  glyphShadow: {
+    textShadowColor: "rgba(0,0,0,0.45)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 3,
+  },
   badge: {
     position: "absolute",
     width: 9,
@@ -162,8 +183,10 @@ const styles = StyleSheet.create({
   },
   label: {
     marginTop: 3,
-    fontSize: 10.5,
+    fontSize: 9.5,
+    letterSpacing: 0.5,
     textAlign: "center",
-    lineHeight: 13,
+    lineHeight: 12.5,
+    opacity: 0.9,
   },
 });

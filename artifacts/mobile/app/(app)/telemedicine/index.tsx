@@ -95,10 +95,10 @@ export default function TelemedicinePortalScreen() {
           <MaterialCommunityIcons name="calendar-search" size={18} color="#22c55e" />
           <View style={{ flex: 1 }}>
             <Text style={[styles.reminderText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-              Book a HIVE Practitioner
+              HIVE Doc — 10-Minute Appointment
             </Text>
             <Text style={[styles.reminderSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Browse open video & audio slots published by practitioners
+              Registered practitioners · €55 on Blue Card · Gold uses 1 of 3 monthly consultations · Geriatric Pack uses 1 of 10 HIVE Doc consultations
             </Text>
           </View>
           <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
