@@ -8,6 +8,7 @@ interface VideoEmbedProps {
   audioSrc?: string;
   frameClassName?: string;
   scaleOnHover?: boolean;
+  expandable?: boolean;
 }
 
 const AUDIO_VOLUME = 0.45;
@@ -18,6 +19,7 @@ export function VideoEmbed({
   audioSrc,
   frameClassName = "",
   scaleOnHover = true,
+  expandable = true,
 }: VideoEmbedProps) {
   const ref = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -94,6 +96,7 @@ export function VideoEmbed({
   };
 
   const openExpanded = (e: React.MouseEvent | React.KeyboardEvent) => {
+    if (!expandable) return;
     triggerRef.current = e.currentTarget as HTMLElement;
     expandedRef.current = true;
     setAutoMode(false);
@@ -122,7 +125,7 @@ export function VideoEmbed({
   useEffect(() => {
     if (inView) {
       setRevealed(true);
-      if (!expandedRef.current && !dismissedRef.current) {
+      if (expandable && !expandedRef.current && !dismissedRef.current) {
         expandedRef.current = true;
         setAutoMode(true);
         setExpanded(true);
@@ -208,9 +211,9 @@ export function VideoEmbed({
       <motion.div
         ref={ref}
         tabIndex={0}
-        role="button"
-        aria-label={`${title} — expand video`}
-        aria-haspopup="dialog"
+        role={expandable ? "button" : undefined}
+        aria-label={expandable ? `${title} — expand video` : title}
+        aria-haspopup={expandable ? "dialog" : undefined}
         onMouseEnter={activate}
         onMouseLeave={deactivate}
         onClick={openExpanded}
@@ -232,7 +235,7 @@ export function VideoEmbed({
           scaleOnHover && !reducedMotion ? { scale: active ? 1.12 : 1 } : undefined
         }
         transition={{ type: "spring", stiffness: 220, damping: 26 }}
-        className={`relative outline-none cursor-zoom-in ${active ? "z-20" : "z-0"}`}
+        className={`relative outline-none ${expandable ? "cursor-zoom-in" : ""} ${active ? "z-20" : "z-0"}`}
       >
         <div
           className={`relative aspect-video bg-[#07070f] overflow-hidden transition-shadow duration-500 ${frameClassName} ${
@@ -300,15 +303,17 @@ export function VideoEmbed({
           )}
 
           {/* Expand hint on hover/focus */}
-          <div
-            aria-hidden="true"
-            className={`absolute top-3 right-3 z-30 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-md transition-all duration-300 ${
-              active ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-            Expand
-          </div>
+          {expandable && (
+            <div
+              aria-hidden="true"
+              className={`absolute top-3 right-3 z-30 flex items-center gap-1.5 rounded-full border border-white/20 bg-black/60 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-md transition-all duration-300 ${
+                active ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              Expand
+            </div>
+          )}
         </div>
 
         {soundButton(active)}
