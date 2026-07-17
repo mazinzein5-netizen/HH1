@@ -76,11 +76,8 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-transparent text-foreground overflow-x-hidden font-sans">
-      
       <a href="#main-content" className="skip-link">Skip to main content</a>
-
       <RubberBackground />
-
       {/* Navigation */}
       <motion.header 
         initial={{ y: -100 }}
@@ -137,7 +134,6 @@ export default function Home() {
           </nav>
         )}
       </motion.header>
-
       <main id="main-content" className="flex-grow pt-20">
         
         {/* Section 1: Hero */}
@@ -452,7 +448,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-panel text-foreground mb-8 shadow-2xl">
                   <Shield className="h-10 w-10 text-primary" />
                 </div>
-                <h2 className="text-4xl md:text-6xl font-bold mb-8 tracking-tight text-foreground">Privacy is our gold standard.</h2>
+                <h2 className="text-4xl md:text-6xl font-bold mb-8 tracking-tight text-foreground">Gold Standards in documentation and advanced privacy features</h2>
                 <p className="text-xl md:text-2xl font-light mb-12 text-foreground/80 leading-relaxed max-w-3xl mx-auto">
                   ALL personal data stays on your device — nothing is uploaded to a server. No tracking, no ads. You can "Delete all my data" at any time.
                 </p>
