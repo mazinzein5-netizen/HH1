@@ -19,6 +19,7 @@ export default function AppLayout() {
       <Stack.Screen name="body-map" options={{ headerShown: false }} />
       <Stack.Screen name="kardex" options={{ title: "Medical Kardex", headerShown: true }} />
       <Stack.Screen name="medical-history" options={{ title: "Medical History", headerShown: true }} />
+      <Stack.Screen name="emergency-share" options={{ title: "Emergency Share", headerShown: true }} />
       <Stack.Screen name="geriatric" options={{ headerShown: false }} />
       <Stack.Screen name="consultation" options={{ headerShown: false }} />
       <Stack.Screen name="telemedicine" options={{ headerShown: false }} />

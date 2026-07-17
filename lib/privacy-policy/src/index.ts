@@ -34,6 +34,11 @@ export const PRIVACY_POLICY_SECTIONS: PrivacyPolicySection[] = [
       "The app only shares your information when you explicitly choose to — for example, when you use a Share button to send your health card or a questionnaire summary to your GP. Sharing uses your device's own share sheet, and you control the recipient.",
   },
   {
+    heading: "Emergency & caretaker sharing",
+    body:
+      "If you generate an emergency share code, a snapshot of your allergies, conditions and current medications is held in the HIVE relay's memory only — never written to a database — and is deleted automatically when the time window you chose runs out, or immediately when you revoke it. If you opt into caretaker sharing (Red Geriatric Pack), your phone sends your latest location and vital-sign readings to the relay about once a minute; only the most recent update is kept, and everything is deleted the moment you stop sharing. Both features are strictly opt-in and start only after your explicit consent in the app.",
+  },
+  {
     heading: "Your rights (GDPR)",
     body:
       "Because your data lives on your device, you are always in control. You can view, edit, or delete your information at any time. The \"Delete all my data\" option in Settings permanently erases everything the app has stored on this device. There is no server copy to request or erase.",

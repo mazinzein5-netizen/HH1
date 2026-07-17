@@ -216,6 +216,26 @@ export default function DashboardScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Emergency Share */}
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push("/(app)/emergency-share")}
+          style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: "rgba(220,38,38,0.35)" }]}
+        >
+          <HiveCardBg gradientColors={["rgba(220,38,38,0.10)", "rgba(0,0,0,0.10)", "transparent"]} />
+          <View style={[styles.sectionIcon, { backgroundColor: "rgba(220,38,38,0.10)", borderColor: "rgba(220,38,38,0.3)", borderWidth: 1 }]}>
+            <MaterialCommunityIcons name="shield-alert" size={22} color="#dc2626" />
+          </View>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Emergency Share</Text>
+          <Text style={[styles.sectionBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Give doctors or first responders a time-limited code to see your allergies and medications — only with your consent.
+          </Text>
+          <View style={styles.sectionLink}>
+            <Text style={[styles.sectionLinkText, { color: "#dc2626", fontFamily: "Inter_600SemiBold" }]}>Open Emergency Share</Text>
+            <Feather name="chevron-right" size={14} color="#dc2626" />
+          </View>
+        </TouchableOpacity>
+
         {/* My Medical History */}
         <TouchableOpacity
           activeOpacity={0.88}
