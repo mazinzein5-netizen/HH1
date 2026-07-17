@@ -24,6 +24,8 @@ export interface HiveSlot {
   start: string;
   end: string;
   kind: "video" | "audio";
+  /** ISO date (yyyy-mm-dd) of the upcoming occurrence, resolved by the server. */
+  date?: string;
   taken: boolean;
 }
 
@@ -31,9 +33,10 @@ export interface HiveBookingResult {
   id: string;
   kind: "video" | "audio";
   when: string;
+  date?: string;
   status: string;
   practitioner: { id: string; fullName: string; role: string };
-  slot: { id: string; day: string; start: string; end: string };
+  slot: { id: string; day: string; start: string; end: string; date?: string };
 }
 
 async function parseOrThrow<T>(res: Response): Promise<T> {

@@ -144,7 +144,7 @@ export default function HiveBookScreen() {
         reason: reason.trim()
           ? `${reason.trim()} — ${booking.kind} consultation with ${selected.fullName}`
           : `${booking.kind === "audio" ? "Audio" : "Video"} consultation with ${selected.fullName}`,
-        dateISO: nextDateForDay(slot.day),
+        dateISO: booking.date ?? booking.slot.date ?? nextDateForDay(slot.day),
         time: slot.start,
         mode: "video",
         gpName: selected.fullName,

@@ -41,8 +41,38 @@ function patientSlots(settings: {
   );
 }
 
-function slotTaken(bookings: Booking[], slotId: string): boolean {
-  return bookings.some((b) => b.slotId === slotId);
+/**
+ * ISO date (yyyy-mm-dd) of the next occurrence of a weekday name, e.g. "Monday".
+ * Mirrors nextDateForDay in the mobile app (artifacts/mobile/utils/hiveBookingApi.ts)
+ * so the server-stored date matches what the patient app computes locally.
+ */
+export function nextDateForDay(dayName: string): string {
+  const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const target = names.findIndex((n) => n.toLowerCase() === dayName.trim().toLowerCase());
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (target >= 0) {
+    const diff = (target - d.getDay() + 7) % 7 || 7;
+    d.setDate(d.getDate() + diff);
+  } else {
+    d.setDate(d.getDate() + 1);
+  }
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Human-readable date, e.g. "20 Jul 2026", from an ISO yyyy-mm-dd string. */
+function formatDate(iso: string): string {
+  const [y, m, day] = iso.split("-").map((n) => parseInt(n, 10));
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${day} ${months[(m ?? 1) - 1]} ${y}`;
+}
+
+/**
+ * A slot is taken only if a booking exists for its upcoming occurrence date.
+ * Bookings from previous weeks (earlier dates) no longer block the slot.
+ */
+function slotTaken(bookings: Booking[], slotId: string, date: string): boolean {
+  return bookings.some((b) => b.slotId === slotId && b.date === date);
 }
 
 /**
@@ -56,7 +86,7 @@ router.get("/hive/practitioners", (_req, res) => {
       if (!store || !store.settings.bookingEnabled) return null;
       const slots = patientSlots(store.settings);
       if (slots.length === 0) return null;
-      const openCount = slots.filter((s) => !slotTaken(store.bookings, s.id)).length;
+      const openCount = slots.filter((s) => !slotTaken(store.bookings, s.id, nextDateForDay(s.day))).length;
       return {
         id: p.id,
         fullName: p.fullName,
@@ -84,14 +114,18 @@ router.get("/hive/practitioners/:id/slots", (req, res) => {
     res.status(404).json({ error: "This practitioner is not accepting HIVE bookings." });
     return;
   }
-  const slots = patientSlots(store.settings).map((s) => ({
-    id: s.id,
-    day: s.day,
-    start: s.start,
-    end: s.end,
-    kind: s.kind,
-    taken: slotTaken(store.bookings, s.id),
-  }));
+  const slots = patientSlots(store.settings).map((s) => {
+    const date = nextDateForDay(s.day);
+    return {
+      id: s.id,
+      day: s.day,
+      start: s.start,
+      end: s.end,
+      kind: s.kind,
+      date,
+      taken: slotTaken(store.bookings, s.id, date),
+    };
+  });
   res.json({
     practitioner: {
       id: entry.id,
@@ -130,7 +164,8 @@ router.post("/hive/practitioners/:id/book", (req, res) => {
     res.status(404).json({ error: "This slot is no longer published." });
     return;
   }
-  if (slotTaken(store.bookings, slot.id)) {
+  const date = nextDateForDay(slot.day);
+  if (slotTaken(store.bookings, slot.id, date)) {
     res.status(409).json({ error: "SLOT_TAKEN", message: "This slot has just been booked — please pick another." });
     return;
   }
@@ -142,10 +177,11 @@ router.post("/hive/practitioners/:id/book", (req, res) => {
     id: newEntityId(),
     patientName,
     kind: slot.kind === "audio" ? "audio" : "video",
-    when: `${slot.day} ${slot.start}–${slot.end}`,
+    when: `${slot.day} ${formatDate(date)} ${slot.start}–${slot.end}`,
     status: "confirmed",
     demo: false,
     slotId: slot.id,
+    date,
     ...(reason ? { reason } : {}),
   };
   store.bookings.unshift(booking);
@@ -155,9 +191,10 @@ router.post("/hive/practitioners/:id/book", (req, res) => {
       id: booking.id,
       kind: booking.kind,
       when: booking.when,
+      date: booking.date,
       status: booking.status,
       practitioner: { id: entry.id, fullName: entry.fullName, role: entry.role },
-      slot: { id: slot.id, day: slot.day, start: slot.start, end: slot.end },
+      slot: { id: slot.id, day: slot.day, start: slot.start, end: slot.end, date },
     },
   });
 });

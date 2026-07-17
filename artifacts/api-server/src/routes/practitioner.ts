@@ -106,6 +106,8 @@ export interface Booking {
   demo: boolean;
   /** Availability slot this booking occupies (patient bookings via HIVE). */
   slotId?: string;
+  /** Concrete ISO date (yyyy-mm-dd) this booking occupies, so weekly slots reopen next week. */
+  date?: string;
   /** Patient-provided reason for the consultation. */
   reason?: string;
 }
