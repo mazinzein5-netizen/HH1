@@ -385,6 +385,8 @@ function bearerToken(req: Request): string | null {
 export interface PortalSessionInfo {
   demo: boolean;
   accountId: string | null;
+  accountType: "healthcare" | "caretaker" | null;
+  role: string | null;
 }
 
 export function getPortalSession(req: Request): PortalSessionInfo | null {
@@ -393,7 +395,13 @@ export function getPortalSession(req: Request): PortalSessionInfo | null {
   if (!token) return null;
   const session = sessions.get(token);
   if (!session || Date.now() >= session.expiresAt) return null;
-  return { demo: session.demo, accountId: session.accountId };
+  const account = session.accountId ? accountById(session.accountId) : undefined;
+  return {
+    demo: session.demo,
+    accountId: session.accountId,
+    accountType: account?.accountType ?? null,
+    role: account?.role ?? null,
+  };
 }
 
 /** Express middleware: requires any valid portal session (incl. demo). */

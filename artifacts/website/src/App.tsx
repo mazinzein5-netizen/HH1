@@ -11,6 +11,8 @@ import PortalEmergency from "@/portal/Emergency";
 import PortalCaretaker from "@/portal/Caretaker";
 import PortalPricing from "@/portal/Pricing";
 import PortalPrivacy from "@/portal/Privacy";
+import PortalPractitioner from "@/portal/Practitioner";
+import PracticePatientFile from "@/portal/PracticePatientFile";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,8 @@ function Router() {
       <Route path="/portal/caretaker" component={PortalCaretaker} />
       <Route path="/portal/pricing" component={PortalPricing} />
       <Route path="/portal/privacy" component={PortalPrivacy} />
+      <Route path="/portal/practitioner" component={PortalPractitioner} />
+      <Route path="/portal/practitioner/patients/:id" component={PracticePatientFile} />
       <Route component={NotFound} />
     </Switch>
   );

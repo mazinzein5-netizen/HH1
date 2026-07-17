@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "wouter";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { HiveLogo } from "@/components/HiveLogo";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { VideoEmbed } from "@/components/VideoEmbed";
 import { VideoShowcase } from "@/components/VideoShowcase";
 import { 
   ArrowRight, ShieldCheck, FileText, Smartphone, 
-  Stethoscope, Mail, ExternalLink, Activity,
+  Stethoscope, Mail, Activity,
   AlertCircle, Heart, Shield,
   MapPin, Pill, Video, Users,
   Menu, X, Building2, ClipboardList, Sparkles, Clock, Euro
@@ -99,9 +100,9 @@ export default function Home() {
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <Button asChild variant="outline" className="hidden sm:flex border-primary/30 hover:border-primary text-primary hover:bg-primary/10 transition-all duration-300 glass-panel">
-              <a href="https://surg-assist-copy-89eb0714.base44.app" target="_blank" rel="noreferrer">
+              <Link href="/portal/practitioner">
                 Clinician Sign In
-              </a>
+              </Link>
             </Button>
             <Button
               variant="outline"
@@ -127,9 +128,9 @@ export default function Home() {
               <a href="#companion" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">HIVE Companion</a>
               <a href="#surgical-assistant" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Surgical Assistant</a>
               <a href="#enterprise" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">For Hospitals &amp; GPs</a>
-              <a href="https://surg-assist-copy-89eb0714.base44.app" target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
+              <Link href="/portal/practitioner" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
                 Clinician Sign In
-              </a>
+              </Link>
             </div>
           </nav>
         )}
@@ -591,9 +592,9 @@ export default function Home() {
                 </div>
 
                 <Button asChild size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-auto min-h-14 whitespace-normal px-6 sm:px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
-                  <a href="https://surg-assist-copy-89eb0714.base44.app" target="_blank" rel="noreferrer">
-                    Open HIVE Surgical Assistant <ExternalLink aria-hidden="true" className="ml-2 h-4 w-4 flex-shrink-0" />
-                  </a>
+                  <Link href="/portal/practitioner">
+                    Open HIVE Surgical Assistant <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4 flex-shrink-0" />
+                  </Link>
                 </Button>
               </motion.div>
             </div>

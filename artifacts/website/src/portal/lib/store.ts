@@ -299,3 +299,135 @@ export async function registerPasskeyServer(webauthnToken: string): Promise<bool
   if (!res.ok) throw await parseError(res);
   return true;
 }
+
+// ── Practitioner portal API ──────────────────────────────────────────────────
+
+export const DOCTOR_ROLES: readonly string[] = [
+  "GP",
+  "Hospital doctor",
+  "Outpatient clinic specialist doctor",
+];
+
+export function isDoctorRole(role?: string): boolean {
+  return !!role && DOCTOR_ROLES.includes(role);
+}
+
+export interface PracPatientSummary {
+  id: string;
+  fullName: string;
+  dob: string;
+  mrn: string;
+  condition: string;
+  demo: boolean;
+  lastQuestionnaire: { name: string; score: string; date: string } | null;
+}
+
+export interface PracPatientFile {
+  id: string;
+  fullName: string;
+  dob: string;
+  mrn: string;
+  condition: string;
+  demo: boolean;
+  history: string[];
+  questionnaires: { id: string; name: string; score: string; date: string }[];
+  prescriptions: { id: string; name: string; dose: string; frequency: string }[];
+  notes: { id: string; ts: number; text: string }[];
+}
+
+export interface AvailabilitySlot {
+  id: string;
+  day: string;
+  start: string;
+  end: string;
+  kind: "video" | "audio" | "clinic";
+}
+
+export interface PracSettings {
+  bookingEnabled: boolean;
+  videoConsultations: boolean;
+  audioConsultations: boolean;
+  slots: AvailabilitySlot[];
+}
+
+export interface PracBooking {
+  id: string;
+  patientName: string;
+  kind: "video" | "audio";
+  when: string;
+  status: "confirmed" | "pending";
+  demo: boolean;
+}
+
+async function pracFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}/portal/practitioner${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(),
+      ...(init?.headers ?? {}),
+    },
+  });
+  if (!res.ok) throw await parseError(res);
+  return (await res.json()) as T;
+}
+
+export function listPracPatients(): Promise<{ patients: PracPatientSummary[] }> {
+  return pracFetch("/patients");
+}
+
+export function createPracPatient(input: {
+  fullName: string;
+  dob?: string;
+  condition?: string;
+}): Promise<{ patient: PracPatientFile }> {
+  return pracFetch("/patients", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function getPracPatient(id: string): Promise<{ patient: PracPatientFile }> {
+  return pracFetch(`/patients/${encodeURIComponent(id)}`);
+}
+
+export function addPracNote(patientId: string, text: string): Promise<{ note: PracPatientFile["notes"][number] }> {
+  return pracFetch(`/patients/${encodeURIComponent(patientId)}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+}
+
+export function addPracPrescription(
+  patientId: string,
+  input: { name: string; dose?: string; frequency?: string },
+): Promise<{ prescription: PracPatientFile["prescriptions"][number] }> {
+  return pracFetch(`/patients/${encodeURIComponent(patientId)}/prescriptions`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getPracSettings(): Promise<{ settings: PracSettings }> {
+  return pracFetch("/settings");
+}
+
+export function updatePracSettings(
+  patch: Partial<Pick<PracSettings, "bookingEnabled" | "videoConsultations" | "audioConsultations">>,
+): Promise<{ settings: PracSettings }> {
+  return pracFetch("/settings", { method: "PUT", body: JSON.stringify(patch) });
+}
+
+export function addPracSlot(input: {
+  day: string;
+  start: string;
+  end: string;
+  kind: AvailabilitySlot["kind"];
+}): Promise<{ slot: AvailabilitySlot }> {
+  return pracFetch("/settings/slots", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function deletePracSlot(slotId: string): Promise<{ ok: boolean }> {
+  return pracFetch(`/settings/slots/${encodeURIComponent(slotId)}`, { method: "DELETE" });
+}
+
+export function listPracBookings(): Promise<{ bookings: PracBooking[] }> {
+  return pracFetch("/bookings");
+}

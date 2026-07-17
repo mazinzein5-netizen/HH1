@@ -6,6 +6,7 @@ import privacyRouter from "./privacy";
 import supportRouter from "./support";
 import emergencyShareRouter from "./emergencyShare";
 import portalAuthRouter from "./portalAuth";
+import practitionerRouter from "./practitioner";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(privacyRouter);
 router.use(supportRouter);
 router.use(emergencyShareRouter);
 router.use(portalAuthRouter);
+router.use(practitionerRouter);
 
 export default router;

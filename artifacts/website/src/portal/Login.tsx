@@ -57,7 +57,7 @@ export default function Login() {
       account,
       demo: account?.status === "demo" || account?.mode === "demo",
     });
-    navigate("/portal/emergency");
+    navigate(account?.accountType === "healthcare" ? "/portal/practitioner" : "/portal/emergency");
   };
 
   const handleAuthError = (err: unknown) => {
