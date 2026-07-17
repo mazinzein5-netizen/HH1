@@ -1,5 +1,14 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import {
+  generateAuthenticationOptions,
+  generateRegistrationOptions,
+  verifyAuthenticationResponse,
+  verifyRegistrationResponse,
+  type AuthenticationResponseJSON,
+  type RegistrationResponseJSON,
+  type WebAuthnCredential,
+} from "@simplewebauthn/server";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -9,9 +18,11 @@ const router: IRouter = Router();
  *
  * Accounts and sessions are held ONLY in server memory (Zero-Server framework:
  * this is a pilot relay, not a persistent registry). Password hashes use
- * scrypt. Login is two-step: password → short-lived login token → the client
- * completes WebAuthn biometric verification locally → exchanges the login
- * token for a session token. Sensitive read endpoints require a session.
+ * scrypt. Login is two-step:
+ *   1. password → short-lived login token
+ *   2. WebAuthn biometric assertion, VERIFIED SERVER-SIDE against the
+ *      credential public key registered at signup → session token.
+ * Sensitive read endpoints require a session.
  *
  * Demo sessions exist so visitors can explore the portal, but they can ONLY
  * access canned demo data — never real patient shares.
@@ -39,6 +50,8 @@ interface PortalAccount {
   mode: "demo" | "full";
   status: "demo" | "verification_ongoing" | "verified";
   createdAt: number;
+  /** WebAuthn credential registered at signup (verified server-side). */
+  credential?: WebAuthnCredential;
 }
 
 interface PortalSession {
@@ -53,17 +66,25 @@ const LOGIN_TOKEN_TTL_MS = 5 * 60_000;
 const SESSION_TTL_MS = 8 * 60 * 60_000;
 
 const accounts = new Map<string, PortalAccount>(); // keyed by lowercase email
-const loginTokens = new Map<string, { accountId: string; expiresAt: number }>();
+const loginTokens = new Map<string, { accountId: string; expiresAt: number; challenge?: string }>();
+/** Registration challenges keyed by one-time webauthnToken issued at register. */
+const registrationChallenges = new Map<string, { accountId: string; challenge?: string; expiresAt: number }>();
 const sessions = new Map<string, PortalSession>();
 
 function sweep() {
   const now = Date.now();
   for (const [t, l] of loginTokens) if (now >= l.expiresAt) loginTokens.delete(t);
+  for (const [t, r] of registrationChallenges) if (now >= r.expiresAt) registrationChallenges.delete(t);
   for (const [t, s] of sessions) if (now >= s.expiresAt) sessions.delete(t);
 }
 
 function hashPassword(password: string, salt: string): Buffer {
   return scryptSync(password, salt, 32);
+}
+
+function accountById(id: string): PortalAccount | undefined {
+  for (const a of accounts.values()) if (a.id === id) return a;
+  return undefined;
 }
 
 function publicAccount(a: PortalAccount) {
@@ -76,12 +97,29 @@ function publicAccount(a: PortalAccount) {
     role: a.role,
     mode: a.mode,
     status: a.status,
+    hasPasskey: !!a.credential,
   };
 }
+
+/** Derive the WebAuthn relying-party ID + origin from the request. */
+function rpFromRequest(req: Request): { rpID: string; origin: string } {
+  const originHeader = typeof req.headers.origin === "string" ? req.headers.origin : "";
+  try {
+    const url = new URL(originHeader);
+    return { rpID: url.hostname, origin: originHeader };
+  } catch {
+    const domain = process.env.REPLIT_DEV_DOMAIN || "localhost";
+    return { rpID: domain, origin: `https://${domain}` };
+  }
+}
+
+const isProduction = process.env.NODE_ENV === "production";
 
 /**
  * POST /portal/register
  * Body: { fullName, workplace, email, password, accountType, role?, mode }
+ * Returns { account, webauthnToken } — the token authorizes passkey
+ * registration for this new account (10 min).
  */
 router.post("/portal/register", (req, res) => {
   sweep();
@@ -124,13 +162,81 @@ router.post("/portal/register", (req, res) => {
     createdAt: Date.now(),
   };
   accounts.set(key, account);
+  const webauthnToken = randomBytes(24).toString("hex");
+  registrationChallenges.set(webauthnToken, { accountId: account.id, expiresAt: Date.now() + 10 * 60_000 });
   logger.info({ accountId: account.id, mode: account.mode }, "Portal account registered (in-memory)");
-  res.json({ account: publicAccount(account) });
+  res.json({ account: publicAccount(account), webauthnToken });
+});
+
+/**
+ * POST /portal/webauthn/register-options
+ * Body: { webauthnToken } → WebAuthn registration options.
+ */
+router.post("/portal/webauthn/register-options", async (req, res) => {
+  sweep();
+  const { webauthnToken } = req.body as Record<string, unknown>;
+  const pending = typeof webauthnToken === "string" ? registrationChallenges.get(webauthnToken) : undefined;
+  const account = pending ? accountById(pending.accountId) : undefined;
+  if (!pending || !account) {
+    res.status(401).json({ error: "Registration window expired — please sign up again." });
+    return;
+  }
+  const { rpID } = rpFromRequest(req);
+  const options = await generateRegistrationOptions({
+    rpName: "HIVE Emergency Portal",
+    rpID,
+    userName: account.email,
+    userDisplayName: account.fullName,
+    attestationType: "none",
+    authenticatorSelection: {
+      authenticatorAttachment: "platform",
+      userVerification: "required",
+      residentKey: "preferred",
+    },
+  });
+  pending.challenge = options.challenge;
+  res.json({ options });
+});
+
+/**
+ * POST /portal/webauthn/register-verify
+ * Body: { webauthnToken, response } — verifies attestation and stores the
+ * credential public key on the account.
+ */
+router.post("/portal/webauthn/register-verify", async (req, res) => {
+  sweep();
+  const { webauthnToken, response } = req.body as { webauthnToken?: unknown; response?: unknown };
+  const pending = typeof webauthnToken === "string" ? registrationChallenges.get(webauthnToken) : undefined;
+  const account = pending ? accountById(pending.accountId) : undefined;
+  if (!pending || !pending.challenge || !account || response == null) {
+    res.status(401).json({ error: "Registration window expired — please sign up again." });
+    return;
+  }
+  const { rpID, origin } = rpFromRequest(req);
+  try {
+    const verification = await verifyRegistrationResponse({
+      response: response as RegistrationResponseJSON,
+      expectedChallenge: pending.challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      requireUserVerification: true,
+    });
+    if (!verification.verified || !verification.registrationInfo) {
+      res.status(400).json({ error: "Passkey registration could not be verified." });
+      return;
+    }
+    account.credential = verification.registrationInfo.credential;
+    registrationChallenges.delete(webauthnToken as string);
+    res.json({ verified: true });
+  } catch (err) {
+    logger.warn({ err }, "WebAuthn registration verification failed");
+    res.status(400).json({ error: "Passkey registration could not be verified." });
+  }
 });
 
 /**
  * POST /portal/login — step 1 (password).
- * Body: { email, password } → { loginToken }
+ * Body: { email, password } → { loginToken, hasPasskey }
  */
 router.post("/portal/login", (req, res) => {
   sweep();
@@ -147,31 +253,93 @@ router.post("/portal/login", (req, res) => {
   }
   const loginToken = randomBytes(24).toString("hex");
   loginTokens.set(loginToken, { accountId: account.id, expiresAt: Date.now() + LOGIN_TOKEN_TTL_MS });
-  res.json({ loginToken, requiresSecondFactor: true });
+  res.json({ loginToken, requiresSecondFactor: true, hasPasskey: !!account.credential });
 });
 
 /**
- * POST /portal/2fa — step 2, after the client completes WebAuthn biometric
- * verification. Body: { loginToken } → { sessionToken, account }
+ * POST /portal/2fa/options — step 2a. Body: { loginToken }
+ * Returns server-generated WebAuthn authentication options.
  */
-router.post("/portal/2fa", (req, res) => {
+router.post("/portal/2fa/options", async (req, res) => {
   sweep();
   const { loginToken } = req.body as Record<string, unknown>;
-  if (typeof loginToken !== "string") {
-    res.status(400).json({ error: "loginToken is required." });
-    return;
-  }
-  const pending = loginTokens.get(loginToken);
-  if (!pending || Date.now() >= pending.expiresAt) {
+  const pending = typeof loginToken === "string" ? loginTokens.get(loginToken) : undefined;
+  const account = pending ? accountById(pending.accountId) : undefined;
+  if (!pending || !account) {
     res.status(401).json({ error: "Login expired — please start again." });
     return;
   }
-  loginTokens.delete(loginToken);
-  const account = [...accounts.values()].find((a) => a.id === pending.accountId);
-  if (!account) {
-    res.status(401).json({ error: "Account not found." });
+  if (!account.credential) {
+    res.status(403).json({
+      error: "NO_CREDENTIAL",
+      message: "No passkey is registered for this account. Sign up again on a device with biometrics.",
+    });
     return;
   }
+  const { rpID } = rpFromRequest(req);
+  const options = await generateAuthenticationOptions({
+    rpID,
+    userVerification: "required",
+    allowCredentials: [{ id: account.credential.id, transports: account.credential.transports }],
+  });
+  pending.challenge = options.challenge;
+  res.json({ options });
+});
+
+/**
+ * POST /portal/2fa/verify — step 2b.
+ * Body: { loginToken, response } — the WebAuthn assertion, verified against
+ * the stored credential public key. Only then is a session minted.
+ * DEV-ONLY: { loginToken, devSimulate: true } is accepted when not in
+ * production, for environments without a platform authenticator.
+ */
+router.post("/portal/2fa/verify", async (req, res) => {
+  sweep();
+  const { loginToken, response, devSimulate } = req.body as {
+    loginToken?: unknown;
+    response?: unknown;
+    devSimulate?: unknown;
+  };
+  const pending = typeof loginToken === "string" ? loginTokens.get(loginToken) : undefined;
+  const account = pending ? accountById(pending.accountId) : undefined;
+  if (!pending || !account) {
+    res.status(401).json({ error: "Login expired — please start again." });
+    return;
+  }
+
+  if (devSimulate === true) {
+    if (isProduction) {
+      res.status(403).json({ error: "Biometric verification is required." });
+      return;
+    }
+    logger.warn({ accountId: account.id }, "DEV-ONLY simulated biometric pass used");
+  } else {
+    if (!account.credential || !pending.challenge || response == null) {
+      res.status(400).json({ error: "Biometric verification is required." });
+      return;
+    }
+    try {
+      const verification = await verifyAuthenticationResponse({
+        response: response as AuthenticationResponseJSON,
+        expectedChallenge: pending.challenge,
+        expectedOrigin: rpFromRequest(req).origin,
+        expectedRPID: rpFromRequest(req).rpID,
+        credential: account.credential,
+        requireUserVerification: true,
+      });
+      if (!verification.verified) {
+        res.status(401).json({ error: "Biometric verification failed." });
+        return;
+      }
+      account.credential.counter = verification.authenticationInfo.newCounter;
+    } catch (err) {
+      logger.warn({ err }, "WebAuthn authentication verification failed");
+      res.status(401).json({ error: "Biometric verification failed." });
+      return;
+    }
+  }
+
+  loginTokens.delete(loginToken as string);
   const sessionToken = randomBytes(24).toString("hex");
   sessions.set(sessionToken, {
     token: sessionToken,
@@ -199,7 +367,7 @@ router.post("/portal/demo-session", (_req, res) => {
   res.json({ sessionToken, demo: true });
 });
 
-/** POST /portal/logout — Body: none; uses Authorization header. */
+/** POST /portal/logout — uses Authorization header. */
 router.post("/portal/logout", (req, res) => {
   const token = bearerToken(req);
   if (token) sessions.delete(token);

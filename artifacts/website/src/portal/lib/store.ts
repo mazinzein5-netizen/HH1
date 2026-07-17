@@ -43,6 +43,8 @@ export interface LocalProfile {
   };
 }
 
+import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
+
 const PROFILES_KEY = "hive_portal_profiles";
 const SESSION_KEY = "hive_portal_session";
 
@@ -141,40 +143,73 @@ export interface RegisterInput {
   mode: VerificationMode;
 }
 
-/** POST /portal/register → PublicAccount. Throws ApiError on failure. */
-export async function registerAccount(input: RegisterInput): Promise<PublicAccount> {
+/**
+ * POST /portal/register → { account, webauthnToken }.
+ * The webauthnToken authorizes server-verified passkey registration.
+ */
+export async function registerAccount(
+  input: RegisterInput,
+): Promise<{ account: PublicAccount; webauthnToken: string }> {
   const res = await fetch(`${API_BASE}/portal/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
   if (!res.ok) throw await parseError(res);
-  const data = (await res.json()) as { account: PublicAccount };
-  return data.account;
+  return (await res.json()) as { account: PublicAccount; webauthnToken: string };
 }
 
 /** POST /portal/login → loginToken. Throws ApiError on failure. */
 export async function loginPassword(
   email: string,
   password: string,
-): Promise<{ loginToken: string; requiresSecondFactor: boolean }> {
+): Promise<{ loginToken: string; requiresSecondFactor: boolean; hasPasskey: boolean }> {
   const res = await fetch(`${API_BASE}/portal/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) throw await parseError(res);
-  return (await res.json()) as { loginToken: string; requiresSecondFactor: boolean };
+  return (await res.json()) as {
+    loginToken: string;
+    requiresSecondFactor: boolean;
+    hasPasskey: boolean;
+  };
 }
 
-/** POST /portal/2fa → { sessionToken, account }. Throws ApiError on failure. */
-export async function complete2fa(
+/**
+ * Server-verified biometric second factor: fetches a server challenge,
+ * runs the platform authenticator, and submits the assertion for
+ * cryptographic verification. Only the server can mint a session.
+ */
+export async function complete2faWithPasskey(
   loginToken: string,
 ): Promise<{ sessionToken: string; account: PublicAccount }> {
-  const res = await fetch(`${API_BASE}/portal/2fa`, {
+  const optRes = await fetch(`${API_BASE}/portal/2fa/options`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ loginToken }),
+  });
+  if (!optRes.ok) throw await parseError(optRes);
+  const { options } = (await optRes.json()) as { options: Parameters<typeof startAuthentication>[0]["optionsJSON"] };
+  const assertion = await startAuthentication({ optionsJSON: options });
+  const res = await fetch(`${API_BASE}/portal/2fa/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ loginToken, response: assertion }),
+  });
+  if (!res.ok) throw await parseError(res);
+  return (await res.json()) as { sessionToken: string; account: PublicAccount };
+}
+
+/** DEV-ONLY: the server accepts a simulated pass only outside production. */
+export async function complete2faDevSimulate(
+  loginToken: string,
+): Promise<{ sessionToken: string; account: PublicAccount }> {
+  const res = await fetch(`${API_BASE}/portal/2fa/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ loginToken, devSimulate: true }),
   });
   if (!res.ok) throw await parseError(res);
   return (await res.json()) as { sessionToken: string; account: PublicAccount };
@@ -233,7 +268,7 @@ export function randomId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-// ── WebAuthn helpers ────────────────────────────────────────────────────────
+// ── WebAuthn helpers (server-verified via SimpleWebAuthn) ───────────────────
 
 export function isWebAuthnAvailable(): boolean {
   return (
@@ -243,73 +278,24 @@ export function isWebAuthnAvailable(): boolean {
   );
 }
 
-function randomChallenge(): BufferSource {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return bytes as BufferSource;
-}
-
-/** Register a platform passkey during signup. Returns a base64url credential id. */
-export async function registerPasskey(account: {
-  id: string;
-  email: string;
-  fullName: string;
-}): Promise<string> {
-  const userId = new TextEncoder().encode(account.id);
-  const credential = (await navigator.credentials.create({
-    publicKey: {
-      challenge: randomChallenge(),
-      rp: { name: "HIVE Emergency Portal", id: window.location.hostname },
-      user: {
-        id: userId,
-        name: account.email,
-        displayName: account.fullName,
-      },
-      pubKeyCredParams: [
-        { type: "public-key", alg: -7 },
-        { type: "public-key", alg: -257 },
-      ],
-      authenticatorSelection: {
-        authenticatorAttachment: "platform",
-        userVerification: "required",
-        residentKey: "preferred",
-      },
-      timeout: 60_000,
-      attestation: "none",
-    },
-  })) as PublicKeyCredential | null;
-  if (!credential) throw new Error("Passkey registration was cancelled.");
-  return bufferToBase64Url(credential.rawId);
-}
-
-/** Perform the biometric 2nd factor at each login. */
-export async function verifyPasskey(credentialId?: string): Promise<boolean> {
-  const allowCredentials: PublicKeyCredentialDescriptor[] = credentialId
-    ? [{ type: "public-key", id: base64UrlToBuffer(credentialId) }]
-    : [];
-  const assertion = (await navigator.credentials.get({
-    publicKey: {
-      challenge: randomChallenge(),
-      rpId: window.location.hostname,
-      allowCredentials,
-      userVerification: "required",
-      timeout: 60_000,
-    },
-  })) as PublicKeyCredential | null;
-  return !!assertion;
-}
-
-function bufferToBase64Url(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let str = "";
-  for (const b of bytes) str += String.fromCharCode(b);
-  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function base64UrlToBuffer(value: string): ArrayBuffer {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
-  const binary = atob(padded);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes.buffer;
+/**
+ * Register a platform passkey during signup, verified and stored server-side.
+ * Returns true when the server verified and stored the credential.
+ */
+export async function registerPasskeyServer(webauthnToken: string): Promise<boolean> {
+  const optRes = await fetch(`${API_BASE}/portal/webauthn/register-options`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ webauthnToken }),
+  });
+  if (!optRes.ok) throw await parseError(optRes);
+  const { options } = (await optRes.json()) as { options: Parameters<typeof startRegistration>[0]["optionsJSON"] };
+  const attestation = await startRegistration({ optionsJSON: options });
+  const res = await fetch(`${API_BASE}/portal/webauthn/register-verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ webauthnToken, response: attestation }),
+  });
+  if (!res.ok) throw await parseError(res);
+  return true;
 }

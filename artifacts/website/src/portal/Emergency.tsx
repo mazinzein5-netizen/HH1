@@ -52,8 +52,8 @@ interface ClaimResult {
   demo?: boolean;
 }
 
-const CODE_RE = /HES-[0-9A-Z]{4}-[0-9A-Z]{4}/i;
 const DEMO_SHARE_CODE = "HES-DEMO-2026";
+const CODE_RE = new RegExp(`HES-DEMO-2026|HES-[0-9A-Z]{4}-[0-9A-Z]{4}`, "i");
 
 function useCountdown(expiresAt?: string): string {
   const [now, setNow] = useState(() => Date.now());

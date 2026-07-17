@@ -6,12 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  complete2fa,
-  findProfileByEmail,
+  complete2faDevSimulate,
+  complete2faWithPasskey,
   isWebAuthnAvailable,
   loginPassword,
   setSession,
-  verifyPasskey,
   type ApiError,
 } from "./lib/store";
 import { Fingerprint, ShieldAlert, Smartphone } from "lucide-react";
@@ -52,24 +51,30 @@ export default function Login() {
     }
   };
 
-  const exchangeToken = async (token: string) => {
-    try {
-      const { sessionToken, account } = await complete2fa(token);
-      setSession({
-        sessionToken,
-        account,
-        demo: account.status === "demo" || account.mode === "demo",
-      });
-      navigate("/portal/emergency");
-    } catch (err) {
-      const apiErr = err as ApiError;
-      if (apiErr.status === 401) {
-        setError("Login expired — start again.");
-        setStep("password");
-        setLoginToken(null);
-      } else {
-        setError(apiErr.message ?? "Could not complete login. Please try again.");
-      }
+  const finishLogin = (sessionToken: string, account: Parameters<typeof setSession>[0]["account"]) => {
+    setSession({
+      sessionToken,
+      account,
+      demo: account?.status === "demo" || account?.mode === "demo",
+    });
+    navigate("/portal/emergency");
+  };
+
+  const handleAuthError = (err: unknown) => {
+    const apiErr = err as ApiError;
+    if (apiErr.status === 401) {
+      setError("Login expired or biometric verification failed — start again.");
+      setStep("password");
+      setLoginToken(null);
+    } else if (apiErr.error === "NO_CREDENTIAL") {
+      setError(
+        apiErr.message ??
+          "No passkey is registered for this account. Sign up again on a device with biometrics.",
+      );
+    } else if (apiErr.status !== undefined) {
+      setError(apiErr.message ?? "Could not complete login. Please try again.");
+    } else {
+      setError("Biometric verification was cancelled or failed.");
     }
   };
 
@@ -78,15 +83,10 @@ export default function Login() {
     setError(null);
     setBusy(true);
     try {
-      const profile = findProfileByEmail(email);
-      const ok = await verifyPasskey(profile?.passkeyId);
-      if (ok) {
-        await exchangeToken(loginToken);
-      } else {
-        setError("Biometric verification failed. Please try again.");
-      }
-    } catch {
-      setError("Biometric verification was cancelled or failed.");
+      const { sessionToken, account } = await complete2faWithPasskey(loginToken);
+      finishLogin(sessionToken, account);
+    } catch (err) {
+      handleAuthError(err);
     } finally {
       setBusy(false);
     }
@@ -94,9 +94,16 @@ export default function Login() {
 
   const simulateBiometric = async () => {
     if (!loginToken) return;
+    setError(null);
     setBusy(true);
-    await exchangeToken(loginToken);
-    setBusy(false);
+    try {
+      const { sessionToken, account } = await complete2faDevSimulate(loginToken);
+      finishLogin(sessionToken, account);
+    } catch (err) {
+      handleAuthError(err);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

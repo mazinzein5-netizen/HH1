@@ -11,7 +11,7 @@ import {
   registerAccount,
   fileToDataUrl,
   isWebAuthnAvailable,
-  registerPasskey,
+  registerPasskeyServer,
   upsertProfile,
   type AccountType,
   type ApiError,
@@ -139,8 +139,9 @@ export default function Signup() {
     setSubmitting(true);
 
     let accountId: string;
+    let webauthnToken: string;
     try {
-      const account = await registerAccount({
+      const { account, webauthnToken: token } = await registerAccount({
         fullName: fullName.trim(),
         workplace: workplace.trim(),
         email: email.trim(),
@@ -150,6 +151,7 @@ export default function Signup() {
         mode: mode as VerificationMode,
       });
       accountId = account.id;
+      webauthnToken = token;
     } catch (err) {
       const apiErr = err as ApiError;
       if (apiErr.status === 409) {
@@ -163,13 +165,12 @@ export default function Signup() {
       return;
     }
 
-    // Register a passkey (on-device) — best effort. Store keyed by email.
-    let passkeyId: string | undefined;
+    // Register a passkey — the credential public key is verified and stored
+    // server-side so the biometric second factor can be enforced at login.
     let hasPasskey = false;
     if (isWebAuthnAvailable()) {
       try {
-        passkeyId = await registerPasskey({ id: accountId, email, fullName });
-        hasPasskey = true;
+        hasPasskey = await registerPasskeyServer(webauthnToken);
       } catch {
         hasPasskey = false;
       }
@@ -180,7 +181,6 @@ export default function Signup() {
       accountId,
       email: email.trim(),
       hasPasskey,
-      passkeyId,
       verification:
         mode === "full"
           ? {

@@ -32,8 +32,8 @@ interface CaretakerData {
   demo?: boolean;
 }
 
-const CODE_RE = /HCL-[0-9A-Z]{4}-[0-9A-Z]{4}/i;
 const DEMO_LINK_CODE = "HCL-DEMO-2026";
+const CODE_RE = new RegExp(`HCL-DEMO-2026|HCL-[0-9A-Z]{4}-[0-9A-Z]{4}`, "i");
 const STALE_MS = 15 * 60 * 1000;
 
 function relativeTime(ts?: string | null): string {

@@ -75,6 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@fontsource/inter": "^5.2.8"
+    "@fontsource/inter": "^5.2.8",
+    "@simplewebauthn/browser": "^13.3.0"
   }
 }
