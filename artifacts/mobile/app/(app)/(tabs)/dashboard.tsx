@@ -13,6 +13,8 @@ import {
   View,
 } from "react-native";
 import ThemedStatusBar from "@/components/ThemedStatusBar";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HexIcon from "@/components/HexIcon";
 import HiveCardBg from "@/components/HoneycombCardBg";
@@ -145,8 +147,14 @@ export default function DashboardScreen() {
   // Collapse first, then navigate, so the card visibly minimises.
   const openRoute = useCallback(
     (route: string) => {
-      setExpandedKey(null);
-      collapseCard(() => router.push(route as never));
+      setExpandedKey((current) => {
+        if (current) {
+          collapseCard(() => router.push(route as never));
+        } else {
+          router.push(route as never);
+        }
+        return null;
+      });
     },
     [collapseCard]
   );
@@ -335,7 +343,7 @@ export default function DashboardScreen() {
             <Text style={[styles.appEco, { color: colors.gold, fontFamily: "Inter_600SemiBold" }]}>PATIENT PORTAL</Text>
           </View>
           <TouchableOpacity
-            onPress={() => router.push("/(app)/settings")}
+            onPress={() => openRoute("/(app)/settings")}
             activeOpacity={0.7}
             style={[styles.menuBtn, { backgroundColor: colors.glass, borderColor: colors.glassBorder }]}
           >
@@ -356,6 +364,8 @@ export default function DashboardScreen() {
         )}
         scrollEventThrottle={16}
       >
+        {/* Screen-level outside-tap dismissal: any tap not swallowed by a hex or the card collapses it */}
+        <Pressable onPress={() => selectHex(null)} accessible={false}>
         {/* Hero Card — HIVE logo + honeycomb */}
         <View style={styles.heroOuter}>
           <LinearGradient colors={["#0e1560", "#1320a0", "#0a0e55"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroCard}>
@@ -375,7 +385,7 @@ export default function DashboardScreen() {
               <Text style={[styles.heroTitle2, { color: "#D4A017", fontFamily: "Inter_700Bold" }]}>Absolute Security.</Text>
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => router.push("/(app)/body-map")}
+                onPress={() => openRoute("/(app)/body-map")}
                 style={[styles.heroCta, { backgroundColor: "rgba(0,0,0,0.45)", borderColor: colors.gold + "55" }]}
               >
                 <MaterialCommunityIcons name="hand-heart" size={17} color={colors.gold} />
@@ -416,8 +426,12 @@ export default function DashboardScreen() {
 
         {/* ── Expanded card for the selected hexagon ── */}
         {expanded && (
-          <Animated.View
+          <AnimatedPressable
             ref={cardRef}
+            onPress={(e) => {
+              // Taps on the card itself shouldn't bubble to the outside-tap collapse layer.
+              e.stopPropagation?.();
+            }}
             style={[
               styles.sectionCard,
               { backgroundColor: colors.card, borderColor: expanded.color + "55" },
@@ -505,8 +519,9 @@ export default function DashboardScreen() {
               </Text>
               <Feather name="chevron-right" size={15} color={expanded.color} />
             </TouchableOpacity>
-          </Animated.View>
+          </AnimatedPressable>
         )}
+        </Pressable>
       </Animated.ScrollView>
 
     </View>
