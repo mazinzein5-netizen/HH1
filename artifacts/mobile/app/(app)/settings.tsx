@@ -123,8 +123,16 @@ export default function SettingsScreen() {
     if (!bioAllowed || !user) return;
     Haptics.selectionAsync();
     if (next) {
-      const passed = await promptBiometric(`Confirm ${bioSupport!.label} to enable quick sign-in`, "Cancel");
-      if (!passed) return;
+      const prompt = await promptBiometric(`Confirm ${bioSupport!.label} to enable quick sign-in`, "Cancel");
+      if (!prompt.success) {
+        setToastMessage(
+          prompt.reason === "cancel"
+            ? "Cancelled — biometric sign-in was not enabled."
+            : prompt.message ?? "The biometric check didn't complete."
+        );
+        setToastVisible(true);
+        return;
+      }
       const firstName = (user.fullName || user.username).trim().split(/\s+/)[0];
       await enableBiometricLogin(user.id, firstName);
       setBioEnabled(true);

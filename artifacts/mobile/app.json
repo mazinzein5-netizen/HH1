@@ -28,6 +28,12 @@
         }
       ],
       "expo-font",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "HIVE Companion™ uses Face ID so you can sign in quickly without typing your password. The check happens entirely on your phone — no biometric data ever leaves your device."
+        }
+      ],
       "expo-web-browser",
       "expo-mail-composer",
       [

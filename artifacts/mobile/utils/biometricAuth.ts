@@ -58,17 +58,56 @@ export async function getBiometricSupport(): Promise<BiometricSupport> {
   }
 }
 
-/** Run the OS biometric prompt. Resolves true only on a real pass. */
-export async function promptBiometric(promptMessage: string, cancelLabel = "Use password instead"): Promise<boolean> {
+export interface BiometricPromptResult {
+  success: boolean;
+  /** Why the prompt did not pass, for honest UI copy. */
+  reason?: "cancel" | "lockout" | "not-available" | "error";
+  /** Human-friendly explanation to show the user (empty on cancel). */
+  message?: string;
+}
+
+/** Run the OS biometric prompt. `success` is true only on a real pass. */
+export async function promptBiometric(
+  promptMessage: string,
+  cancelLabel = "Use password instead"
+): Promise<BiometricPromptResult> {
   try {
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage,
       cancelLabel,
       disableDeviceFallback: false,
     });
-    return result.success;
+    if (result.success) return { success: true };
+    const code: string = result.error ?? "";
+    if (code === "user_cancel" || code === "system_cancel" || code === "app_cancel") {
+      return { success: false, reason: "cancel" };
+    }
+    if (code === "lockout" || code === "lockout_permanent") {
+      return {
+        success: false,
+        reason: "lockout",
+        message:
+          "Too many attempts — biometrics are temporarily locked. Unlock your phone with its passcode first, then try again, or sign in with your password.",
+      };
+    }
+    if (code === "not_available" || code === "not_enrolled" || code === "passcode_not_set") {
+      return {
+        success: false,
+        reason: "not-available",
+        message: "Biometric sign-in isn't available right now. Please sign in with your password.",
+      };
+    }
+    return {
+      success: false,
+      reason: "error",
+      message: "The biometric check didn't complete. Please sign in with your password.",
+    };
   } catch {
-    return false;
+    return {
+      success: false,
+      reason: "error",
+      message: "The biometric check didn't complete. Please sign in with your password.",
+    };
   }
 }
 

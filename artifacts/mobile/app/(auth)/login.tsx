@@ -47,12 +47,20 @@ export default function LoginScreen() {
   const [bioSupport, setBioSupport] = useState<BiometricSupport | null>(null);
   const [bioBusy, setBioBusy] = useState(false);
 
+  const autoPrompted = React.useRef(false);
+
   useEffect(() => {
     (async () => {
       const [record, support] = await Promise.all([getBiometricLogin(), getBiometricSupport()]);
       setBioRecord(record);
       setBioSupport(support);
+      // Offer the OS prompt straight away when a shortcut exists (once per visit).
+      if (record && support.available && !autoPrompted.current) {
+        autoPrompted.current = true;
+        runBiometric(record);
+      }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -79,17 +87,21 @@ export default function LoginScreen() {
     router.replace("/(app)/(tabs)/dashboard");
   }
 
-  async function handleBiometric() {
-    if (!bioRecord || !bioSupport?.available || bioBusy) return;
+  async function runBiometric(record: BiometricLoginRecord) {
     setError("");
     setBioBusy(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const passed = await promptBiometric(`Sign in as ${bioRecord.displayName}`);
-    if (!passed) {
+    const prompt = await promptBiometric(`Sign in as ${record.displayName}`);
+    if (!prompt.success) {
       setBioBusy(false);
-      return; // user cancelled or check failed — no error banner needed
+      if (prompt.reason === "cancel") {
+        setError("Biometric sign-in cancelled — use your password to continue.");
+      } else if (prompt.message) {
+        setError(prompt.message);
+      }
+      return;
     }
-    const result = await loginById(bioRecord.userId);
+    const result = await loginById(record.userId);
     setBioBusy(false);
     if (!result.success) {
       // The stored account was removed — clear the stale shortcut.
@@ -101,13 +113,18 @@ export default function LoginScreen() {
       // Keep the button label in sync if the person changed their name.
       if (result.user) {
         const firstName = (result.user.fullName || result.user.username).trim().split(/\s+/)[0];
-        if (firstName !== bioRecord.displayName) {
+        if (firstName !== record.displayName) {
           await enableBiometricLogin(result.user.id, firstName);
         }
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(app)/(tabs)/dashboard");
     }
+  }
+
+  async function handleBiometric() {
+    if (!bioRecord || !bioSupport?.available || bioBusy) return;
+    await runBiometric(bioRecord);
   }
 
   const showBiometricBtn = !!bioRecord && !!bioSupport?.available;
