@@ -21,4 +21,5 @@
 - [Promo narration & captions](promo-narration.md) — per-scene TTS clips must fit fixed scene slots (trim+atempo ≤1.15x); captions burned in; store-safe wording only.
 - [Practitioner store persistence](practitioner-store-persistence.md) — stores persist as one JSONB doc per account; every mutation must call persistPracStore or it's lost on restart.
 - [Sarah companion](sarah-companion.md) — on-device intent layer for personal data; pilot+consent-gated GP letter; mic consent at first launch; legacy queenb_* keys kept.
+- [EAS APK builds](eas-apk-builds.md) — use EAS_NO_VCS=1; run `expo install --check` first: newer-SDK expo packages crash installed APKs with NoClassDefFoundError while dev mode hides it.
 - [Android splash & icon checks](android-splash-icons.md) — Android 12+ clips splash icons to a circle; use expo-splash-screen plugin + prebuild inspection to verify without a device.
