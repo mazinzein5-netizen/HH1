@@ -453,14 +453,20 @@ export default function Home() {
                   ALL personal data stays on your device — nothing is uploaded to a server. No tracking, no ads. You can "Delete all my data" at any time.
                 </p>
                 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-                  <Button variant="secondary" size="lg" disabled aria-disabled="true" className="w-full sm:w-auto glass-panel h-auto min-h-14 whitespace-normal px-6 sm:px-8 text-foreground">
-                    App Store (Coming Soon)
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
+                  <Button asChild size="lg" className="w-full sm:w-auto h-auto min-h-14 whitespace-normal px-6 sm:px-8 font-semibold">
+                    <a href="/api/app/download/android" data-testid="button-download-android">
+                      Download for Android (APK)
+                    </a>
                   </Button>
                   <Button variant="secondary" size="lg" disabled aria-disabled="true" className="w-full sm:w-auto glass-panel h-auto min-h-14 whitespace-normal px-6 sm:px-8 text-foreground">
-                    Google Play (Coming Soon)
+                    iPhone &amp; iPad — Soon to Follow
                   </Button>
                 </div>
+
+                <p className="text-sm text-muted-foreground mb-16 max-w-xl mx-auto">
+                  Android: after downloading, tap the file and allow installation when your phone asks. The iPhone &amp; iPad version is on its way via the App Store.
+                </p>
 
                 <div className="text-sm font-medium glass-panel p-6 rounded-2xl text-left inline-block max-w-2xl mx-auto border-primary/20">
                   <span className="text-primary font-bold uppercase tracking-wider text-xs block mb-2">Compliance Notice</span>

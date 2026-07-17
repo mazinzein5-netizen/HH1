@@ -10,6 +10,7 @@ import practitionerRouter from "./practitioner";
 import hiveBookingRouter from "./hiveBooking";
 import stripeRouter from "./stripe";
 import whopRouter from "./whop";
+import appReleaseRouter from "./appRelease";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(hiveBookingRouter);
 // new builds pay through Whop (routes/whop.ts).
 router.use(stripeRouter);
 router.use(whopRouter);
+router.use(appReleaseRouter);
 
 export default router;

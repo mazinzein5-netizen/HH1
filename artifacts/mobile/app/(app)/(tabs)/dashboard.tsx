@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import ThemedStatusBar from "@/components/ThemedStatusBar";
+import UpdateBanner from "@/components/UpdateBanner";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -325,6 +326,7 @@ export default function DashboardScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ThemedStatusBar backgroundColor="transparent" translucent />
+      <UpdateBanner topOffset={topPad} />
       <HoneycombWallpaper density={prefs.density} />
 
       {/* ── Fixed transparent-on-scroll header ── */}
