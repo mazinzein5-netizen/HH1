@@ -398,9 +398,11 @@ export default function Practitioner() {
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-sm flex items-center gap-2">
                           {b.patientName}
-                          {b.demo && (
+                          {b.demo ? (
                             <Badge className="bg-primary/15 text-primary border border-primary/30 text-[10px]">DEMO</Badge>
-                          )}
+                          ) : b.slotId ? (
+                            <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px]">PATIENT</Badge>
+                          ) : null}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
                           {b.kind === "video" ? <Video className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
@@ -409,6 +411,12 @@ export default function Practitioner() {
                             {b.status}
                           </span>
                         </div>
+                        {b.reason && (
+                          <p className="text-xs text-foreground/80 mt-1.5 rounded-md bg-muted/40 border border-border/60 px-2 py-1.5">
+                            <span className="text-muted-foreground">Reason: </span>
+                            {b.reason}
+                          </p>
+                        )}
                       </div>
                       <Button size="sm" variant="outline" disabled title="Joining opens at appointment time (pilot)">
                         Join

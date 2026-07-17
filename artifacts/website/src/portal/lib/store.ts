@@ -357,6 +357,10 @@ export interface PracBooking {
   when: string;
   status: "confirmed" | "pending";
   demo: boolean;
+  /** Availability slot this booking occupies (patient bookings via HIVE). */
+  slotId?: string;
+  /** Patient-provided reason for the consultation. */
+  reason?: string;
 }
 
 async function pracFetch<T>(path: string, init?: RequestInit): Promise<T> {
