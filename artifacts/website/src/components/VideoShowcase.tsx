@@ -81,14 +81,6 @@ export function VideoShowcase({ videos }: { videos: ShowcaseVideo[] }) {
                 {video.duration}
               </span>
 
-              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                <h3 className="text-xl md:text-2xl font-bold text-white mb-1">
-                  {video.title}
-                </h3>
-                <p className="text-sm md:text-base text-white/70">
-                  {video.tagline}
-                </p>
-              </div>
             </div>
           </motion.button>
         ))}
