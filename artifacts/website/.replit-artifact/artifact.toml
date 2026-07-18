@@ -19,60 +19,7 @@ run = "pnpm --filter @workspace/website run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/website", "run", "build" ]
-publicDir = "artifacts/website/dist/public"
-serve = "static"
-
-[[services.production.rewrites]]
-from = "/"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/book"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal/signup"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal/login"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal/emergency"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal/caretaker"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal/pricing"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal/privacy"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal/practitioner"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal/supportive"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal/responder"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/portal/practitioner/patients/*"
-to = "/index.html"
+run = [ "pnpm", "--filter", "@workspace/website", "run", "serve" ]
 
 [services.env]
 PORT = "19161"

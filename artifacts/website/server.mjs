@@ -262,8 +262,6 @@ function esc(str) {
 function buildMetaBlock(meta) {
   const canonical = `${SITE_URL}${meta.path}`;
   return [
-    `<meta charset="UTF-8" />`,
-    `<meta name="viewport" content="width=device-width, initial-scale=1.0" />`,
     `<title>${esc(meta.title)}</title>`,
     `<meta name="description" content="${esc(meta.description)}" />`,
     `<meta name="robots" content="index, follow" />`,
