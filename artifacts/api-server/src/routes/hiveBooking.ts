@@ -5,11 +5,22 @@ import {
 } from "./portalAuth";
 import {
   getPracStoreById,
+  membershipOf,
   newEntityId,
   persistPracStore,
   type AvailabilitySlot,
   type Booking,
+  type PracStore,
 } from "./practitioner";
+
+/**
+ * Practitioners appear in the patient-facing directory only while their HIVE
+ * HUB professional membership is active AND automated booking is switched on.
+ * Membership lapsing removes them from patient booking immediately.
+ */
+function acceptingBookings(store: PracStore): boolean {
+  return membershipOf(store).active && store.settings.bookingEnabled;
+}
 
 const router: IRouter = Router();
 
@@ -83,7 +94,7 @@ router.get("/hive/practitioners", (_req, res) => {
   const practitioners = listHealthcarePractitioners()
     .map((p) => {
       const store = getPracStoreById(p.id);
-      if (!store || !store.settings.bookingEnabled) return null;
+      if (!store || !acceptingBookings(store)) return null;
       const slots = patientSlots(store.settings);
       if (slots.length === 0) return null;
       const openCount = slots.filter((s) => !slotTaken(store.bookings, s.id, nextDateForDay(s.day))).length;
@@ -110,7 +121,7 @@ router.get("/hive/practitioners", (_req, res) => {
 router.get("/hive/practitioners/:id/slots", (req, res) => {
   const entry = practitionerDirectoryEntry(req.params.id);
   const store = entry ? getPracStoreById(entry.id) : null;
-  if (!entry || !store || !store.settings.bookingEnabled) {
+  if (!entry || !store || !acceptingBookings(store)) {
     res.status(404).json({ error: "This practitioner is not accepting HIVE bookings." });
     return;
   }
@@ -147,7 +158,7 @@ router.get("/hive/practitioners/:id/slots", (req, res) => {
 router.post("/hive/practitioners/:id/book", (req, res) => {
   const entry = practitionerDirectoryEntry(req.params.id);
   const store = entry ? getPracStoreById(entry.id) : null;
-  if (!entry || !store || !store.settings.bookingEnabled) {
+  if (!entry || !store || !acceptingBookings(store)) {
     res.status(404).json({ error: "This practitioner is not accepting HIVE bookings." });
     return;
   }

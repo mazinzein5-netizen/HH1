@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { createHash, randomBytes } from "crypto";
 import { db, practitionerStoresTable } from "@workspace/db";
 import { requirePortalSession, portalAccountEmail, type PortalSessionInfo } from "./portalAuth";
+import { getUncachableStripeClient } from "../stripeClient";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -33,6 +34,24 @@ function requireDoctor(req: Request, res: Response, next: NextFunction): void {
     res.status(403).json({
       error: "DOCTOR_ROLE_REQUIRED",
       message: "Patient files are available to doctor roles only.",
+    });
+    return;
+  }
+  next();
+}
+
+/**
+ * Requires an ACTIVE HIVE HUB professional membership (validated server-side).
+ * The bookings workspace and video appointments are membership features.
+ */
+function requireMembership(req: Request, res: Response, next: NextFunction): void {
+  const store = getStore(req, res);
+  if (!store) return;
+  if (!membershipOf(store).active) {
+    res.status(403).json({
+      error: "MEMBERSHIP_REQUIRED",
+      message:
+        "The bookings workspace and video appointments are part of the HIVE HUB professional membership.",
     });
     return;
   }
@@ -112,10 +131,33 @@ export interface Booking {
   reason?: string;
 }
 
+export type MembershipBilling = "monthly" | "yearly";
+
+export interface ProMembership {
+  active: boolean;
+  billing: MembershipBilling | null;
+  activatedAt: number | null;
+  /** Stripe Checkout session that paid for the membership (audit trail). */
+  sessionId: string | null;
+}
+
 export interface PracStore {
   patients: PracPatient[];
   settings: PracSettings;
   bookings: Booking[];
+  /** HIVE HUB professional membership — optional for legacy stores. */
+  membership?: ProMembership;
+}
+
+const INACTIVE_MEMBERSHIP: ProMembership = {
+  active: false,
+  billing: null,
+  activatedAt: null,
+  sessionId: null,
+};
+
+export function membershipOf(store: PracStore): ProMembership {
+  return store.membership ?? INACTIVE_MEMBERSHIP;
 }
 
 /**
@@ -447,7 +489,7 @@ router.get("/portal/practitioner/settings", requirePortalSession, requirePractit
   res.json({ settings: store.settings });
 });
 
-router.put("/portal/practitioner/settings", requirePortalSession, requirePractitioner, (req, res) => {
+router.put("/portal/practitioner/settings", requirePortalSession, requirePractitioner, requireMembership, (req, res) => {
   const store = getStore(req, res);
   if (!store) return;
   const body = req.body as Record<string, unknown>;
@@ -458,7 +500,7 @@ router.put("/portal/practitioner/settings", requirePortalSession, requirePractit
   res.json({ settings: store.settings });
 });
 
-router.post("/portal/practitioner/settings/slots", requirePortalSession, requirePractitioner, (req, res) => {
+router.post("/portal/practitioner/settings/slots", requirePortalSession, requirePractitioner, requireMembership, (req, res) => {
   const store = getStore(req, res);
   if (!store) return;
   const body = req.body as Record<string, unknown>;
@@ -480,7 +522,7 @@ router.post("/portal/practitioner/settings/slots", requirePortalSession, require
   res.json({ slot });
 });
 
-router.delete("/portal/practitioner/settings/slots/:slotId", requirePortalSession, requirePractitioner, (req, res) => {
+router.delete("/portal/practitioner/settings/slots/:slotId", requirePortalSession, requirePractitioner, requireMembership, (req, res) => {
   const store = getStore(req, res);
   if (!store) return;
   store.settings.slots = store.settings.slots.filter((s) => s.id !== req.params.slotId);
@@ -488,12 +530,204 @@ router.delete("/portal/practitioner/settings/slots/:slotId", requirePortalSessio
   res.json({ ok: true });
 });
 
-// ── Bookings ─────────────────────────────────────────────────────────────────
+// ── Bookings (membership workspace) ─────────────────────────────────────────
 
-router.get("/portal/practitioner/bookings", requirePortalSession, requirePractitioner, (req, res) => {
+router.get("/portal/practitioner/bookings", requirePortalSession, requirePractitioner, requireMembership, (req, res) => {
   const store = getStore(req, res);
   if (!store) return;
   res.json({ bookings: store.settings.bookingEnabled ? store.bookings : [] });
+});
+
+/**
+ * POST /portal/practitioner/bookings/:id/session — start a video/audio
+ * appointment session for a booking. Membership-only. Uses the same
+ * provider-agnostic session seam as the HIVE COMPANION telemedicine flow:
+ * the server issues a session descriptor; the pilot provider simulates the
+ * media transport, and a real provider (Daily/Twilio) can be plugged in
+ * without changing this contract.
+ */
+router.post("/portal/practitioner/bookings/:id/session", requirePortalSession, requirePractitioner, requireMembership, (req, res) => {
+  const store = getStore(req, res);
+  if (!store) return;
+  const booking = store.bookings.find((b) => b.id === req.params.id);
+  if (!booking) {
+    res.status(404).json({ error: "Booking not found." });
+    return;
+  }
+  if (booking.kind === "video" && !store.settings.videoConsultations) {
+    res.status(400).json({ error: "Enable video consultations to join video appointments." });
+    return;
+  }
+  if (booking.kind === "audio" && !store.settings.audioConsultations) {
+    res.status(400).json({ error: "Enable audio consultations to join audio appointments." });
+    return;
+  }
+  res.json({
+    session: {
+      id: id(),
+      bookingId: booking.id,
+      kind: booking.kind,
+      room: `hive-${booking.id}`,
+      patientName: booking.patientName,
+      provider: "simulated",
+      startedAt: Date.now(),
+      expiresAt: Date.now() + 60 * 60_000,
+    },
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * HIVE HUB professional membership (server-validated entitlement).
+ *
+ * Membership is purchased through Stripe Checkout and only ever activated
+ * after the server itself confirms with Stripe that the session was paid and
+ * belongs to this account. The client can never flip the entitlement.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+const PRO_PRICES: Record<MembershipBilling, { lookupKey: string; unitAmount: number; interval: "month" | "year" }> = {
+  monthly: { lookupKey: "hive_pro_monthly", unitAmount: 4900, interval: "month" }, // €49.00
+  yearly: { lookupKey: "hive_pro_yearly", unitAmount: 49000, interval: "year" }, // €490.00
+};
+
+const isProduction = process.env.NODE_ENV === "production";
+
+function parseBilling(v: unknown): MembershipBilling | null {
+  return v === "monthly" || v === "yearly" ? v : null;
+}
+
+/** Find (or lazily seed) the Stripe price for a professional membership plan. */
+async function proPriceId(billing: MembershipBilling): Promise<string> {
+  const stripe = await getUncachableStripeClient();
+  const spec = PRO_PRICES[billing];
+  const prices = await stripe.prices.list({ lookup_keys: [spec.lookupKey], active: true, limit: 1 });
+  if (prices.data[0]) return prices.data[0].id;
+
+  const search = await stripe.products.search({
+    query: `name:'HIVE HUB Professional Membership' AND active:'true'`,
+  });
+  const product =
+    search.data[0] ??
+    (await stripe.products.create({
+      name: "HIVE HUB Professional Membership",
+      description:
+        "Professional membership for the HIVE HUB — bookings workspace and video appointments.",
+      metadata: { tier: "pro" },
+    }));
+  const price = await stripe.prices.create({
+    product: product.id,
+    unit_amount: spec.unitAmount,
+    currency: "eur",
+    recurring: { interval: spec.interval },
+    lookup_key: spec.lookupKey,
+    metadata: { tier: "pro", billing },
+  });
+  logger.info({ lookupKey: spec.lookupKey, priceId: price.id }, "Seeded professional membership price");
+  return price.id;
+}
+
+router.get("/portal/practitioner/membership", requirePortalSession, requirePractitioner, (req, res) => {
+  const store = getStore(req, res);
+  if (!store) return;
+  const m = membershipOf(store);
+  res.json({ membership: { active: m.active, billing: m.billing, activatedAt: m.activatedAt } });
+});
+
+router.post("/portal/practitioner/membership/checkout", requirePortalSession, requirePractitioner, async (req, res) => {
+  const store = getStore(req, res);
+  if (!store) return;
+  if (membershipOf(store).active) {
+    res.status(400).json({ error: "Your membership is already active." });
+    return;
+  }
+  const billing = parseBilling((req.body as Record<string, unknown>).billing);
+  if (!billing) {
+    res.status(400).json({ error: "billing must be 'monthly' or 'yearly'." });
+    return;
+  }
+  const session = sessionOf(req);
+  const accountKey = session.email ? accountKeyForEmail(session.email) : null;
+  if (!accountKey) {
+    res.status(403).json({ error: "ACCOUNT_REQUIRED", message: "A practitioner account is required." });
+    return;
+  }
+  try {
+    const stripe = await getUncachableStripeClient();
+    const priceId = await proPriceId(billing);
+    const baseUrl = `https://${process.env["REPLIT_DOMAINS"]?.split(",")[0]}`;
+    // Idempotency: retries for the same account + plan reuse one Checkout
+    // Session for 24h, so a timeout + retry can never double-charge.
+    const idempotencyKey = `hive_pro_${accountKey}_${billing}_${priceId}`;
+    const checkout = await stripe.checkout.sessions.create(
+      {
+        mode: "subscription",
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${baseUrl}/portal/practitioner?membership_session={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/portal/practitioner?membership_cancelled=1`,
+        metadata: { purpose: "pro_membership", accountKey, billing },
+      },
+      { idempotencyKey },
+    );
+    res.json({ url: checkout.url, sessionId: checkout.id });
+  } catch (err) {
+    logger.error({ err }, "Failed to create professional membership checkout");
+    res.status(502).json({ error: "Could not start the membership payment. Please try again." });
+  }
+});
+
+/**
+ * POST /portal/practitioner/membership/confirm — Body: { sessionId } or, in
+ * non-production only, { devActivate: true } (mirrors the portal's dev-only
+ * biometric simulation for environments without Stripe test checkout).
+ * Membership activates ONLY after Stripe confirms payment for this account.
+ */
+router.post("/portal/practitioner/membership/confirm", requirePortalSession, requirePractitioner, async (req, res) => {
+  const store = getStore(req, res);
+  if (!store) return;
+  const session = sessionOf(req);
+  const accountKey = session.email ? accountKeyForEmail(session.email) : null;
+  if (!accountKey) {
+    res.status(403).json({ error: "ACCOUNT_REQUIRED", message: "A practitioner account is required." });
+    return;
+  }
+  const { sessionId, devActivate } = req.body as { sessionId?: unknown; devActivate?: unknown };
+
+  if (devActivate === true) {
+    if (isProduction) {
+      res.status(403).json({ error: "A completed payment is required." });
+      return;
+    }
+    logger.warn({ accountKey }, "DEV-ONLY simulated membership activation used");
+    store.membership = { active: true, billing: "monthly", activatedAt: Date.now(), sessionId: "dev-simulated" };
+    persistPracStore(session.accountId!);
+    const m = membershipOf(store);
+    res.json({ membership: { active: m.active, billing: m.billing, activatedAt: m.activatedAt } });
+    return;
+  }
+
+  if (typeof sessionId !== "string" || !sessionId.startsWith("cs_")) {
+    res.status(400).json({ error: "A valid checkout session id is required." });
+    return;
+  }
+  try {
+    const stripe = await getUncachableStripeClient();
+    const checkout = await stripe.checkout.sessions.retrieve(sessionId);
+    if (checkout.metadata?.["purpose"] !== "pro_membership" || checkout.metadata?.["accountKey"] !== accountKey) {
+      res.status(403).json({ error: "This payment does not belong to your account." });
+      return;
+    }
+    if (checkout.payment_status !== "paid") {
+      res.status(402).json({ error: "Payment not completed yet.", status: checkout.status });
+      return;
+    }
+    const billing = parseBilling(checkout.metadata?.["billing"]) ?? "monthly";
+    store.membership = { active: true, billing, activatedAt: Date.now(), sessionId };
+    persistPracStore(session.accountId!);
+    const m = membershipOf(store);
+    res.json({ membership: { active: m.active, billing: m.billing, activatedAt: m.activatedAt } });
+  } catch (err) {
+    logger.error({ err }, "Failed to confirm membership payment");
+    res.status(502).json({ error: "Could not verify the payment. Please try again." });
+  }
 });
 
 export default router;

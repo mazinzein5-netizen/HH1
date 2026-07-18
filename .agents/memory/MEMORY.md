@@ -22,4 +22,5 @@
 - [Practitioner store persistence](practitioner-store-persistence.md) — stores persist as one JSONB doc per account; every mutation must call persistPracStore or it's lost on restart.
 - [Sarah companion](sarah-companion.md) — on-device intent layer for personal data; pilot+consent-gated GP letter; mic consent at first launch; legacy queenb_* keys kept.
 - [EAS APK builds](eas-apk-builds.md) — use EAS_NO_VCS=1; run `expo install --check` first: newer-SDK expo packages crash installed APKs with NoClassDefFoundError while dev mode hides it.
+- [Pro membership](pro-membership.md) — practitioner bookings/video gated server-side by PracStore.membership; patient-facing booking uses acceptingBookings(); Stripe lookup keys hive_pro_monthly/yearly.
 - [Android splash & icon checks](android-splash-icons.md) — Android 12+ clips splash icons to a circle; use expo-splash-screen plugin + prebuild inspection to verify without a device.

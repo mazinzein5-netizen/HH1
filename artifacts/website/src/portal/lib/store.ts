@@ -435,3 +435,47 @@ export function deletePracSlot(slotId: string): Promise<{ ok: boolean }> {
 export function listPracBookings(): Promise<{ bookings: PracBooking[] }> {
   return pracFetch("/bookings");
 }
+
+// ── HIVE HUB professional membership ─────────────────────────────────────────
+
+export type MembershipBilling = "monthly" | "yearly";
+
+export interface ProMembership {
+  active: boolean;
+  billing: MembershipBilling | null;
+  activatedAt: number | null;
+}
+
+export interface ConsultSession {
+  id: string;
+  bookingId: string;
+  kind: "video" | "audio";
+  room: string;
+  patientName: string;
+  provider: string;
+  startedAt: number;
+  expiresAt: number;
+}
+
+export function getMembership(): Promise<{ membership: ProMembership }> {
+  return pracFetch("/membership");
+}
+
+export function startMembershipCheckout(
+  billing: MembershipBilling,
+): Promise<{ url: string; sessionId: string }> {
+  return pracFetch("/membership/checkout", { method: "POST", body: JSON.stringify({ billing }) });
+}
+
+export function confirmMembership(sessionId: string): Promise<{ membership: ProMembership }> {
+  return pracFetch("/membership/confirm", { method: "POST", body: JSON.stringify({ sessionId }) });
+}
+
+/** DEV-ONLY: the server accepts a simulated activation only outside production. */
+export function confirmMembershipDevSimulate(): Promise<{ membership: ProMembership }> {
+  return pracFetch("/membership/confirm", { method: "POST", body: JSON.stringify({ devActivate: true }) });
+}
+
+export function startConsultSession(bookingId: string): Promise<{ session: ConsultSession }> {
+  return pracFetch(`/bookings/${encodeURIComponent(bookingId)}/session`, { method: "POST" });
+}
