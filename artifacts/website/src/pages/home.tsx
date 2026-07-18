@@ -8,6 +8,7 @@ import { CircuitHexBackground } from "@/components/CircuitHexBackground";
 import { TrustStrip } from "@/components/TrustStrip";
 import { VideoEmbed } from "@/components/VideoEmbed";
 import { VideoShowcase } from "@/components/VideoShowcase";
+import { ExchangeSection } from "@/components/ExchangeSection";
 import { 
   ArrowRight, ShieldCheck, FileText, Smartphone, 
   Stethoscope, Mail, Activity,
@@ -94,6 +95,7 @@ export default function Home() {
           <nav aria-label="Main navigation" className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#ecosystem" className="hover:text-primary transition-colors">Ecosystem</a>
             <a href="#companion" className="hover:text-primary transition-colors">HIVE Companion</a>
+            <a href="#exchange" className="hover:text-primary transition-colors">Data Exchange</a>
             <a href="#surgical-assistant" className="hover:text-primary transition-colors">Surgical Assistant</a>
             <a href="#enterprise" className="hover:text-primary transition-colors">For Hospitals &amp; GPs</a>
             <Link href="/book" className="hover:text-primary transition-colors">Book a Consultation</Link>
@@ -127,6 +129,7 @@ export default function Home() {
             <div className="container mx-auto px-6 py-4 flex flex-col gap-1 text-base font-medium">
               <a href="#ecosystem" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Ecosystem</a>
               <a href="#companion" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">HIVE Companion</a>
+              <a href="#exchange" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Data Exchange</a>
               <a href="#surgical-assistant" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Surgical Assistant</a>
               <a href="#enterprise" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">For Hospitals &amp; GPs</a>
               <Link href="/book" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">
@@ -477,6 +480,8 @@ export default function Home() {
           </div>
         </section>
 
+        <ExchangeSection />
+
         {/* Section 4.5: Video Showcase */}
         <section id="showcase" className="py-20 lg:py-28 relative">
           <div className="container mx-auto px-6">
@@ -755,6 +760,7 @@ export default function Home() {
                 <h3 className="font-semibold text-foreground mb-4">Ecosystem</h3>
                 <ul className="space-y-3 text-sm">
                   <li><a href="#companion" className="text-muted-foreground hover:text-primary transition-colors">HIVE Companion App</a></li>
+                  <li><a href="#exchange" className="text-muted-foreground hover:text-primary transition-colors">Encrypted Data Exchange</a></li>
                   <li><a href="#surgical-assistant" className="text-muted-foreground hover:text-primary transition-colors">Surgical Assistant</a></li>
                   <li><a href="#enterprise" className="text-muted-foreground hover:text-primary transition-colors">For Hospitals &amp; GP Practices</a></li>
                   <li><a href={`${import.meta.env.BASE_URL}portal`} className="text-muted-foreground hover:text-primary transition-colors">Emergency Portal</a></li>

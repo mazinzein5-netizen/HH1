@@ -150,6 +150,15 @@ export default function Landing() {
             </CardContent>
           </Card>
         </div>
+
+        <p className="text-center text-sm text-muted-foreground mt-10">
+          <ShieldCheck className="inline h-4 w-4 text-primary mr-1 -mt-0.5" />
+          Every portal access runs on the HIVE encrypted exchange — patient-consented,
+          relayed, never centrally stored.{" "}
+          <a href={`${import.meta.env.BASE_URL}#exchange`} className="text-primary underline underline-offset-4 hover:opacity-80">
+            How the exchange works
+          </a>
+        </p>
       </div>
     </PortalLayout>
   );
