@@ -22,7 +22,16 @@ export function VideoEmbed({
   const ref = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fadeFrame = useRef<number | null>(null);
+  // Pre-mount the live preview shortly before it scrolls into view so it
+  // feels instant, without loading every video up-front on page load.
+  const nearView = useInView(ref, { once: true, margin: "600px 0px" });
+  // Attention gate: the embed stays live only while it is near the viewport;
+  // scrolled far away it unmounts (and its animation stops consuming work).
+  const activeView = useInView(ref, { margin: "300px 0px" });
   const inView = useInView(ref, { once: true, amount: 0.25 });
+  const [tabVisible, setTabVisible] = useState(
+    typeof document === "undefined" ? true : !document.hidden
+  );
   const reducedMotion = useReducedMotion();
   const [revealed, setRevealed] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -98,6 +107,13 @@ export function VideoEmbed({
   useEffect(() => {
     if (inView) setRevealed(true);
   }, [inView]);
+
+  // Pause the embed when the tab loses focus (unmounts the iframe).
+  useEffect(() => {
+    const onVisibility = () => setTabVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
   // While expanded: Escape closes; scrolling away minimizes and silences.
   useEffect(() => {
@@ -242,22 +258,24 @@ export function VideoEmbed({
             </div>
           )}
 
-          {/* Video preview (silent) — mounted immediately so it is already
-              loaded and playing by the time the section scrolls into view. */}
+          {/* Video preview (silent) — mounted just before the section scrolls
+              into view so it starts seamlessly without heavy up-front loading. */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: revealed ? 1 : 0 }}
             transition={{ duration: reducedMotion ? 0.3 : 1, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-0"
           >
-            <iframe
-              src={src}
-              title={title}
-              className="w-full h-full border-0 pointer-events-none"
-              loading="eager"
-              tabIndex={-1}
-              scrolling="no"
-            />
+            {nearView && activeView && tabVisible && (
+              <iframe
+                src={src}
+                title={title}
+                className="w-full h-full border-0 pointer-events-none"
+                loading="lazy"
+                tabIndex={-1}
+                scrolling="no"
+              />
+            )}
           </motion.div>
 
           {/* Inline sound control while highlighted */}

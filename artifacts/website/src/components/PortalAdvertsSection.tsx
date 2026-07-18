@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HiveMark } from "@/components/HiveMark";
 
 const SMOOTH_EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -33,6 +34,11 @@ const PORTALS = [
     accentBg: "bg-primary/10 border-primary/25",
     badge: "For doctors",
     title: "GP & HIVE HUB",
+    titleNode: (
+      <>
+        GP &amp; <HiveMark /> HUB
+      </>
+    ),
     desc: "The doctors' workspace — GPs, hospital doctors and clinic specialists managing their HIVE patients.",
     points: [
       { icon: FolderHeart, text: "Patient files with questionnaires, notes & attachments" },
@@ -126,7 +132,9 @@ export function PortalAdvertsSection() {
               <div className="text-xs font-bold tracking-widest uppercase text-muted-foreground mb-2">
                 {p.badge}
               </div>
-              <h3 className="text-2xl font-bold text-foreground mb-3">{p.title}</h3>
+              <h3 className="text-2xl font-bold text-foreground mb-3">
+                {"titleNode" in p ? p.titleNode : p.title}
+              </h3>
               <p className="text-muted-foreground text-sm leading-relaxed mb-5">{p.desc}</p>
               <ul className="space-y-2.5 mb-8">
                 {p.points.map((pt) => (

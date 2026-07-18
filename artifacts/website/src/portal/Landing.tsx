@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { setSession, startDemoSession, type ApiError } from "./lib/store";
 import { Stethoscope, HeartHandshake, Siren, ArrowRight, ShieldCheck } from "lucide-react";
+import { HiveMark } from "@/components/HiveMark";
 
 const DEMO_SHARE_CODE = "HES-DEMO-2026";
 
@@ -45,7 +46,7 @@ export default function Landing() {
             For life-saving, last-minute situations
           </div>
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-5">
-            HIVE <span className="hive-gradient-text">Emergency Portal</span>
+            <HiveMark /> <span className="hive-gradient-text">Emergency Portal</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             A secure gateway for healthcare workers and caretakers to reach a
@@ -97,7 +98,7 @@ export default function Landing() {
               <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center mb-3">
                 <Stethoscope className="h-7 w-7 text-primary" />
               </div>
-              <CardTitle className="text-2xl">GP &amp; HIVE HUB</CardTitle>
+              <CardTitle className="text-2xl">GP &amp; <HiveMark /> HUB</CardTitle>
               <CardDescription className="text-base">
                 Doctors only — GPs, hospital doctors and outpatient clinic
                 specialists.

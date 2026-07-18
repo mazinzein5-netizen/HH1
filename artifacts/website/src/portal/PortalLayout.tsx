@@ -13,6 +13,7 @@ import {
   type AccountStatus,
 } from "./lib/store";
 import { LogOut, ShieldAlert } from "lucide-react";
+import { HiveMark } from "@/components/HiveMark";
 
 function statusBadgeVariant(status: AccountStatus): {
   className: string;
@@ -78,7 +79,7 @@ export function PortalLayout({ children }: { children: ReactNode }) {
           >
             <HiveLogo size={30} />
             <span className="font-semibold tracking-tight leading-tight">
-              HIVE <span className="text-primary">Emergency Portal</span>
+              <HiveMark /> <span className="text-primary">Emergency Portal</span>
             </span>
           </Link>
 

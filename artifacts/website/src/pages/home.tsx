@@ -11,6 +11,8 @@ import { VideoEmbed } from "@/components/VideoEmbed";
 import { VideoShowcase } from "@/components/VideoShowcase";
 import { ExchangeSection } from "@/components/ExchangeSection";
 import { PortalAdvertsSection } from "@/components/PortalAdvertsSection";
+import { HiveMark } from "@/components/HiveMark";
+import { AttentionVideo } from "@/components/AttentionVideo";
 import { 
   ArrowRight, ShieldCheck, FileText, Smartphone, 
   Stethoscope, Mail, Activity,
@@ -39,7 +41,22 @@ const staggerContainer = {
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
+
+  // Live Android release version for the download section title
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/app/latest")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.version) setAppVersion(String(data.version));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Gentle parallax: hero content drifts up slightly slower than the scroll
   const heroRef = useRef<HTMLElement>(null);
@@ -99,7 +116,7 @@ export default function Home() {
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <HiveLogo size={32} />
-            <span className="font-semibold text-lg tracking-tight text-foreground">HEALTH HIVE</span>
+            <span className="font-semibold text-lg tracking-tight text-foreground">HEALTH <HiveMark /></span>
           </div>
           <nav aria-label="Main navigation" className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#ecosystem" className="hover:text-primary transition-colors">Ecosystem</a>
@@ -171,14 +188,14 @@ export default function Home() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-primary text-xs font-bold tracking-[0.2em] uppercase mb-8 shadow-[0_0_15px_rgba(245,197,24,0.1)]"
             >
               <HiveLogo size={16} />
-              HEALTH HIVE ECOSYSTEM
+              HEALTH <HiveMark /> ECOSYSTEM
             </motion.div>
             
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.1, ease: SMOOTH_EASE }}
-              className="text-[clamp(2.5rem,7vw,6.5rem)] font-bold tracking-tight mb-8 leading-[1.05] text-balance text-foreground drop-shadow-sm"
+              className="text-[clamp(2.1rem,7vw,6.5rem)] font-bold tracking-tight mb-8 leading-[1.08] text-balance text-foreground drop-shadow-sm"
             >
               Gold Standard Privacy. <br />
               <span className="hive-gradient-text drop-shadow-sm">A focused, efficient digital solution.</span>
@@ -188,7 +205,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.22, ease: SMOOTH_EASE }}
-              className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light glass-panel px-6 py-4 rounded-3xl"
+              className="text-base sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light glass-panel px-5 sm:px-6 py-4 rounded-3xl"
             >
               An intricate health documentation ecosystem. Long specialist waiting lists &amp; health systems under pressure can benefit from this digital health solution platform. HIVE Health is smart, safe, efficient and a cost effective augmentation available to all parties.
             </motion.p>
@@ -216,10 +233,10 @@ export default function Home() {
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, margin: "-100px" }}
-              className="grid md:grid-cols-2 gap-16 items-center glass-panel-heavy p-8 md:p-16 rounded-[3rem]"
+              className="grid md:grid-cols-2 gap-10 md:gap-16 items-center glass-panel-heavy p-6 sm:p-8 md:p-16 rounded-[2rem] md:rounded-[3rem]"
             >
               <motion.div variants={fadeInUp}>
-                <div className="text-primary font-bold tracking-widest uppercase mb-4 text-[14px]">One Unified HIVE HUB</div>
+                <div className="text-primary font-bold tracking-widest uppercase mb-4 text-[14px]">One Unified <HiveMark /> HUB</div>
                 <h2 className="text-[clamp(1.9rem,3.6vw,3rem)] font-bold mb-6 leading-tight text-balance text-foreground">Clinicians receive streamlined and comprehensive data.</h2>
                 <div className="mb-6">
                   <VideoEmbed
@@ -253,7 +270,7 @@ export default function Home() {
                 </div>
               </motion.div>
               
-              <motion.div variants={fadeInUp} className="relative h-[600px] rounded-[2.5rem] glass-panel overflow-hidden flex items-center justify-center">
+              <motion.div variants={fadeInUp} className="relative h-[420px] md:h-[600px] rounded-[2rem] md:rounded-[2.5rem] glass-panel overflow-hidden flex items-center justify-center">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent"></div>
                 <div className="relative grid grid-cols-1 md:grid-cols-2 gap-6 p-8 w-full max-w-lg">
                   
@@ -307,8 +324,8 @@ export default function Home() {
                 <Smartphone className="h-3 w-3 text-primary" />
                 Mobile App
               </div>
-              <h2 className="text-[clamp(2.2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground text-balance">HIVE Companion</h2>
-              <p className="text-xl md:text-2xl text-muted-foreground font-light glass-panel px-6 py-3 rounded-2xl inline-block">
+              <h2 className="text-[clamp(2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground text-balance"><HiveMark /> Companion</h2>
+              <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground font-light glass-panel px-5 sm:px-6 py-3 rounded-2xl inline-block">
                 A steady hand on your shoulder. Your health story, already organised.
               </p>
             </motion.div>
@@ -321,22 +338,13 @@ export default function Home() {
               transition={{ duration: 0.9, ease: SMOOTH_EASE }}
               className="relative max-w-5xl mx-auto mb-16"
             >
-              <div className="relative aspect-video overflow-hidden rounded-[2rem] glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)] bg-[#07070f]">
-                <video
+              <div className="relative aspect-video overflow-hidden rounded-2xl sm:rounded-[2rem] glass-panel-heavy border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.25)] bg-[#07070f]">
+                <AttentionVideo
                   className="h-full w-full object-cover"
                   src={`${import.meta.env.BASE_URL}videos/hive-companion-promo.mp4`}
                   poster={`${import.meta.env.BASE_URL}videos/hive-companion-promo-poster.jpg`}
-                  controls
-                  preload="metadata"
-                  playsInline
-                  aria-label="HIVE Companion promo video"
-                >
-                  Your browser does not support the video tag. You can{" "}
-                  <a href={`${import.meta.env.BASE_URL}videos/hive-companion-promo.mp4`}>
-                    download the promo video
-                  </a>{" "}
-                  instead.
-                </video>
+                  title="HIVE Companion promo video"
+                />
               </div>
             </motion.div>
 
@@ -468,15 +476,19 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-panel text-foreground mb-8 shadow-2xl">
                   <Shield className="h-10 w-10 text-primary" />
                 </div>
-                <h2 className="text-[clamp(2.2rem,4.5vw,3.75rem)] font-bold mb-8 tracking-tight text-foreground text-balance">Gold Standards in documentation and advanced privacy features</h2>
+                <h2 className="text-[clamp(2rem,4.5vw,3.75rem)] font-bold mb-8 tracking-tight text-foreground text-balance">Gold Standards in documentation and advanced privacy features</h2>
                 <p className="text-xl md:text-2xl font-light mb-12 text-foreground/80 leading-relaxed max-w-3xl mx-auto">
                   ALL personal data stays on your device — nothing is uploaded to a server. No tracking, no ads. You can "Delete all my data" at any time.
                 </p>
                 
+                <h3 className="text-lg md:text-xl font-bold text-foreground mb-6" data-testid="text-download-title">
+                  Get <HiveMark /> Companion{appVersion ? ` — Android v${appVersion}` : " for Android"}
+                </h3>
+
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
                   <Button asChild size="lg" className="w-full sm:w-auto h-auto min-h-14 whitespace-normal px-6 sm:px-8 font-semibold">
                     <a href="/api/app/download/android" data-testid="button-download-android">
-                      Download for Android (APK)
+                      Download for Android (APK){appVersion ? ` · v${appVersion}` : ""}
                     </a>
                   </Button>
                   <Button variant="secondary" size="lg" disabled aria-disabled="true" className="w-full sm:w-auto glass-panel h-auto min-h-14 whitespace-normal px-6 sm:px-8 text-foreground">
@@ -513,7 +525,7 @@ export default function Home() {
                 <Video className="h-3 w-3 text-primary" />
                 Watch
               </div>
-              <h2 className="text-[clamp(2.2rem,4.5vw,3.75rem)] font-bold mb-4 text-foreground text-balance">See the HIVE in action</h2>
+              <h2 className="text-[clamp(2rem,4.5vw,3.75rem)] font-bold mb-4 text-foreground text-balance">See the <HiveMark /> in action</h2>
               <p className="text-lg md:text-xl text-muted-foreground font-light">
                 A short film for patients and families. Select the video to expand and play.
               </p>
@@ -580,7 +592,7 @@ export default function Home() {
                   <Activity className="h-3 w-3 text-primary" />
                   Web App
                 </div>
-                <h2 className="text-[clamp(2.2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground leading-tight text-balance">HIVE Hospital Surgical Assistant</h2>
+                <h2 className="text-[clamp(2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground leading-tight text-balance"><HiveMark /> Hospital Surgical Assistant</h2>
                 <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light">
                   HIVE Hospital digitises the patient file into a member-accessed platform — organising patient flow and flagging safety risks with advanced algorithmic workflows, supported by robust evidence. Advanced AI risk oversight coming soon.
                 </p>
@@ -764,7 +776,7 @@ export default function Home() {
               <div className="col-span-1 md:col-span-2">
                 <div className="flex items-center gap-3 mb-6">
                   <HiveLogo size={32} />
-                  <span className="font-semibold text-xl tracking-tight text-foreground">HEALTH HIVE</span>
+                  <span className="font-semibold text-xl tracking-tight text-foreground">HEALTH <HiveMark /></span>
                 </div>
                 <p className="text-muted-foreground mb-6 max-w-sm">
                   Connecting the healthcare experience for patients and clinicians with precision, privacy, and clinical alignment.
