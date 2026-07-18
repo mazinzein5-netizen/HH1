@@ -10,6 +10,7 @@ import {
   complete2faWithPasskey,
   isWebAuthnAvailable,
   loginPassword,
+  registerPasskeyServer,
   setSession,
   type ApiError,
 } from "./lib/store";
@@ -36,7 +37,19 @@ export default function Login() {
     setError(null);
     setBusy(true);
     try {
-      const { loginToken: token } = await loginPassword(email.trim(), password);
+      const { loginToken: token, needsPasskeySetup, webauthnToken } = await loginPassword(
+        email.trim(),
+        password,
+      );
+      // Founder superuser one-time setup: enrol a passkey before the 2FA step
+      // (the account is seeded server-side and has no signup passkey).
+      if (needsPasskeySetup && webauthnToken && isWebAuthnAvailable()) {
+        try {
+          await registerPasskeyServer(webauthnToken);
+        } catch {
+          // Enrolment cancelled/failed — 2FA will surface the missing passkey.
+        }
+      }
       setLoginToken(token);
       setStep("biometric");
     } catch (err) {

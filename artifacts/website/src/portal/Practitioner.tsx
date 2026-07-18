@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   addPracSlot,
+  adminListAccounts,
+  type AdminAccount,
   confirmMembership,
   confirmMembershipDevSimulate,
   createPracPatient,
@@ -40,6 +42,7 @@ import {
   MicOff,
   PhoneOff,
   Plus,
+  ShieldCheck,
   Stethoscope,
   Trash2,
   UserPlus,
@@ -85,8 +88,17 @@ export default function Practitioner() {
   const [slotKind, setSlotKind] = useState<AvailabilitySlot["kind"]>("video");
 
   const isPractitioner = !!account && account.accountType === "healthcare";
-  const doctor = isPractitioner && isDoctorRole(account?.role);
+  const superuser = !!account?.superuser;
+  const doctor = isPractitioner && (isDoctorRole(account?.role) || superuser);
   const isMember = membership?.active === true;
+
+  const [adminAccounts, setAdminAccounts] = useState<AdminAccount[] | null>(null);
+  useEffect(() => {
+    if (!allowed || !superuser) return;
+    adminListAccounts()
+      .then((r) => setAdminAccounts(r.accounts))
+      .catch(() => setAdminAccounts([]));
+  }, [allowed, superuser]);
 
   const refresh = useCallback(async () => {
     try {
@@ -295,6 +307,11 @@ export default function Practitioner() {
             <Stethoscope className="h-7 w-7 text-primary" /> Practitioner Portal
           </h1>
           <div className="flex items-center gap-2">
+            {superuser && (
+              <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40 gap-1">
+                <ShieldCheck className="h-3 w-3" /> SUPERUSER
+              </Badge>
+            )}
             {isMember && (
               <Badge className="bg-primary/20 text-primary border border-primary/40 gap-1">
                 <Crown className="h-3 w-3" /> MEMBER
@@ -322,6 +339,53 @@ export default function Practitioner() {
           <div className="rounded-lg border border-primary/40 bg-primary/10 text-primary px-4 py-3 mb-6 text-sm">
             {notice}
           </div>
+        )}
+
+        {/* Founder superuser — read/test overview of every registered account */}
+        {superuser && (
+          <Card className="mb-8 border-amber-500/30 bg-card/60 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-amber-400" /> Founder overview
+              </CardTitle>
+              <CardDescription>
+                Read-only view of every registered portal account. Accounts are held
+                in server memory for the pilot, so this list resets on a server restart.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {adminAccounts === null ? (
+                <p className="text-sm text-muted-foreground">Loading accounts…</p>
+              ) : adminAccounts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No registered accounts yet.</p>
+              ) : (
+                <div className="grid gap-2">
+                  {adminAccounts.map((a) => (
+                    <div
+                      key={a.id}
+                      className="rounded-xl border border-border bg-background/40 p-3.5 flex flex-wrap items-center gap-x-4 gap-y-1"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-sm flex items-center gap-2">
+                          {a.fullName}
+                          {a.superuser && (
+                            <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px]">FOUNDER</Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {a.email} · {a.accountType === "healthcare" ? a.role ?? "Healthcare" : "Caretaker"} · {a.status}
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground text-right">
+                        <div>{a.patients} patient file{a.patients === 1 ? "" : "s"}</div>
+                        <div>{a.membershipActive ? "Member" : "Free hub"}{a.hasPasskey ? " · passkey" : ""}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* My HIVE Patients — doctors only, part of the light hub */}

@@ -24,6 +24,8 @@ export interface PublicAccount {
   role?: HealthcareRole | string;
   mode: VerificationMode;
   status: AccountStatus;
+  /** Founder superuser — full read/test access across the portal. */
+  superuser?: boolean;
 }
 
 /** On-device profile / verification images. Never leaves this device. */
@@ -163,7 +165,14 @@ export async function registerAccount(
 export async function loginPassword(
   email: string,
   password: string,
-): Promise<{ loginToken: string; requiresSecondFactor: boolean; hasPasskey: boolean }> {
+): Promise<{
+  loginToken: string;
+  requiresSecondFactor: boolean;
+  hasPasskey: boolean;
+  /** Superuser first login: one-time token to enrol a passkey before 2FA. */
+  needsPasskeySetup?: boolean;
+  webauthnToken?: string;
+}> {
   const res = await fetch(`${API_BASE}/portal/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -174,6 +183,8 @@ export async function loginPassword(
     loginToken: string;
     requiresSecondFactor: boolean;
     hasPasskey: boolean;
+    needsPasskeySetup?: boolean;
+    webauthnToken?: string;
   };
 }
 
@@ -310,6 +321,50 @@ export const DOCTOR_ROLES: readonly string[] = [
 
 export function isDoctorRole(role?: string): boolean {
   return !!role && DOCTOR_ROLES.includes(role);
+}
+
+// ── Founder superuser admin API (read/test capacity) ────────────────────────
+
+export interface AdminAccount {
+  id: string;
+  fullName: string;
+  workplace: string;
+  email: string;
+  accountType: AccountType;
+  role: string | null;
+  mode: VerificationMode;
+  status: AccountStatus;
+  hasPasskey: boolean;
+  superuser: boolean;
+  createdAt: number;
+  patients: number;
+  membershipActive: boolean;
+}
+
+export async function adminListAccounts(): Promise<{ accounts: AdminAccount[] }> {
+  const res = await fetch(`${API_BASE}/portal/admin/accounts`, {
+    headers: { "Content-Type": "application/json", ...authHeader() },
+  });
+  if (!res.ok) throw await parseError(res);
+  return (await res.json()) as { accounts: AdminAccount[] };
+}
+
+export interface AdminStoreView {
+  account: AdminAccount;
+  store: {
+    patients: PracPatientFile[];
+    settings: PracSettings;
+    bookings: PracBooking[];
+    membership: ProMembership;
+  } | null;
+}
+
+export async function adminGetAccountStore(accountId: string): Promise<AdminStoreView> {
+  const res = await fetch(`${API_BASE}/portal/admin/accounts/${accountId}/store`, {
+    headers: { "Content-Type": "application/json", ...authHeader() },
+  });
+  if (!res.ok) throw await parseError(res);
+  return (await res.json()) as AdminStoreView;
 }
 
 export interface PracPatientSummary {

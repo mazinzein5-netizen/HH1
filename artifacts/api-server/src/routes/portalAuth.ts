@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
@@ -52,6 +52,8 @@ interface PortalAccount {
   createdAt: number;
   /** WebAuthn credential registered at signup (verified server-side). */
   credential?: WebAuthnCredential;
+  /** Founder superuser — seeded from environment secrets, never registerable. */
+  superuser?: boolean;
 }
 
 interface PortalSession {
@@ -98,7 +100,48 @@ function publicAccount(a: PortalAccount) {
     mode: a.mode,
     status: a.status,
     hasPasskey: !!a.credential,
+    superuser: !!a.superuser,
   };
+}
+
+/**
+ * Seed (or refresh) the founder superuser account from environment secrets.
+ * The credential is NEVER hardcoded: both the email and the password come
+ * from SUPERUSER_EMAIL / SUPERUSER_PASSWORD, delivered privately as secrets.
+ * The account is re-seeded lazily on login so a rotated secret takes effect
+ * immediately and the account survives in-memory restarts.
+ */
+function ensureSuperuserAccount(): void {
+  const email = process.env.SUPERUSER_EMAIL?.trim().toLowerCase();
+  const password = process.env.SUPERUSER_PASSWORD;
+  if (!email || !password || password.length < 12) return;
+  const existing = accounts.get(email);
+  const salt = existing?.salt ?? randomBytes(16).toString("hex");
+  const hash = hashPassword(password, salt);
+  if (existing) {
+    // Never let a regular signup claim the superuser email.
+    existing.superuser = true;
+    existing.salt = salt;
+    existing.hash = hash;
+    existing.mode = "full";
+    existing.status = "verified";
+    return;
+  }
+  accounts.set(email, {
+    id: randomBytes(12).toString("hex"),
+    fullName: "HIVE Founder",
+    workplace: "Health HIVE",
+    email,
+    salt,
+    hash,
+    accountType: "healthcare",
+    role: "GP",
+    mode: "full",
+    status: "verified",
+    createdAt: Date.now(),
+    superuser: true,
+  });
+  logger.info("Superuser account seeded from environment secrets");
 }
 
 /** Derive the WebAuthn relying-party ID + origin from the request. */
@@ -142,6 +185,11 @@ router.post("/portal/register", (req, res) => {
     return;
   }
   const key = email.trim().toLowerCase();
+  if (key === process.env.SUPERUSER_EMAIL?.trim().toLowerCase()) {
+    // The founder credential is seeded from secrets — never via signup.
+    res.status(409).json({ error: "An account with this email already exists." });
+    return;
+  }
   if (accounts.has(key)) {
     res.status(409).json({ error: "An account with this email already exists." });
     return;
@@ -240,6 +288,7 @@ router.post("/portal/webauthn/register-verify", async (req, res) => {
  */
 router.post("/portal/login", (req, res) => {
   sweep();
+  ensureSuperuserAccount();
   const { email, password } = req.body as Record<string, unknown>;
   if (typeof email !== "string" || typeof password !== "string") {
     res.status(400).json({ error: "email and password are required." });
@@ -253,7 +302,23 @@ router.post("/portal/login", (req, res) => {
   }
   const loginToken = randomBytes(24).toString("hex");
   loginTokens.set(loginToken, { accountId: account.id, expiresAt: Date.now() + LOGIN_TOKEN_TTL_MS });
-  res.json({ loginToken, requiresSecondFactor: true, hasPasskey: !!account.credential });
+  // Superuser first login (or after a restart of the in-memory account store):
+  // no passkey exists yet, so issue a one-time registration token. Biometric
+  // 2FA remains mandatory — this only lets the founder enrol the passkey.
+  let webauthnToken: string | undefined;
+  if (account.superuser && !account.credential) {
+    webauthnToken = randomBytes(24).toString("hex");
+    registrationChallenges.set(webauthnToken, {
+      accountId: account.id,
+      expiresAt: Date.now() + 10 * 60_000,
+    });
+  }
+  res.json({
+    loginToken,
+    requiresSecondFactor: true,
+    hasPasskey: !!account.credential,
+    ...(webauthnToken ? { needsPasskeySetup: true, webauthnToken } : {}),
+  });
 });
 
 /**
@@ -389,6 +454,8 @@ export interface PortalSessionInfo {
   role: string | null;
   /** Normalised (lowercase) account email — stable across restarts. */
   email: string | null;
+  /** Founder superuser — passes every role/membership gate (read/test capacity). */
+  superuser: boolean;
 }
 
 /** Normalised email for an account id (stable identity across restarts). */
@@ -409,8 +476,70 @@ export function getPortalSession(req: Request): PortalSessionInfo | null {
     accountType: account?.accountType ?? null,
     role: account?.role ?? null,
     email: account?.email ?? null,
+    superuser: !!account?.superuser,
   };
 }
+
+/** True when the account id belongs to the founder superuser. */
+export function isSuperuserAccount(accountId: string): boolean {
+  return !!accountById(accountId)?.superuser;
+}
+
+/** Admin-only listing of every registered portal account (read capacity). */
+export interface AdminAccountEntry {
+  id: string;
+  fullName: string;
+  workplace: string;
+  email: string;
+  accountType: "healthcare" | "caretaker";
+  role: string | null;
+  mode: "demo" | "full";
+  status: string;
+  hasPasskey: boolean;
+  superuser: boolean;
+  createdAt: number;
+}
+
+export function listPortalAccountsAdmin(): AdminAccountEntry[] {
+  return [...accounts.values()]
+    .map((a) => ({
+      id: a.id,
+      fullName: a.fullName,
+      workplace: a.workplace,
+      email: a.email,
+      accountType: a.accountType,
+      role: a.role ?? null,
+      mode: a.mode,
+      status: a.status,
+      hasPasskey: !!a.credential,
+      superuser: !!a.superuser,
+      createdAt: a.createdAt,
+    }))
+    .sort((x, y) => y.createdAt - x.createdAt);
+}
+
+/**
+ * POST /app/superuser/unlock — server-validated founder unlock for the
+ * mobile app. Body: { code }. The code is the SUPERUSER_PASSWORD secret;
+ * nothing is hardcoded client-side and no client boolean grants access
+ * without this round-trip.
+ */
+router.post("/app/superuser/unlock", (req, res) => {
+  const secret = process.env.SUPERUSER_PASSWORD;
+  const { code } = req.body as Record<string, unknown>;
+  if (!secret || secret.length < 12 || typeof code !== "string") {
+    res.status(401).json({ error: "INVALID_CODE" });
+    return;
+  }
+  const a = createHash("sha256").update(code).digest();
+  const b = createHash("sha256").update(secret).digest();
+  if (!timingSafeEqual(a, b)) {
+    res.status(401).json({ error: "INVALID_CODE" });
+    return;
+  }
+  logger.info("Mobile superuser unlock granted");
+  res.json({ ok: true, grants: { pilotMode: true, tier: "red", allTiers: true } });
+});
 
 /** Minimal public directory info for a healthcare account (patient-facing booking). */
 export interface PractitionerDirectoryEntry {

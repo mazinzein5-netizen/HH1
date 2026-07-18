@@ -1,7 +1,12 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { createHash, randomBytes } from "crypto";
 import { db, practitionerStoresTable } from "@workspace/db";
-import { requirePortalSession, portalAccountEmail, type PortalSessionInfo } from "./portalAuth";
+import {
+  requirePortalSession,
+  portalAccountEmail,
+  listPortalAccountsAdmin,
+  type PortalSessionInfo,
+} from "./portalAuth";
 import { getUncachableStripeClient } from "../stripeClient";
 import { logger } from "../lib/logger";
 
@@ -48,6 +53,11 @@ async function requireMembership(req: Request, res: Response, next: NextFunction
   const store = getStore(req, res);
   if (!store) return;
   const session = sessionOf(req);
+  if (session.superuser) {
+    // Founder superuser has every membership feature in read/test capacity.
+    next();
+    return;
+  }
   if (session.accountId) await reconcileMembership(store, session.accountId);
   if (!membershipOf(store).active) {
     res.status(403).json({
@@ -452,6 +462,58 @@ function getStore(req: Request, res: Response): PracStore | null {
 const str = (v: unknown, max = 200): string =>
   typeof v === "string" ? v.trim().slice(0, max) : "";
 
+// ── Founder superuser admin (read/test capacity) ────────────────────────────
+
+/** Requires the founder superuser session (seeded from environment secrets). */
+function requireSuperuser(req: Request, res: Response, next: NextFunction): void {
+  if (!sessionOf(req).superuser) {
+    res.status(403).json({ error: "SUPERUSER_REQUIRED", message: "Founder access only." });
+    return;
+  }
+  next();
+}
+
+/** GET /portal/admin/accounts — every registered portal account. */
+router.get("/portal/admin/accounts", requirePortalSession, requireSuperuser, (_req, res) => {
+  const accounts = listPortalAccountsAdmin();
+  res.json({
+    accounts: accounts.map((a) => ({
+      ...a,
+      patients: stores.get(accountKeyForEmail(a.email))?.patients.length ?? 0,
+      membershipActive: membershipOf(
+        stores.get(accountKeyForEmail(a.email)) ?? { patients: [], settings: { bookingEnabled: false, videoConsultations: false, audioConsultations: false, slots: [] }, bookings: [] },
+      ).active,
+    })),
+  });
+});
+
+/**
+ * GET /portal/admin/accounts/:id/store — read-only view of a practitioner's
+ * workspace (patient files, bookings, settings, membership). Founder only.
+ */
+router.get("/portal/admin/accounts/:id/store", requirePortalSession, requireSuperuser, (req, res) => {
+  const entry = listPortalAccountsAdmin().find((a) => a.id === req.params.id);
+  if (!entry) {
+    res.status(404).json({ error: "Account not found." });
+    return;
+  }
+  const store = stores.get(accountKeyForEmail(entry.email));
+  if (!store) {
+    res.json({ account: entry, store: null });
+    return;
+  }
+  const m = membershipOf(store);
+  res.json({
+    account: entry,
+    store: {
+      patients: store.patients,
+      settings: store.settings,
+      bookings: store.bookings,
+      membership: { active: m.active, billing: m.billing, activatedAt: m.activatedAt },
+    },
+  });
+});
+
 // ── Patients ────────────────────────────────────────────────────────────────
 
 router.get("/portal/practitioner/patients", requirePortalSession, requirePractitioner, requireDoctor, (req, res) => {
@@ -703,6 +765,11 @@ router.get("/portal/practitioner/membership", requirePortalSession, requirePract
   const store = getStore(req, res);
   if (!store) return;
   const session = sessionOf(req);
+  if (session.superuser) {
+    // Founder superuser: all membership features unlocked, no billing record.
+    res.json({ membership: { active: true, billing: null, activatedAt: null, superuser: true } });
+    return;
+  }
   if (session.accountId) await reconcileMembership(store, session.accountId);
   const m = membershipOf(store);
   res.json({ membership: { active: m.active, billing: m.billing, activatedAt: m.activatedAt } });

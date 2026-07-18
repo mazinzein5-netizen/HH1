@@ -71,6 +71,14 @@ type UsageMap = Partial<Record<MeteredFeature, number>>;
  * HIVE node, online or through the insurer.
  */
 export async function getPlanTier(userId: string): Promise<PlanTier> {
+  // Founder superuser (server-validated unlock) gets the top card's benefits,
+  // which include everything in the Gold and Blue cards.
+  try {
+    const superuser = await AsyncStorage.getItem("@hive_superuser_v1");
+    if (superuser === "true") return "red";
+  } catch {
+    /* fall through to the normal membership lookup */
+  }
   const membership = await getMembership(userId);
   return membership ? membership.plan : "blue";
 }

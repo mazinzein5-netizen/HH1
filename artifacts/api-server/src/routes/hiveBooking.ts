@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import {
+  isSuperuserAccount,
   listHealthcarePractitioners,
   practitionerDirectoryEntry,
 } from "./portalAuth";
@@ -22,6 +23,8 @@ import {
  * practitioner out of patient booking within the re-verification window.
  */
 async function acceptingBookings(store: PracStore, accountId: string): Promise<boolean> {
+  // Founder superuser can test the booking flow without a paid membership.
+  if (isSuperuserAccount(accountId)) return store.settings.bookingEnabled;
   await reconcileMembership(store, accountId);
   return membershipOf(store).active && store.settings.bookingEnabled;
 }
