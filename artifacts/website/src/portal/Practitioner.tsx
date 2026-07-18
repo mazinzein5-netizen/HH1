@@ -13,6 +13,7 @@ import {
   type AdminAccount,
   type AdminStoreView,
   createPracPatient,
+  isDoctorRole,
   isSupportiveRole,
   listLiveMedShares,
   type LiveMedShare,
@@ -65,9 +66,13 @@ export default function Practitioner() {
 
   const isPractitioner = !!account && account.accountType === "healthcare";
   const superuser = !!account?.superuser;
-  // Unknown/legacy roles are treated as doctors (previous behaviour) so
-  // existing accounts keep working; server-side gates remain authoritative.
-  const doctor = isPractitioner && (superuser || !isSupportiveRole(account?.role));
+  // Page access: unknown/legacy roles stay in the HUB (previous behaviour)
+  // so existing accounts keep working; only known supportive roles re-route.
+  const inHub = isPractitioner && (superuser || !isSupportiveRole(account?.role));
+  // Doctor-only sections (patient files, live medications) mirror the
+  // server's DOCTOR_ROLES gate exactly, so the UI never offers tools the
+  // API would reject with a 403.
+  const doctor = isPractitioner && (superuser || isDoctorRole(account?.role));
 
   // Live medication shares (consent-based, live from patient devices)
   const [liveShares, setLiveShares] = useState<LiveMedShare[] | null>(null);
@@ -176,7 +181,7 @@ export default function Practitioner() {
     );
   }
 
-  if (!doctor) {
+  if (!inHub) {
     // Supportive-care professionals have their own dedicated portal.
     return (
       <PortalLayout>
@@ -318,6 +323,7 @@ export default function Practitioner() {
         )}
 
         {/* My HIVE Patients — doctors only, part of the light hub */}
+        {doctor && (
         <Card className="mb-8 border-primary/25 bg-card/60 backdrop-blur">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
@@ -415,8 +421,10 @@ export default function Practitioner() {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Live medications — consent-based, live from patient devices */}
+        {doctor && (
         <Card className="mb-8 border-primary/25 bg-card/60 backdrop-blur">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -488,6 +496,7 @@ export default function Practitioner() {
             )}
           </CardContent>
         </Card>
+        )}
 
         <MembershipWorkspace onMembershipChange={setIsMember} />
       </div>
