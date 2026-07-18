@@ -65,6 +65,82 @@ interface MedGrant {
 
 const grants = new Map<string, MedGrant>();
 
+/* ── GDPR consent audit trail.
+ * Consent accountability (who granted what, to whom, when, and how it ended)
+ * must OUTLIVE the grant itself: revocation purges the medication snapshot
+ * and the key, but the audit record of the consent event is retained.
+ * The audit holds consent metadata only — never medication data. ── */
+interface ConsentAuditRecord {
+  grantId: string;
+  providerKey: string;
+  providerName: string;
+  providerRole: string;
+  patientName: string;
+  scope: "medications";
+  wording: string;
+  grantedAt: string;
+  expiresAt: string;
+  /** Set when consent ends; the snapshot is purged at the same moment. */
+  endedAt: string | null;
+  endReason: "revoked_by_patient" | "expired" | null;
+}
+const MAX_AUDIT_RECORDS = 5000;
+const consentAudit: ConsentAuditRecord[] = [];
+
+function closeAuditRecord(grantId: string, reason: "revoked_by_patient" | "expired") {
+  const rec = consentAudit.find((r) => r.grantId === grantId && !r.endedAt);
+  if (rec) {
+    rec.endedAt = new Date().toISOString();
+    rec.endReason = reason;
+  }
+}
+
+/** Normalise a patient display name for matching shares to patient files. */
+function normName(name: string): string {
+  return name.toLowerCase().replace(/\(demo\)/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+export interface LiveMedShareForFile {
+  grantId: string;
+  patientName: string;
+  grantedAt: string;
+  expiresAt: string;
+  updatedAt: string | null;
+  payload: unknown;
+}
+
+/**
+ * Live medication share for a specific patient file, matched on the
+ * provider's account key AND the patient's display name. Used by the
+ * practitioner patient-file endpoint so live meds appear in the file itself.
+ */
+export function liveMedShareForPatient(providerKey: string, patientFullName: string): LiveMedShareForFile | null {
+  sweepGrants();
+  const target = normName(patientFullName);
+  if (!target) return null;
+  for (const g of grants.values()) {
+    if (g.providerKey !== providerKey || normName(g.patientName) !== target) continue;
+    let payload: unknown = null;
+    if (g.blob) {
+      try {
+        payload = decryptBlob(g.keyHex, g.blob.iv, g.blob.ciphertext);
+        g.accessCount += 1;
+      } catch {
+        return null;
+      }
+    }
+    return {
+      grantId: g.grantId,
+      patientName: g.patientName,
+      grantedAt: g.consent.grantedAt,
+      expiresAt: new Date(g.expiresAt).toISOString(),
+      updatedAt: g.blob ? new Date(g.blob.updatedAt).toISOString() : null,
+      payload,
+    };
+  }
+  return null;
+}
+
 /** Max ACTIVE grants a single provider can have — bounds inbox spam. */
 const MAX_GRANTS_PER_PROVIDER = 50;
 
@@ -97,7 +173,10 @@ function rateLimited(req: Request, bucket: string, max: number, windowMs: number
 function sweepGrants() {
   const now = Date.now();
   for (const [id, g] of grants) {
-    if (now >= g.expiresAt) grants.delete(id);
+    if (now >= g.expiresAt) {
+      grants.delete(id);
+      closeAuditRecord(id, "expired");
+    }
   }
 }
 
@@ -203,6 +282,20 @@ router.post("/med-exchange/grants", (req, res) => {
     accessCount: 0,
   };
   grants.set(grant.grantId, grant);
+  if (consentAudit.length >= MAX_AUDIT_RECORDS) consentAudit.shift();
+  consentAudit.push({
+    grantId: grant.grantId,
+    providerKey: grant.providerKey,
+    providerName: grant.providerName,
+    providerRole: grant.providerRole,
+    patientName: grant.patientName,
+    scope: "medications",
+    wording: grant.consent.wording,
+    grantedAt: grant.consent.grantedAt,
+    expiresAt: new Date(grant.expiresAt).toISOString(),
+    endedAt: null,
+    endReason: null,
+  });
   logger.info(
     { grantId: grant.grantId, provider: provider.fullName },
     "Live medication grant created (transient, in-memory)",
@@ -270,7 +363,8 @@ router.post("/med-exchange/revoke", (req, res) => {
   const grant = grants.get(grantId.trim());
   if (grant && tokensMatch(grant.patientToken, patientToken)) {
     grants.delete(grant.grantId);
-    logger.info({ grantId: grant.grantId }, "Live medication grant revoked — snapshot purged");
+    closeAuditRecord(grant.grantId, "revoked_by_patient");
+    logger.info({ grantId: grant.grantId }, "Live medication grant revoked — snapshot purged, consent audit retained");
   }
   // Always 200 — revocation is idempotent and non-enumerable.
   res.json({ revoked: true });
@@ -349,6 +443,30 @@ router.get("/med-exchange/live", requirePortalSession, (req, res) => {
     });
   }
   res.json({ shares });
+});
+
+/**
+ * GET /med-exchange/consent-log
+ * GDPR consent audit trail for THIS provider: who granted what, when, and
+ * whether/why it ended. Retained after revocation/expiry (metadata only —
+ * medication data is purged with the grant).
+ */
+router.get("/med-exchange/consent-log", requirePortalSession, (req, res) => {
+  sweepGrants();
+  const session = sessionOf(req);
+  if (session.demo) {
+    res.json({ demo: true, records: [] });
+    return;
+  }
+  if (!session.email || !session.role || !GRANTABLE_ROLES.includes(session.role)) {
+    res.status(403).json({ error: "DOCTOR_ROLE_REQUIRED" });
+    return;
+  }
+  const myKey = accountKeyForEmail(session.email);
+  const records = consentAudit
+    .filter((r) => r.providerKey === myKey)
+    .map(({ providerKey: _pk, ...rest }) => rest);
+  res.json({ records });
 });
 
 /** AES-256-GCM decrypt: ciphertext is base64 of (encrypted bytes ‖ 16-byte tag). */

@@ -8,6 +8,7 @@ import {
   type PortalSessionInfo,
 } from "./portalAuth";
 import { getUncachableStripeClient } from "../stripeClient";
+import { liveMedShareForPatient } from "./medExchange";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -575,7 +576,15 @@ router.get("/portal/practitioner/patients/:id", requirePortalSession, requirePra
     res.status(404).json({ error: "Patient not found." });
     return;
   }
-  res.json({ patient });
+  // Attach any consented live medication share for this patient (matched on
+  // the logged-in doctor's account key + patient display name) so live meds
+  // appear inside the patient file itself, with freshness.
+  const session = sessionOf(req);
+  let liveMedications = null;
+  if (session.email && !session.demo) {
+    liveMedications = liveMedShareForPatient(accountKeyForEmail(session.email), patient.fullName);
+  }
+  res.json({ patient: { ...patient, liveMedications } });
 });
 
 router.post("/portal/practitioner/patients/:id/notes", requirePortalSession, requirePractitioner, requireDoctor, (req, res) => {

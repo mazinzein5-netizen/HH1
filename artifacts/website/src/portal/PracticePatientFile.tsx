@@ -14,7 +14,18 @@ import {
   type ApiError,
   type PracPatientFile,
 } from "./lib/store";
-import { ArrowLeft, ClipboardList, FileText, Pill, Plus, StickyNote } from "lucide-react";
+import { ArrowLeft, ClipboardList, FileText, Pill, Plus, RadioTower, StickyNote } from "lucide-react";
+
+/** Human-readable freshness for a live snapshot, e.g. "2 min ago". */
+function freshness(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const min = Math.max(0, Math.round(ms / 60_000));
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `${h} h ago`;
+  return `${Math.round(h / 24)} d ago`;
+}
 
 export default function PracticePatientFile() {
   const [, params] = useRoute("/portal/practitioner/patients/:id");
@@ -121,6 +132,44 @@ export default function PracticePatientFile() {
                 {patient.mrn} · DOB {patient.dob} · {patient.condition}
               </p>
             </div>
+
+            {patient.liveMedications && (
+              <Card className="bg-card/60 backdrop-blur border-primary/40 mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <RadioTower className="h-5 w-5 text-primary" /> Medications — live from patient device
+                    <Badge className="bg-primary/15 text-primary border border-primary/30">LIVE</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Shared by patient consent from HIVE COMPANION ·{" "}
+                    {patient.liveMedications.updatedAt
+                      ? `updated ${freshness(patient.liveMedications.updatedAt)}`
+                      : "waiting for first update from the device…"}{" "}
+                    · consent expires {new Date(patient.liveMedications.expiresAt).toLocaleDateString()}. Patient-declared
+                    share — confirm the patient&apos;s identity before acting on this list.
+                  </p>
+                  {patient.liveMedications.payload?.medications?.length ? (
+                    <ul className="space-y-2 text-sm">
+                      {patient.liveMedications.payload.medications.map((m, i) => (
+                        <li key={i} className="rounded-lg border border-border bg-background/40 px-3 py-2">
+                          <span className="font-medium">{m.medication}</span>{" "}
+                          <span className="text-muted-foreground text-xs">
+                            {[m.dose, m.frequency, m.route, m.status].filter(Boolean).join(" · ")}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No medication snapshot received yet.</p>
+                  )}
+                  {patient.liveMedications.payload?.notes && (
+                    <p className="text-xs text-muted-foreground">{patient.liveMedications.payload.notes}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <div className="grid md:grid-cols-2 gap-6">
               <Card className="bg-card/60 backdrop-blur">

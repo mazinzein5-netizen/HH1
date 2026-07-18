@@ -388,6 +388,8 @@ export interface PracPatientFile {
   questionnaires: { id: string; name: string; score: string; date: string }[];
   prescriptions: { id: string; name: string; dose: string; frequency: string }[];
   notes: { id: string; ts: number; text: string }[];
+  /** Consented live medication share matched to this patient — null if none. */
+  liveMedications?: LiveMedShare | null;
 }
 
 export interface AvailabilitySlot {
