@@ -397,8 +397,24 @@ export interface PracPatientFile {
   questionnaires: { id: string; name: string; score: string; date: string }[];
   prescriptions: { id: string; name: string; dose: string; frequency: string }[];
   notes: { id: string; ts: number; text: string }[];
+  /** Items & documents added to this file (metadata + extracted text only). */
+  attachments?: PatientAttachment[];
   /** Consented live medication share matched to this patient — null if none. */
   liveMedications?: LiveMedShare | null;
+}
+
+export interface PatientAttachment {
+  id: string;
+  ts: number;
+  kind: "photo" | "document" | "audio" | "text";
+  name: string;
+  mimeType: string;
+  size: number;
+  /** Extracted / transcribed / typed text, ready for assimilation. */
+  text?: string;
+  textSource?: "typed" | "extracted" | "transcribed";
+  /** Whether raw file content is available for viewing/download. */
+  hasData: boolean;
 }
 
 export interface AvailabilitySlot {
@@ -473,6 +489,39 @@ export function addPracPrescription(
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function addPracAttachment(
+  patientId: string,
+  input: {
+    kind: PatientAttachment["kind"];
+    name: string;
+    mimeType?: string;
+    dataBase64?: string;
+    text?: string;
+  },
+): Promise<{ attachment: PatientAttachment }> {
+  return pracFetch(`/patients/${encodeURIComponent(patientId)}/attachments`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deletePracAttachment(patientId: string, attachmentId: string): Promise<{ ok: boolean }> {
+  return pracFetch(
+    `/patients/${encodeURIComponent(patientId)}/attachments/${encodeURIComponent(attachmentId)}`,
+    { method: "DELETE" },
+  );
+}
+
+/** Fetch raw attachment bytes (auth header required) and return an object URL. */
+export async function fetchPracAttachmentUrl(patientId: string, attachmentId: string): Promise<string> {
+  const res = await fetch(
+    `${API_BASE}/portal/practitioner/patients/${encodeURIComponent(patientId)}/attachments/${encodeURIComponent(attachmentId)}/content`,
+    { headers: { ...authHeader() } },
+  );
+  if (!res.ok) throw await parseError(res);
+  return URL.createObjectURL(await res.blob());
 }
 
 export function getPracSettings(): Promise<{ settings: PracSettings }> {

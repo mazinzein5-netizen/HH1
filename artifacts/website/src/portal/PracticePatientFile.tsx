@@ -15,6 +15,7 @@ import {
   type PracPatientFile,
 } from "./lib/store";
 import { ArrowLeft, ClipboardList, FileText, Pill, Plus, RadioTower, StickyNote } from "lucide-react";
+import { PatientAttachments } from "./PatientAttachments";
 
 /** Human-readable freshness for a live snapshot, e.g. "2 min ago". */
 function freshness(iso: string): string {
@@ -294,6 +295,12 @@ export default function PracticePatientFile() {
                   </div>
                 </CardContent>
               </Card>
+
+              <PatientAttachments
+                patientId={patient.id}
+                attachments={patient.attachments ?? []}
+                onChanged={load}
+              />
             </div>
           </>
         )}

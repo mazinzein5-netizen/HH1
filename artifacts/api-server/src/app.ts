@@ -53,12 +53,15 @@ app.use(
   }),
 );
 app.use(cors());
-// Large JSON bodies are only needed for voice transcription (base64 audio);
-// every other route keeps the small default limit.
+// Large JSON bodies are only needed for voice transcription (base64 audio)
+// and patient-file attachment uploads; every other route keeps the default.
 const jsonDefault = express.json();
 const jsonLarge = express.json({ limit: "25mb" });
+const largeBodyPath = (path: string): boolean =>
+  path === "/api/ai/transcribe" ||
+  /^\/api\/portal\/practitioner\/patients\/[^/]+\/attachments$/.test(path);
 app.use((req, res, next) =>
-  req.path === "/api/ai/transcribe" ? jsonLarge(req, res, next) : jsonDefault(req, res, next)
+  largeBodyPath(req.path) ? jsonLarge(req, res, next) : jsonDefault(req, res, next)
 );
 app.use(express.urlencoded({ extended: true }));
 

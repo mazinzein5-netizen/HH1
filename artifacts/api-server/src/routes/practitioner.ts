@@ -10,6 +10,8 @@ import {
 import { getUncachableStripeClient } from "../stripeClient";
 import { liveMedShareForPatient, sessionIsVerifiedDoctor } from "./medExchange";
 import { logger } from "../lib/logger";
+import { toFile } from "openai";
+import { getOpenAI } from "../lib/aiClients";
 
 const router: IRouter = Router();
 
@@ -104,6 +106,34 @@ interface PatientNote {
   text: string;
 }
 
+/**
+ * An item added to a patient file by the practitioner: a camera photo, an
+ * uploaded document, an audio note, or a typed text note. Text is extracted
+ * (documents) or transcribed (audio) at upload time so every attachment is
+ * searchable/assimilable as text where possible.
+ */
+export interface PatientAttachment {
+  id: string;
+  ts: number;
+  kind: "photo" | "document" | "audio" | "text";
+  name: string;
+  mimeType: string;
+  /** Raw file content (base64) — stripped from list/file responses. */
+  dataBase64?: string;
+  /** Decoded byte size of the stored file (0 for pure text notes). */
+  size: number;
+  /** Extracted / transcribed / typed text, ready for assimilation. */
+  text?: string;
+  /** How `text` was produced. */
+  textSource?: "typed" | "extracted" | "transcribed";
+}
+
+/** Attachment metadata safe to embed in patient-file responses. */
+function attachmentMeta(a: PatientAttachment): Omit<PatientAttachment, "dataBase64"> & { hasData: boolean } {
+  const { dataBase64, ...meta } = a;
+  return { ...meta, hasData: !!dataBase64 };
+}
+
 interface Prescription {
   id: string;
   name: string;
@@ -129,6 +159,8 @@ interface PracPatient {
   questionnaires: QuestionnaireResult[];
   prescriptions: Prescription[];
   notes: PatientNote[];
+  /** Items & documents added by the practitioner — optional for legacy stores. */
+  attachments?: PatientAttachment[];
 }
 
 export interface AvailabilitySlot {
@@ -596,7 +628,14 @@ router.get("/portal/practitioner/patients/:id", requirePortalSession, requirePra
   if (session.email && !session.demo && sessionIsVerifiedDoctor(session)) {
     liveMedications = liveMedShareForPatient(accountKeyForEmail(session.email), patient.fullName);
   }
-  res.json({ patient: { ...patient, liveMedications } });
+  res.json({
+    patient: {
+      ...patient,
+      // Raw file bytes are fetched per-attachment; the file view only needs metadata + text.
+      attachments: (patient.attachments ?? []).map(attachmentMeta),
+      liveMedications,
+    },
+  });
 });
 
 router.post("/portal/practitioner/patients/:id/notes", requirePortalSession, requirePractitioner, requireDoctor, (req, res) => {
@@ -642,6 +681,235 @@ router.post("/portal/practitioner/patients/:id/prescriptions", requirePortalSess
   persistPracStore(sessionOf(req).accountId!);
   res.json({ prescription: rx });
 });
+
+// ── Patient attachments (items & documents) ─────────────────────────────────
+
+/** Decoded-size cap per attachment (photos are compressed client-side). */
+const ATTACHMENT_MAX_BYTES = 8 * 1024 * 1024;
+const ATTACHMENTS_PER_PATIENT = 50;
+
+/** MIME types / extensions we treat as text for extraction ("odd" text files included). */
+const TEXT_MIME_PREFIXES = ["text/"];
+const TEXT_MIME_EXACT = new Set([
+  "application/json",
+  "application/xml",
+  "application/x-yaml",
+  "application/yaml",
+  "application/csv",
+  "application/rtf",
+]);
+const TEXT_EXTENSIONS = new Set([
+  "txt", "md", "csv", "tsv", "log", "json", "xml", "yaml", "yml", "rtf", "text", "dat", "ini", "cfg",
+]);
+
+function looksLikeTextFile(name: string, mimeType: string): boolean {
+  const mt = mimeType.toLowerCase();
+  if (TEXT_MIME_PREFIXES.some((p) => mt.startsWith(p)) || TEXT_MIME_EXACT.has(mt)) return true;
+  const ext = name.toLowerCase().split(".").pop() ?? "";
+  return TEXT_EXTENSIONS.has(ext);
+}
+
+/**
+ * Best-effort text extraction from a decoded buffer. Returns null when the
+ * content does not decode to mostly-printable UTF-8 (i.e. it's binary).
+ */
+function extractTextFromBuffer(buf: Buffer, name: string, mimeType: string): string | null {
+  const decoded = buf.toString("utf8");
+  // Reject if replacement chars or control bytes dominate → binary content.
+  let bad = 0;
+  const sample = decoded.slice(0, 20_000);
+  for (const ch of sample) {
+    const code = ch.codePointAt(0)!;
+    if (code === 0xfffd || (code < 32 && code !== 9 && code !== 10 && code !== 13)) bad++;
+  }
+  if (sample.length === 0 || bad / sample.length > 0.05) return null;
+  let text = decoded;
+  // Crude RTF cleanup so the note text is readable.
+  if (mimeType.toLowerCase() === "application/rtf" || name.toLowerCase().endsWith(".rtf")) {
+    text = text
+      .replace(/\\par[d]?/g, "\n")
+      .replace(/\{\\[^{}]*\}/g, "")
+      .replace(/\\[a-z]+-?\d* ?/gi, "")
+      .replace(/[{}]/g, "");
+  }
+  text = text.replace(/\r\n/g, "\n").trim();
+  return text ? text.slice(0, 20_000) : null;
+}
+
+router.post(
+  "/portal/practitioner/patients/:id/attachments",
+  requirePortalSession,
+  requirePractitioner,
+  requireDoctor,
+  async (req, res) => {
+    const store = getStore(req, res);
+    if (!store) return;
+    const patient = store.patients.find((p) => p.id === req.params.id);
+    if (!patient) {
+      res.status(404).json({ error: "Patient not found." });
+      return;
+    }
+    patient.attachments ??= [];
+    if (patient.attachments.length >= ATTACHMENTS_PER_PATIENT) {
+      res.status(400).json({ error: "This patient file already has the maximum number of attachments." });
+      return;
+    }
+
+    const body = req.body as Record<string, unknown>;
+    const kind = body.kind;
+    if (kind !== "photo" && kind !== "document" && kind !== "audio" && kind !== "text") {
+      res.status(400).json({ error: "kind must be photo, document, audio or text." });
+      return;
+    }
+    const name = str(body.name, 160) || (kind === "text" ? "Note" : "Attachment");
+    const mimeType = str(body.mimeType, 100) || (kind === "text" ? "text/plain" : "application/octet-stream");
+    const typedText = typeof body.text === "string" ? body.text.slice(0, 20_000).trim() : "";
+
+    if (kind === "text") {
+      if (!typedText) {
+        res.status(400).json({ error: "Note text is required." });
+        return;
+      }
+      const attachment: PatientAttachment = {
+        id: id(), ts: Date.now(), kind, name, mimeType: "text/plain",
+        size: 0, text: typedText, textSource: "typed",
+      };
+      patient.attachments.unshift(attachment);
+      persistPracStore(sessionOf(req).accountId!);
+      res.json({ attachment: attachmentMeta(attachment) });
+      return;
+    }
+
+    const dataBase64 = typeof body.dataBase64 === "string" ? body.dataBase64 : "";
+    if (!dataBase64) {
+      res.status(400).json({ error: "File content (dataBase64) is required." });
+      return;
+    }
+    // Strict validation — Buffer.from silently ignores malformed base64.
+    const normalized = dataBase64.replace(/\s/g, "");
+    if (!/^[A-Za-z0-9+/]*={0,2}$/.test(normalized) || normalized.length % 4 !== 0) {
+      res.status(400).json({ error: "File content is not valid base64." });
+      return;
+    }
+    const buf = Buffer.from(normalized, "base64");
+    if (buf.length < 10) {
+      res.status(400).json({ error: "File is empty." });
+      return;
+    }
+    if (buf.length > ATTACHMENT_MAX_BYTES) {
+      res.status(413).json({ error: "File is too large (max 8 MB)." });
+      return;
+    }
+
+    let text: string | undefined;
+    let textSource: PatientAttachment["textSource"];
+
+    if (kind === "audio") {
+      // Transcribe the audio note so it is assimilable as text.
+      const openai = getOpenAI();
+      if (openai) {
+        try {
+          const extByType: Record<string, string> = {
+            "audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a",
+            "audio/m4a": "m4a", "audio/mpeg": "mp3", "audio/wav": "wav",
+          };
+          const ext = extByType[mimeType.toLowerCase()] ?? "webm";
+          const transcription = await openai.audio.transcriptions.create({
+            file: await toFile(buf, `note.${ext}`),
+            model: "gpt-4o-mini-transcribe",
+            language: "en",
+          });
+          const t = (transcription.text ?? "").trim();
+          if (t) {
+            text = t;
+            textSource = "transcribed";
+          }
+        } catch (err) {
+          logger.error({ err }, "Attachment audio transcription failed");
+        }
+      }
+    } else if (looksLikeTextFile(name, mimeType)) {
+      const extracted = extractTextFromBuffer(buf, name, mimeType);
+      if (extracted) {
+        text = extracted;
+        textSource = "extracted";
+      }
+    } else if (kind === "document") {
+      // "Odd" text files often arrive as application/octet-stream — sniff them.
+      const extracted = extractTextFromBuffer(buf, name, mimeType);
+      if (extracted) {
+        text = extracted;
+        textSource = "extracted";
+      }
+    }
+
+    const attachment: PatientAttachment = {
+      id: id(), ts: Date.now(), kind, name, mimeType,
+      dataBase64, size: buf.length,
+      ...(text ? { text, textSource } : {}),
+    };
+    patient.attachments.unshift(attachment);
+    persistPracStore(sessionOf(req).accountId!);
+    res.json({ attachment: attachmentMeta(attachment) });
+  },
+);
+
+router.get(
+  "/portal/practitioner/patients/:id/attachments/:aid/content",
+  requirePortalSession,
+  requirePractitioner,
+  requireDoctor,
+  (req, res) => {
+    const store = getStore(req, res);
+    if (!store) return;
+    const patient = store.patients.find((p) => p.id === req.params.id);
+    const attachment = patient?.attachments?.find((a) => a.id === req.params.aid);
+    if (!patient || !attachment || !attachment.dataBase64) {
+      res.status(404).json({ error: "Attachment not found." });
+      return;
+    }
+    const buf = Buffer.from(attachment.dataBase64, "base64");
+    const mime = (attachment.mimeType || "application/octet-stream").toLowerCase();
+    // Only render safe media types inline; anything scriptable (HTML, SVG, XML…)
+    // is forced to download so it can never execute in the portal's origin.
+    const safeInline =
+      /^image\/(png|jpe?g|gif|webp|bmp|avif)$/.test(mime) ||
+      mime.startsWith("audio/") ||
+      mime === "application/pdf" ||
+      mime === "text/plain";
+    res.setHeader("Content-Type", safeInline ? mime : "application/octet-stream");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader(
+      "Content-Disposition",
+      `${safeInline ? "inline" : "attachment"}; filename="${attachment.name.replace(/[^\w. -]/g, "_")}"`,
+    );
+    res.send(buf);
+  },
+);
+
+router.delete(
+  "/portal/practitioner/patients/:id/attachments/:aid",
+  requirePortalSession,
+  requirePractitioner,
+  requireDoctor,
+  (req, res) => {
+    const store = getStore(req, res);
+    if (!store) return;
+    const patient = store.patients.find((p) => p.id === req.params.id);
+    if (!patient?.attachments) {
+      res.status(404).json({ error: "Attachment not found." });
+      return;
+    }
+    const idx = patient.attachments.findIndex((a) => a.id === req.params.aid);
+    if (idx === -1) {
+      res.status(404).json({ error: "Attachment not found." });
+      return;
+    }
+    patient.attachments.splice(idx, 1);
+    persistPracStore(sessionOf(req).accountId!);
+    res.json({ ok: true });
+  },
+);
 
 // ── Settings (booking & consultations) ──────────────────────────────────────
 
