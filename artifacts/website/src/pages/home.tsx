@@ -4,7 +4,7 @@ import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion
 import { HiveLogo } from "@/components/HiveLogo";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { RubberBackground } from "@/components/RubberBackground";
+import { CircuitHexBackground } from "@/components/CircuitHexBackground";
 import { TrustStrip } from "@/components/TrustStrip";
 import { VideoEmbed } from "@/components/VideoEmbed";
 import { VideoShowcase } from "@/components/VideoShowcase";
@@ -78,7 +78,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-[100dvh] bg-transparent text-foreground overflow-x-hidden font-sans">
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      <RubberBackground />
+      <CircuitHexBackground />
       {/* Navigation */}
       <motion.header 
         initial={{ y: -100 }}
@@ -158,7 +158,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.1, ease: SMOOTH_EASE }}
-              className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 leading-[1.05] text-foreground drop-shadow-sm"
+              className="text-[clamp(2.5rem,7vw,6.5rem)] font-bold tracking-tight mb-8 leading-[1.05] text-balance text-foreground drop-shadow-sm"
             >
               Gold Standard Privacy. <br />
               <span className="hive-gradient-text drop-shadow-sm">A focused, efficient digital solution.</span>
@@ -200,7 +200,7 @@ export default function Home() {
             >
               <motion.div variants={fadeInUp}>
                 <div className="text-primary font-bold tracking-widest uppercase mb-4 text-[14px]">One Unified HIVE HUB</div>
-                <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight text-foreground">Clinicians receive streamlined and comprehensive data.</h2>
+                <h2 className="text-[clamp(1.9rem,3.6vw,3rem)] font-bold mb-6 leading-tight text-balance text-foreground">Clinicians receive streamlined and comprehensive data.</h2>
                 <div className="mb-6">
                   <VideoEmbed
                     src="/hub-video/?embed=1"
@@ -287,7 +287,7 @@ export default function Home() {
                 <Smartphone className="h-3 w-3 text-primary" />
                 Mobile App
               </div>
-              <h2 className="text-4xl md:text-6xl font-bold mb-6 text-foreground">HIVE Companion</h2>
+              <h2 className="text-[clamp(2.2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground text-balance">HIVE Companion</h2>
               <p className="text-xl md:text-2xl text-muted-foreground font-light glass-panel px-6 py-3 rounded-2xl inline-block">
                 A steady hand on your shoulder. Your health story, already organised.
               </p>
@@ -448,7 +448,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-panel text-foreground mb-8 shadow-2xl">
                   <Shield className="h-10 w-10 text-primary" />
                 </div>
-                <h2 className="text-4xl md:text-6xl font-bold mb-8 tracking-tight text-foreground">Gold Standards in documentation and advanced privacy features</h2>
+                <h2 className="text-[clamp(2.2rem,4.5vw,3.75rem)] font-bold mb-8 tracking-tight text-foreground text-balance">Gold Standards in documentation and advanced privacy features</h2>
                 <p className="text-xl md:text-2xl font-light mb-12 text-foreground/80 leading-relaxed max-w-3xl mx-auto">
                   ALL personal data stays on your device — nothing is uploaded to a server. No tracking, no ads. You can "Delete all my data" at any time.
                 </p>
@@ -491,7 +491,7 @@ export default function Home() {
                 <Video className="h-3 w-3 text-primary" />
                 Watch
               </div>
-              <h2 className="text-4xl md:text-6xl font-bold mb-4 text-foreground">See the HIVE in action</h2>
+              <h2 className="text-[clamp(2.2rem,4.5vw,3.75rem)] font-bold mb-4 text-foreground text-balance">See the HIVE in action</h2>
               <p className="text-lg md:text-xl text-muted-foreground font-light">
                 A short film for patients and families. Select the video to expand and play.
               </p>
@@ -558,7 +558,7 @@ export default function Home() {
                   <Activity className="h-3 w-3 text-primary" />
                   Web App
                 </div>
-                <h2 className="text-4xl md:text-6xl font-bold mb-6 text-foreground leading-tight">HIVE Hospital Surgical Assistant</h2>
+                <h2 className="text-[clamp(2.2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground leading-tight text-balance">HIVE Hospital Surgical Assistant</h2>
                 <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light">
                   HIVE Hospital digitises the patient file into a member-accessed platform — organising patient flow and flagging safety risks with advanced algorithmic workflows, supported by robust evidence. Advanced AI risk oversight coming soon.
                 </p>
@@ -624,7 +624,7 @@ export default function Home() {
                 <Building2 className="h-3 w-3 text-primary" />
                 Enterprise
               </div>
-              <h2 className="text-4xl md:text-6xl font-bold mb-6 text-foreground leading-tight">
+              <h2 className="text-[clamp(2.2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground leading-tight text-balance">
                 For hospitals &amp; established GP practices
               </h2>
               <p className="text-lg md:text-xl text-muted-foreground font-light glass-panel px-6 py-3 rounded-2xl">

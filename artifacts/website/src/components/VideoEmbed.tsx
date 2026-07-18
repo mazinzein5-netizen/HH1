@@ -31,6 +31,7 @@ export function VideoEmbed({
   const [expanded, setExpanded] = useState(false);
   const soundOnRef = useRef(true);
   const expandedRef = useRef(false);
+  const activeRef = useRef(false);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
 
@@ -61,8 +62,8 @@ export function VideoEmbed({
       .play()
       .then(() => {
         setNeedsTap(false);
-        // Audio only ever plays while the video is expanded and sound is on.
-        if (expandedRef.current && soundOnRef.current) {
+        // Audio plays while the video is highlighted (hover/focus) or expanded, and sound is on.
+        if ((activeRef.current || expandedRef.current) && soundOnRef.current) {
           fadeTo(AUDIO_VOLUME);
         } else {
           fadeTo(0, () => audioRef.current?.pause());
@@ -127,7 +128,7 @@ export function VideoEmbed({
     } else {
       soundOnRef.current = true;
       setSoundOn(true);
-      if (expandedRef.current) tryPlay();
+      if (activeRef.current || expandedRef.current) tryPlay();
     }
   };
 
@@ -169,8 +170,28 @@ export function VideoEmbed({
         role={expandable ? "button" : undefined}
         aria-label={expandable ? `${title} — expand video` : title}
         aria-haspopup={expandable ? "dialog" : undefined}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={() => {
+          setHovered(true);
+          activeRef.current = true;
+          if (audioSrc && soundOnRef.current) tryPlay();
+        }}
+        onMouseLeave={() => {
+          setHovered(false);
+          activeRef.current = false;
+          if (!expandedRef.current) fadeTo(0, () => {
+            if (!activeRef.current && !expandedRef.current) audioRef.current?.pause();
+          });
+        }}
+        onFocus={() => {
+          activeRef.current = true;
+          if (audioSrc && soundOnRef.current) tryPlay();
+        }}
+        onBlur={() => {
+          activeRef.current = false;
+          if (!expandedRef.current) fadeTo(0, () => {
+            if (!activeRef.current && !expandedRef.current) audioRef.current?.pause();
+          });
+        }}
         onClick={openExpanded}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -221,24 +242,26 @@ export function VideoEmbed({
             </div>
           )}
 
-          {/* Video preview (silent) once in view */}
-          {revealed && (
-            <motion.div
-              initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 1.04 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: reducedMotion ? 0.3 : 1, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-0"
-            >
-              <iframe
-                src={src}
-                title={title}
-                className="w-full h-full border-0 pointer-events-none"
-                loading="lazy"
-                tabIndex={-1}
-                scrolling="no"
-              />
-            </motion.div>
-          )}
+          {/* Video preview (silent) — mounted immediately so it is already
+              loaded and playing by the time the section scrolls into view. */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: revealed ? 1 : 0 }}
+            transition={{ duration: reducedMotion ? 0.3 : 1, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-0"
+          >
+            <iframe
+              src={src}
+              title={title}
+              className="w-full h-full border-0 pointer-events-none"
+              loading="eager"
+              tabIndex={-1}
+              scrolling="no"
+            />
+          </motion.div>
+
+          {/* Inline sound control while highlighted */}
+          {hovered && soundButton}
 
           {/* Expand hint on hover/focus */}
           {expandable && (
