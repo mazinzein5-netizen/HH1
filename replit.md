@@ -42,6 +42,8 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 _Populate as you build — sharp edges, "always run X before Y" rules._
 
+- **New Android release (EAS build):** the download version lives in the `app_releases` DB row, not in code. After a build, the founder logs into the portal and calls `PUT /api/app/release` with `{ version, versionCode, apkUrl }` (expo.dev APK link). The website download section and mobile update banner pick it up immediately — no code edit or redeploy. Validation rejects malformed versions/URLs and versionCode regressions.
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details

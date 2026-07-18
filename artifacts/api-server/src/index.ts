@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { hydratePracStores, flushPracStores } from "./routes/practitioner";
+import { hydrateAppRelease } from "./routes/appRelease";
 
 const rawPort = process.env["PORT"];
 
@@ -50,6 +51,7 @@ await initStripe();
 
 try {
   await hydratePracStores();
+  await hydrateAppRelease();
 } catch (err) {
   logger.error({ err }, "Failed to hydrate practitioner stores from database");
   process.exit(1);
