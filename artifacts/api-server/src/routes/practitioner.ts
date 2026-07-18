@@ -16,6 +16,18 @@ const router: IRouter = Router();
 /** Roles allowed to access the patient-file system ("My HIVE Patients"). */
 const DOCTOR_ROLES = ["GP", "Hospital doctor", "Outpatient clinic specialist doctor"];
 
+/**
+ * Supportive-care roles (mirrors the website's SUPPORTIVE_ROLES). Only these
+ * explicit roles are routed to /portal/supportive — unknown/legacy role
+ * strings fall back to the GP & HIVE HUB, matching the frontend guards.
+ */
+const SUPPORTIVE_ROLES = [
+  "First responder",
+  "Physiotherapist",
+  "A&E follow-up",
+  "Occupational health specialist",
+];
+
 function sessionOf(req: Request): PortalSessionInfo {
   return (req as Request & { portalSession: PortalSessionInfo }).portalSession;
 }
@@ -811,12 +823,13 @@ router.post("/portal/practitioner/membership/checkout", requirePortalSession, re
     const stripe = await getUncachableStripeClient();
     const priceId = await proPriceId(billing);
     const baseUrl = `https://${process.env["REPLIT_DOMAINS"]?.split(",")[0]}`;
-    // Send the buyer back to the portal they actually use: supportive-care
-    // roles live at /portal/supportive, doctor (and unknown/legacy) roles at
-    // /portal/practitioner. Both mount the same membership workspace that
-    // consumes the membership_session / membership_cancelled params.
+    // Send the buyer back to the portal they actually use: known supportive
+    // roles live at /portal/supportive; doctor and unknown/legacy roles at
+    // /portal/practitioner (matching the frontend guard fallback). Both mount
+    // the same membership workspace that consumes the membership_session /
+    // membership_cancelled params.
     const supportive =
-      !session.superuser && !!session.role && !DOCTOR_ROLES.includes(session.role);
+      !session.superuser && !!session.role && SUPPORTIVE_ROLES.includes(session.role);
     const returnPath = supportive ? "/portal/supportive" : "/portal/practitioner";
     // Idempotency: retries for the same account + plan reuse one Checkout
     // Session for 24h, so a timeout + retry can never double-charge.
