@@ -24,11 +24,17 @@ const DOCTOR_ROLES = ["GP", "Hospital doctor", "Outpatient clinic specialist doc
  * strings fall back to the GP & HIVE HUB, matching the frontend guards.
  */
 const SUPPORTIVE_ROLES = [
-  "First responder",
   "Physiotherapist",
   "A&E follow-up",
   "Occupational health specialist",
 ];
+
+/**
+ * First responders have their own dedicated pathway (/portal/responder) —
+ * split out of the supportive tier so the three portals mirror the three
+ * homepage adverts. Mirrors the website's FIRST_RESPONDER_ROLE.
+ */
+const FIRST_RESPONDER_ROLE = "First responder";
 
 function sessionOf(req: Request): PortalSessionInfo {
   return (req as Request & { portalSession: PortalSessionInfo }).portalSession;
@@ -1092,13 +1098,18 @@ router.post("/portal/practitioner/membership/checkout", requirePortalSession, re
     const priceId = await proPriceId(billing);
     const baseUrl = `https://${process.env["REPLIT_DOMAINS"]?.split(",")[0]}`;
     // Send the buyer back to the portal they actually use: known supportive
-    // roles live at /portal/supportive; doctor and unknown/legacy roles at
-    // /portal/practitioner (matching the frontend guard fallback). Both mount
-    // the same membership workspace that consumes the membership_session /
-    // membership_cancelled params.
+    // roles live at /portal/supportive, first responders at /portal/responder;
+    // doctor and unknown/legacy roles at /portal/practitioner (matching the
+    // frontend guard fallback). All three mount the same membership workspace
+    // that consumes the membership_session / membership_cancelled params.
     const supportive =
       !session.superuser && !!session.role && SUPPORTIVE_ROLES.includes(session.role);
-    const returnPath = supportive ? "/portal/supportive" : "/portal/practitioner";
+    const responder = !session.superuser && session.role === FIRST_RESPONDER_ROLE;
+    const returnPath = responder
+      ? "/portal/responder"
+      : supportive
+        ? "/portal/supportive"
+        : "/portal/practitioner";
     // Idempotency: retries for the same account + plan reuse one Checkout
     // Session for 24h, so a timeout + retry can never double-charge.
     const idempotencyKey = `hive_pro_${accountKey}_${billing}_${priceId}`;

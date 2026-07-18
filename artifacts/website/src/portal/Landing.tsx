@@ -82,8 +82,8 @@ export default function Landing() {
           </CardContent>
         </Card>
 
-        {/* Three entrances */}
-        <div className="grid md:grid-cols-3 gap-6">
+        {/* Four entrances */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="group hover:border-primary/50 transition-colors">
             <CardHeader>
               <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center mb-3">
@@ -124,8 +124,8 @@ export default function Landing() {
               </div>
               <CardTitle className="text-2xl">Supportive Care</CardTitle>
               <CardDescription className="text-base">
-                Physiotherapists, occupational health, first responders and
-                A&amp;E follow-up professionals.
+                Physiotherapists, occupational health and A&amp;E follow-up
+                professionals.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -137,6 +137,39 @@ export default function Landing() {
                 <li className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-primary" /> HIVE booking
                   &amp; consultations
+                </li>
+              </ul>
+              <div className="flex gap-2 pt-2">
+                <Button onClick={() => navigate("/portal/signup?type=healthcare")}>
+                  Sign up
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/portal/login")}>
+                  Log in
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:border-primary/50 transition-colors">
+            <CardHeader>
+              <div className="h-14 w-14 rounded-2xl bg-destructive/15 flex items-center justify-center mb-3">
+                <Siren className="h-7 w-7 text-destructive" />
+              </div>
+              <CardTitle className="text-2xl">First Responders</CardTitle>
+              <CardDescription className="text-base">
+                Paramedics, ambulance and emergency crews needing rapid
+                handover at the scene.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <ul className="text-sm text-muted-foreground space-y-1.5">
+                <li className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" /> Rapid
+                  emergency code access
+                </li>
+                <li className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" /> Allergies,
+                  red flags &amp; live medications
                 </li>
               </ul>
               <div className="flex gap-2 pt-2">

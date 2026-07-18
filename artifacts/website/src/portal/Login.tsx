@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import {
   complete2faDevSimulate,
   complete2faWithPasskey,
+  isFirstResponderRole,
   isSupportiveRole,
   isWebAuthnAvailable,
   loginPassword,
@@ -73,12 +74,17 @@ export default function Login() {
     });
     // Route to the correct portal for the account's role:
     // doctors → GP & HIVE HUB, supportive-care roles → Supportive Care portal,
-    // caretakers → emergency viewer.
+    // first responders → First Responders portal, caretakers → emergency viewer.
     // Unknown/legacy roles fall back to the HUB (previous behaviour) so
-    // existing accounts keep working; only known supportive roles re-route.
+    // existing accounts keep working; only known roles re-route.
     if (account?.accountType === "healthcare") {
-      const toSupportive = isSupportiveRole(account.role) && !account.superuser;
-      navigate(toSupportive ? "/portal/supportive" : "/portal/practitioner");
+      if (!account.superuser && isFirstResponderRole(account.role)) {
+        navigate("/portal/responder");
+      } else if (!account.superuser && isSupportiveRole(account.role)) {
+        navigate("/portal/supportive");
+      } else {
+        navigate("/portal/practitioner");
+      }
     } else {
       navigate("/portal/emergency");
     }

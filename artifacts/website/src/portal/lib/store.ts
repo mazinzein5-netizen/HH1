@@ -323,9 +323,19 @@ export function isDoctorRole(role?: string): boolean {
   return !!role && DOCTOR_ROLES.includes(role);
 }
 
-/** Supportive-care professional roles — every healthcare role that is not a doctor. */
+/** First responders have their own dedicated portal at /portal/responder. */
+export const FIRST_RESPONDER_ROLE = "First responder";
+
+export function isFirstResponderRole(role?: string): boolean {
+  return role === FIRST_RESPONDER_ROLE;
+}
+
+/**
+ * Supportive-care professional roles — healthcare roles that are neither
+ * doctors nor first responders (who have their own portal).
+ */
 export const SUPPORTIVE_ROLES: readonly string[] = HEALTHCARE_ROLES.filter(
-  (r) => !DOCTOR_ROLES.includes(r),
+  (r) => !DOCTOR_ROLES.includes(r) && r !== FIRST_RESPONDER_ROLE,
 );
 
 export function isSupportiveRole(role?: string): boolean {

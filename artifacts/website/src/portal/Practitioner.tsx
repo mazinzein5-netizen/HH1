@@ -14,6 +14,7 @@ import {
   type AdminStoreView,
   createPracPatient,
   isDoctorRole,
+  isFirstResponderRole,
   isSupportiveRole,
   listLiveMedShares,
   type LiveMedShare,
@@ -67,8 +68,11 @@ export default function Practitioner() {
   const isPractitioner = !!account && account.accountType === "healthcare";
   const superuser = !!account?.superuser;
   // Page access: unknown/legacy roles stay in the HUB (previous behaviour)
-  // so existing accounts keep working; only known supportive roles re-route.
-  const inHub = isPractitioner && (superuser || !isSupportiveRole(account?.role));
+  // so existing accounts keep working; only known supportive-care and
+  // first-responder roles re-route to their own portals.
+  const responder = isPractitioner && !superuser && isFirstResponderRole(account?.role);
+  const inHub =
+    isPractitioner && (superuser || (!isSupportiveRole(account?.role) && !responder));
   // Doctor-only sections (patient files, live medications) mirror the
   // server's DOCTOR_ROLES gate exactly, so the UI never offers tools the
   // API would reject with a 403.
@@ -182,7 +186,7 @@ export default function Practitioner() {
   }
 
   if (!inHub) {
-    // Supportive-care professionals have their own dedicated portal.
+    // Supportive-care professionals and first responders have their own portals.
     return (
       <PortalLayout>
         <div className="max-w-md mx-auto text-center py-16">
@@ -191,11 +195,15 @@ export default function Practitioner() {
           <p className="text-muted-foreground mb-6">
             The GP &amp; HIVE HUB is reserved for doctor roles. As a{" "}
             {account?.role ?? "supportive-care professional"}, your workspace —
-            emergency relay tools, HIVE booking and consultations — lives in the
-            Supportive Care portal.
+            emergency relay tools, HIVE booking and consultations — lives in the{" "}
+            {responder ? "First Responders" : "Supportive Care"} portal.
           </p>
-          <Button onClick={() => navigate("/portal/supportive")} className="gap-1.5">
-            <HeartHandshake className="h-4 w-4" /> Go to my Supportive Care portal
+          <Button
+            onClick={() => navigate(responder ? "/portal/responder" : "/portal/supportive")}
+            className="gap-1.5"
+          >
+            <HeartHandshake className="h-4 w-4" />{" "}
+            {responder ? "Go to my First Responders portal" : "Go to my Supportive Care portal"}
           </Button>
         </div>
       </PortalLayout>

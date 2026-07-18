@@ -9,6 +9,7 @@ import { TrustStrip } from "@/components/TrustStrip";
 import { VideoEmbed } from "@/components/VideoEmbed";
 import { VideoShowcase } from "@/components/VideoShowcase";
 import { ExchangeSection } from "@/components/ExchangeSection";
+import { PortalAdvertsSection } from "@/components/PortalAdvertsSection";
 import { 
   ArrowRight, ShieldCheck, FileText, Smartphone, 
   Stethoscope, Mail, Activity,
@@ -98,6 +99,7 @@ export default function Home() {
             <a href="#exchange" className="hover:text-primary transition-colors">Data Exchange</a>
             <a href="#surgical-assistant" className="hover:text-primary transition-colors">Surgical Assistant</a>
             <a href="#enterprise" className="hover:text-primary transition-colors">For Hospitals &amp; GPs</a>
+            <a href="#portals" className="hover:text-primary transition-colors">Portals</a>
             <Link href="/book" className="hover:text-primary transition-colors">Book a Consultation</Link>
           </nav>
           <div className="flex items-center gap-4">
@@ -132,11 +134,18 @@ export default function Home() {
               <a href="#exchange" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Data Exchange</a>
               <a href="#surgical-assistant" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Surgical Assistant</a>
               <a href="#enterprise" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">For Hospitals &amp; GPs</a>
+              <a href="#portals" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Portals</a>
               <Link href="/book" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">
                 Book a Consultation
               </Link>
               <Link href="/portal/practitioner" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
-                Clinician Sign In
+                GP &amp; HIVE HUB Sign In
+              </Link>
+              <Link href="/portal/supportive" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
+                Supportive Care Sign In
+              </Link>
+              <Link href="/portal/responder" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
+                First Responders Sign In
               </Link>
             </div>
           </nav>
@@ -737,10 +746,13 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Section: Professional portal adverts */}
+        <PortalAdvertsSection />
+
         {/* Section 6: Footer */}
         <footer className="py-16 relative overflow-hidden border-t border-border/40 glass-panel-heavy rounded-t-[3rem] mt-24">
           <div className="container mx-auto px-6 relative z-10">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+            <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
               <div className="col-span-1 md:col-span-2">
                 <div className="flex items-center gap-3 mb-6">
                   <HiveLogo size={32} />
@@ -764,6 +776,15 @@ export default function Home() {
                   <li><a href="#surgical-assistant" className="text-muted-foreground hover:text-primary transition-colors">Surgical Assistant</a></li>
                   <li><a href="#enterprise" className="text-muted-foreground hover:text-primary transition-colors">For Hospitals &amp; GP Practices</a></li>
                   <li><a href={`${import.meta.env.BASE_URL}portal`} className="text-muted-foreground hover:text-primary transition-colors">Emergency Portal</a></li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-foreground mb-4">Professional Portals</h3>
+                <ul className="space-y-3 text-sm">
+                  <li><Link href="/portal/practitioner" className="text-muted-foreground hover:text-primary transition-colors">GP &amp; HIVE HUB</Link></li>
+                  <li><Link href="/portal/supportive" className="text-muted-foreground hover:text-primary transition-colors">Supportive Care Professionals</Link></li>
+                  <li><Link href="/portal/responder" className="text-muted-foreground hover:text-primary transition-colors">First Responders</Link></li>
                 </ul>
               </div>
 
