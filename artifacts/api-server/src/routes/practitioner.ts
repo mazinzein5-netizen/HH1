@@ -811,6 +811,13 @@ router.post("/portal/practitioner/membership/checkout", requirePortalSession, re
     const stripe = await getUncachableStripeClient();
     const priceId = await proPriceId(billing);
     const baseUrl = `https://${process.env["REPLIT_DOMAINS"]?.split(",")[0]}`;
+    // Send the buyer back to the portal they actually use: supportive-care
+    // roles live at /portal/supportive, doctor (and unknown/legacy) roles at
+    // /portal/practitioner. Both mount the same membership workspace that
+    // consumes the membership_session / membership_cancelled params.
+    const supportive =
+      !session.superuser && !!session.role && !DOCTOR_ROLES.includes(session.role);
+    const returnPath = supportive ? "/portal/supportive" : "/portal/practitioner";
     // Idempotency: retries for the same account + plan reuse one Checkout
     // Session for 24h, so a timeout + retry can never double-charge.
     const idempotencyKey = `hive_pro_${accountKey}_${billing}_${priceId}`;
@@ -818,8 +825,8 @@ router.post("/portal/practitioner/membership/checkout", requirePortalSession, re
       {
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${baseUrl}/portal/practitioner?membership_session={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/portal/practitioner?membership_cancelled=1`,
+        success_url: `${baseUrl}${returnPath}?membership_session={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}${returnPath}?membership_cancelled=1`,
         metadata: { purpose: "pro_membership", accountKey, billing },
       },
       { idempotencyKey },
