@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   addPracSlot,
+  adminGetAccountStore,
   adminListAccounts,
   type AdminAccount,
+  type AdminStoreView,
   confirmMembership,
   confirmMembershipDevSimulate,
   createPracPatient,
@@ -93,12 +95,33 @@ export default function Practitioner() {
   const isMember = membership?.active === true;
 
   const [adminAccounts, setAdminAccounts] = useState<AdminAccount[] | null>(null);
+  const [adminOpenId, setAdminOpenId] = useState<string | null>(null);
+  const [adminStore, setAdminStore] = useState<AdminStoreView | null>(null);
+  const [adminStoreBusy, setAdminStoreBusy] = useState(false);
   useEffect(() => {
     if (!allowed || !superuser) return;
     adminListAccounts()
       .then((r) => setAdminAccounts(r.accounts))
       .catch(() => setAdminAccounts([]));
   }, [allowed, superuser]);
+
+  const toggleAdminStore = async (id: string) => {
+    if (adminOpenId === id) {
+      setAdminOpenId(null);
+      setAdminStore(null);
+      return;
+    }
+    setAdminOpenId(id);
+    setAdminStore(null);
+    setAdminStoreBusy(true);
+    try {
+      setAdminStore(await adminGetAccountStore(id));
+    } catch {
+      setAdminStore(null);
+    } finally {
+      setAdminStoreBusy(false);
+    }
+  };
 
   const refresh = useCallback(async () => {
     try {
@@ -361,25 +384,62 @@ export default function Practitioner() {
               ) : (
                 <div className="grid gap-2">
                   {adminAccounts.map((a) => (
-                    <div
-                      key={a.id}
-                      className="rounded-xl border border-border bg-background/40 p-3.5 flex flex-wrap items-center gap-x-4 gap-y-1"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-sm flex items-center gap-2">
-                          {a.fullName}
-                          {a.superuser && (
-                            <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px]">FOUNDER</Badge>
+                    <div key={a.id} className="rounded-xl border border-border bg-background/40 p-3.5">
+                      <button
+                        type="button"
+                        onClick={() => void toggleAdminStore(a.id)}
+                        className="w-full text-left flex flex-wrap items-center gap-x-4 gap-y-1"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-sm flex items-center gap-2">
+                            {a.fullName}
+                            {a.superuser && (
+                              <Badge className="bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[10px]">FOUNDER</Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {a.email} · {a.accountType === "healthcare" ? a.role ?? "Healthcare" : "Caretaker"} · {a.status}
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground text-right">
+                          <div>{a.patients} patient file{a.patients === 1 ? "" : "s"}</div>
+                          <div>{a.membershipActive ? "Member" : "Free hub"}{a.hasPasskey ? " · passkey" : ""}</div>
+                        </div>
+                      </button>
+                      {adminOpenId === a.id && (
+                        <div className="mt-3 border-t border-border pt-3 text-xs">
+                          {adminStoreBusy ? (
+                            <p className="text-muted-foreground">Loading account data…</p>
+                          ) : !adminStore || !adminStore.store ? (
+                            <p className="text-muted-foreground">No stored data for this account yet.</p>
+                          ) : (
+                            <div className="grid gap-2">
+                              <div className="text-muted-foreground">
+                                {adminStore.store.bookings.length} booking{adminStore.store.bookings.length === 1 ? "" : "s"} ·{" "}
+                                {adminStore.store.membership.active ? "active membership" : "no membership"}
+                              </div>
+                              {adminStore.store.patients.length === 0 ? (
+                                <p className="text-muted-foreground">No patient files.</p>
+                              ) : (
+                                adminStore.store.patients.map((p) => (
+                                  <div key={p.id} className="rounded-lg border border-border/70 bg-background/60 p-2.5">
+                                    <div className="font-medium text-foreground">
+                                      {p.fullName}
+                                      {p.demo ? " (demo)" : ""}
+                                    </div>
+                                    <div className="text-muted-foreground mt-0.5">
+                                      {p.dob || "DOB —"} · MRN {p.mrn || "—"} · {p.condition || "No condition noted"}
+                                    </div>
+                                    <div className="text-muted-foreground mt-0.5">
+                                      {p.notes.length} note{p.notes.length === 1 ? "" : "s"} · {p.prescriptions.length} prescription{p.prescriptions.length === 1 ? "" : "s"}
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {a.email} · {a.accountType === "healthcare" ? a.role ?? "Healthcare" : "Caretaker"} · {a.status}
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground text-right">
-                        <div>{a.patients} patient file{a.patients === 1 ? "" : "s"}</div>
-                        <div>{a.membershipActive ? "Member" : "Free hub"}{a.hasPasskey ? " · passkey" : ""}</div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>

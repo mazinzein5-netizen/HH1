@@ -35,6 +35,11 @@ function requirePractitioner(req: Request, res: Response, next: NextFunction): v
 /** Requires a doctor-role practitioner for patient-file endpoints. */
 function requireDoctor(req: Request, res: Response, next: NextFunction): void {
   const session = sessionOf(req);
+  // Founder superuser passes every role gate for read/test purposes.
+  if (session.superuser) {
+    next();
+    return;
+  }
   if (!session.role || !DOCTOR_ROLES.includes(session.role)) {
     res.status(403).json({
       error: "DOCTOR_ROLE_REQUIRED",

@@ -125,6 +125,10 @@ function ensureSuperuserAccount(): void {
     existing.hash = hash;
     existing.mode = "full";
     existing.status = "verified";
+    // Normalize the founder profile so every role gate passes regardless of
+    // how a pre-existing record with this email was originally created.
+    existing.accountType = "healthcare";
+    existing.role = "GP";
     return;
   }
   accounts.set(email, {
