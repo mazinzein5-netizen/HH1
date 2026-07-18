@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { MembershipWorkspace } from "./MembershipWorkspace";
+import { AppReleasePublisher } from "./AppReleasePublisher";
 import {
   adminGetAccountStore,
   adminListAccounts,
@@ -245,6 +246,9 @@ export default function Practitioner() {
             {error}
           </div>
         )}
+
+        {/* Founder superuser — publish a new Android build */}
+        {superuser && <AppReleasePublisher />}
 
         {/* Founder superuser — read/test overview of every registered account */}
         {superuser && (

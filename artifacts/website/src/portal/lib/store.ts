@@ -605,6 +605,38 @@ export function startConsultSession(bookingId: string): Promise<{ session: Consu
   return pracFetch(`/bookings/${encodeURIComponent(bookingId)}/session`, { method: "POST" });
 }
 
+// ── App release publishing (founder only) ──────────────────────────────────
+
+export interface AppRelease {
+  platform: "android";
+  version: string;
+  versionCode: number;
+  apkUrl: string;
+  updatedAt: number;
+}
+
+/** Current live Android release advertised on the website (public). */
+export async function getLatestAppRelease(): Promise<AppRelease> {
+  const res = await fetch(`${API_BASE}/app/latest`);
+  if (!res.ok) throw await parseError(res);
+  return (await res.json()) as AppRelease;
+}
+
+/** Founder-only: publish a new Android release (version, code, EAS APK URL). */
+export async function publishAppRelease(input: {
+  version: string;
+  versionCode: number;
+  apkUrl: string;
+}): Promise<AppRelease> {
+  const res = await fetch(`${API_BASE}/app/release`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw await parseError(res);
+  return (await res.json()) as AppRelease;
+}
+
 // ── Consent-based live medication exchange ─────────────────────────────────
 
 export interface LiveMedShare {
