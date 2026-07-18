@@ -65,6 +65,79 @@ export async function hydrateAppRelease(): Promise<void> {
   }
 }
 
+/**
+ * Check the APK link actually resolves to a downloadable file. EAS artifact
+ * URLs can expire or be mistyped; a HEAD request (falling back to a 1-byte
+ * range GET for servers that reject HEAD) catches dead links before the site
+ * starts advertising them.
+ */
+export async function verifyApkReachable(
+  url: string,
+  timeoutMs = 10_000,
+): Promise<{ ok: boolean; status?: number; reason?: string }> {
+  const attempt = async (method: "HEAD" | "GET") => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        method,
+        redirect: "follow",
+        signal: controller.signal,
+        headers: method === "GET" ? { Range: "bytes=0-0" } : undefined,
+      });
+      // Drain nothing: for the range GET we cancel the body immediately.
+      if (method === "GET") await res.body?.cancel().catch(() => {});
+      return res;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  try {
+    let res = await attempt("HEAD");
+    if (res.status === 405 || res.status === 501) {
+      res = await attempt("GET");
+    }
+    if (res.ok || res.status === 206) return { ok: true, status: res.status };
+    return { ok: false, status: res.status, reason: `HTTP ${res.status}` };
+  } catch (err) {
+    return {
+      ok: false,
+      reason: err instanceof Error && err.name === "AbortError" ? "timeout" : "network error",
+    };
+  }
+}
+
+// Periodically re-check the advertised APK link and flag when it goes dead.
+const RECHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // every 6 hours
+let recheckTimer: NodeJS.Timeout | null = null;
+
+export function startApkLinkMonitor(): void {
+  if (recheckTimer) return;
+  const check = async () => {
+    const result = await verifyApkReachable(androidRelease.apkUrl);
+    if (result.ok) {
+      logger.debug(
+        { version: androidRelease.version },
+        "Advertised APK link verified reachable",
+      );
+    } else {
+      logger.error(
+        {
+          version: androidRelease.version,
+          apkUrl: androidRelease.apkUrl,
+          status: result.status,
+          reason: result.reason,
+        },
+        "Advertised APK download link is no longer reachable — publish a fresh release",
+      );
+    }
+  };
+  recheckTimer = setInterval(check, RECHECK_INTERVAL_MS);
+  recheckTimer.unref?.();
+  // First check shortly after boot, off the startup critical path.
+  setTimeout(check, 30_000).unref?.();
+}
+
 /** Founder-only guard (mirrors the practitioner admin routes). */
 function requireSuperuser(req: Request, res: Response, next: NextFunction): void {
   if (!getPortalSession(req)?.superuser) {
@@ -113,6 +186,14 @@ router.put("/app/release", requirePortalSession, requireSuperuser, async (req, r
     res.status(409).json({
       error: "VERSION_CODE_REGRESSION",
       message: `versionCode ${versionCode} is lower than the current ${androidRelease.versionCode}`,
+    });
+    return;
+  }
+  const reachable = await verifyApkReachable(apkUrl.trim());
+  if (!reachable.ok) {
+    res.status(422).json({
+      error: "APK_UNREACHABLE",
+      message: `The APK link did not resolve (${reachable.reason ?? "unreachable"}). Check the EAS build URL and try again.`,
     });
     return;
   }
