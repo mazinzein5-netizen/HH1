@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { PortalLayout } from "./PortalLayout";
+import { PageHead } from "@/components/PageHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { setSession, startDemoSession, type ApiError } from "./lib/store";
@@ -30,6 +31,13 @@ export default function Landing() {
 
   return (
     <PortalLayout>
+      <PageHead
+        title="HIVE Emergency Portal"
+        description="The HIVE Emergency Portal gives verified clinicians instant, patient-approved access to critical health records in life-saving situations."
+        path="/portal"
+        ogTitle="HIVE Emergency Portal — Clinician Access"
+        ogDescription="Instant, patient-approved access to critical health records for verified clinicians. Built for life-saving, last-minute situations."
+      />
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-destructive/40 bg-destructive/10 text-destructive text-xs font-bold tracking-[0.15em] uppercase mb-6">

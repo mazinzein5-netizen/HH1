@@ -1,5 +1,6 @@
 import { PortalLayout } from "./PortalLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHead } from "@/components/PageHead";
 import { ShieldCheck, Clock, MapPin, Camera, Lock } from "lucide-react";
 
 const sections = [
@@ -33,6 +34,13 @@ const sections = [
 export default function Privacy() {
   return (
     <PortalLayout>
+      <PageHead
+        title="Privacy Policy"
+        description="Plain-language disclosures on how the HIVE Emergency Portal handles data — patient-approved access only, no central storage, automatic share expiry."
+        path="/portal/privacy"
+        ogTitle="Privacy Policy — Health HIVE"
+        ogDescription="Patient-approved access only, no central patient database, automatic share expiry, and on-device verification images. Privacy by design."
+      />
       <div className="max-w-2xl mx-auto">
         <h1 className="text-4xl font-bold mb-3">Privacy</h1>
         <p className="text-muted-foreground text-lg mb-8">

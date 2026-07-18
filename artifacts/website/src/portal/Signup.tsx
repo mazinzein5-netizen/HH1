@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearch, Link } from "wouter";
 import { PortalLayout } from "./PortalLayout";
+import { PageHead } from "@/components/PageHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -199,6 +200,13 @@ export default function Signup() {
 
   return (
     <PortalLayout>
+      <PageHead
+        title="Create Your HIVE Portal Account"
+        description="Sign up for a HIVE Portal account as a healthcare professional or caretaker. Join Ireland's connected health network with verified, biometric-secured access."
+        path="/portal/signup"
+        ogTitle="Create Your HIVE Portal Account"
+        ogDescription="Sign up as a verified healthcare professional or caretaker. Biometric-secured access to Ireland's connected health network."
+      />
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">Create your portal account</h1>
         <p className="text-muted-foreground mb-8">

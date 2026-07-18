@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
+import { PageHead } from "@/components/PageHead";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -137,6 +138,13 @@ export default function BookPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PageHead
+        title="Book a HIVE Consultation"
+        description="Browse verified HIVE practitioners with open video and audio consultation slots. Book your connected health appointment online."
+        path="/book"
+        ogTitle="Book a HIVE Consultation"
+        ogDescription="Browse verified HIVE practitioners with open video and audio slots and book your connected health appointment online."
+      />
       <header className="border-b border-border">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-3">
           <Link href="/" className="text-muted-foreground hover:text-primary transition-colors" aria-label="Back to home">

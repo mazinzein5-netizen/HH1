@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useSearch, Link } from "wouter";
 import { PortalLayout } from "./PortalLayout";
+import { PageHead } from "@/components/PageHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -138,6 +139,13 @@ export default function Login() {
 
   return (
     <PortalLayout>
+      <PageHead
+        title="Log In to HIVE Portal"
+        description="Log in to your HIVE Portal account. Secure password and biometric second-factor authentication for verified healthcare partners."
+        path="/portal/login"
+        ogTitle="Log In — HIVE Portal"
+        ogDescription="Secure login for verified HIVE healthcare partners. Password plus mandatory biometric second factor."
+      />
       <div className="max-w-md mx-auto">
         <h1 className="text-3xl font-bold mb-2">Log in</h1>
         <p className="text-muted-foreground mb-6">

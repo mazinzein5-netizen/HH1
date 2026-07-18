@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PortalLayout } from "./PortalLayout";
+import { PageHead } from "@/components/PageHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,13 @@ export default function Pricing() {
 
   return (
     <PortalLayout>
+      <PageHead
+        title="Partner Subscription Plans"
+        description="Flexible monthly and annual subscription plans for HIVE Portal partners — verified access, emergency viewer, caretaker dashboard, and biometric 2FA."
+        path="/portal/pricing"
+        ogTitle="HIVE Portal — Partner Subscription Plans"
+        ogDescription="Monthly and annual subscriptions for verified practitioners. Includes emergency viewer, caretaker dashboard, and biometric 2FA."
+      />
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold mb-3">Partner subscription</h1>

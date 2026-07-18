@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
+import { PageHead } from "@/components/PageHead";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { HiveLogo } from "@/components/HiveLogo";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,13 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-transparent text-foreground overflow-x-hidden font-sans">
+      <PageHead
+        title="Connected Health Platform"
+        description="Health HIVE is Ireland's connected health ecosystem — patients keep records organised and clinicians stay supported on call, all in one secure platform."
+        path="/"
+        ogTitle="Health HIVE Ecosystem"
+        ogDescription="Ireland's connected health platform. Patients keep their records organised; clinicians stay supported on call."
+      />
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <CircuitHexBackground />
       {/* Navigation */}
