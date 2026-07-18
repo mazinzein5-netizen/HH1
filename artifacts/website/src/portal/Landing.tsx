@@ -82,28 +82,61 @@ export default function Landing() {
           </CardContent>
         </Card>
 
-        {/* Two entrances */}
-        <div className="grid md:grid-cols-2 gap-6">
+        {/* Three entrances */}
+        <div className="grid md:grid-cols-3 gap-6">
           <Card className="group hover:border-primary/50 transition-colors">
             <CardHeader>
               <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center mb-3">
                 <Stethoscope className="h-7 w-7 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Healthcare Worker</CardTitle>
+              <CardTitle className="text-2xl">GP &amp; HIVE HUB</CardTitle>
               <CardDescription className="text-base">
-                GPs, hospital doctors, first responders, physiotherapists,
-                specialists, A&amp;E follow-up and occupational health.
+                Doctors only — GPs, hospital doctors and outpatient clinic
+                specialists.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <ul className="text-sm text-muted-foreground space-y-1.5">
                 <li className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-primary" /> Verified
-                  professional access
+                  <ShieldCheck className="h-4 w-4 text-primary" /> Patient files
+                  &amp; live medications
                 </li>
                 <li className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-primary" /> Biometric 2FA
-                  on every login
+                  <ShieldCheck className="h-4 w-4 text-primary" /> HIVE booking
+                  &amp; consultations
+                </li>
+              </ul>
+              <div className="flex gap-2 pt-2">
+                <Button onClick={() => navigate("/portal/signup?type=healthcare")}>
+                  Sign up
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/portal/login")}>
+                  Log in
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="group hover:border-primary/50 transition-colors">
+            <CardHeader>
+              <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center mb-3">
+                <HeartHandshake className="h-7 w-7 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">Supportive Care</CardTitle>
+              <CardDescription className="text-base">
+                Physiotherapists, occupational health, first responders and
+                A&amp;E follow-up professionals.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <ul className="text-sm text-muted-foreground space-y-1.5">
+                <li className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" /> Emergency
+                  relay tools
+                </li>
+                <li className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" /> HIVE booking
+                  &amp; consultations
                 </li>
               </ul>
               <div className="flex gap-2 pt-2">

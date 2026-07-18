@@ -323,6 +323,15 @@ export function isDoctorRole(role?: string): boolean {
   return !!role && DOCTOR_ROLES.includes(role);
 }
 
+/** Supportive-care professional roles — every healthcare role that is not a doctor. */
+export const SUPPORTIVE_ROLES: readonly string[] = HEALTHCARE_ROLES.filter(
+  (r) => !DOCTOR_ROLES.includes(r),
+);
+
+export function isSupportiveRole(role?: string): boolean {
+  return !!role && SUPPORTIVE_ROLES.includes(role);
+}
+
 // ── Founder superuser admin API (read/test capacity) ────────────────────────
 
 export interface AdminAccount {
