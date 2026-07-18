@@ -44,9 +44,11 @@ function requireDoctor(req: Request, res: Response, next: NextFunction): void {
  * Requires an ACTIVE HIVE HUB professional membership (validated server-side).
  * The bookings workspace and video appointments are membership features.
  */
-function requireMembership(req: Request, res: Response, next: NextFunction): void {
+async function requireMembership(req: Request, res: Response, next: NextFunction): Promise<void> {
   const store = getStore(req, res);
   if (!store) return;
+  const session = sessionOf(req);
+  if (session.accountId) await reconcileMembership(store, session.accountId);
   if (!membershipOf(store).active) {
     res.status(403).json({
       error: "MEMBERSHIP_REQUIRED",
@@ -139,6 +141,12 @@ export interface ProMembership {
   activatedAt: number | null;
   /** Stripe Checkout session that paid for the membership (audit trail). */
   sessionId: string | null;
+  /** Stripe subscription backing this membership — used to revoke on lapse. */
+  subscriptionId?: string | null;
+  /** Stripe customer for the subscription (audit trail / support lookups). */
+  customerId?: string | null;
+  /** Last time the subscription status was re-verified against Stripe (ms). */
+  lastVerifiedAt?: number | null;
 }
 
 export interface PracStore {
@@ -158,6 +166,72 @@ const INACTIVE_MEMBERSHIP: ProMembership = {
 
 export function membershipOf(store: PracStore): ProMembership {
   return store.membership ?? INACTIVE_MEMBERSHIP;
+}
+
+/** Stripe subscription statuses that keep the membership entitlement alive. */
+const LIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "past_due"]);
+
+/** Re-verify against Stripe at most this often (per store). */
+const MEMBERSHIP_VERIFY_TTL_MS = 15 * 60 * 1000;
+
+/**
+ * Reconcile an active membership against the Stripe subscription that backs
+ * it, revoking the entitlement when the subscription has lapsed (canceled,
+ * unpaid, incomplete_expired, …). Called lazily on membership-gated access —
+ * results are cached for MEMBERSHIP_VERIFY_TTL_MS so patient-facing directory
+ * scans stay cheap. Stripe outages fail open (entitlement unchanged) and are
+ * retried on the next access.
+ */
+export async function reconcileMembership(store: PracStore, accountId: string): Promise<void> {
+  const m = store.membership;
+  if (!m?.active) return;
+  if (!m.subscriptionId) {
+    // Dev-simulated activation (non-production only) has no subscription.
+    if (m.sessionId === "dev-simulated") {
+      if (isProduction) {
+        // A dev-simulated record must never grant paid access in production.
+        m.active = false;
+        persistPracStore(accountId);
+        logger.warn({ accountId }, "Revoked dev-simulated membership in production");
+      }
+      return;
+    }
+    // Legacy/incomplete records without a subscription id: backfill from the
+    // stored checkout session once, so revocation can work for them too.
+    if (!m.sessionId || !m.sessionId.startsWith("cs_")) return;
+    const now = Date.now();
+    if (m.lastVerifiedAt && now - m.lastVerifiedAt < MEMBERSHIP_VERIFY_TTL_MS) return;
+    try {
+      const stripe = await getUncachableStripeClient();
+      const checkout = await stripe.checkout.sessions.retrieve(m.sessionId);
+      m.subscriptionId = typeof checkout.subscription === "string" ? checkout.subscription : checkout.subscription?.id ?? null;
+      m.customerId = typeof checkout.customer === "string" ? checkout.customer : checkout.customer?.id ?? null;
+      m.lastVerifiedAt = now;
+      persistPracStore(accountId);
+    } catch (err) {
+      logger.warn({ err, accountId }, "Could not backfill membership subscription id");
+      return;
+    }
+    if (!m.subscriptionId) return;
+  }
+  const now = Date.now();
+  if (m.lastVerifiedAt && now - m.lastVerifiedAt < MEMBERSHIP_VERIFY_TTL_MS) return;
+  try {
+    const stripe = await getUncachableStripeClient();
+    const sub = await stripe.subscriptions.retrieve(m.subscriptionId);
+    m.lastVerifiedAt = now;
+    if (!LIVE_SUBSCRIPTION_STATUSES.has(sub.status)) {
+      m.active = false;
+      logger.info(
+        { accountId, subscriptionId: m.subscriptionId, status: sub.status },
+        "Professional membership revoked — subscription no longer live",
+      );
+    }
+    persistPracStore(accountId);
+  } catch (err) {
+    // Fail open on transient Stripe errors; retry on next access.
+    logger.warn({ err, accountId }, "Could not re-verify membership subscription");
+  }
 }
 
 /**
@@ -625,9 +699,11 @@ async function proPriceId(billing: MembershipBilling): Promise<string> {
   return price.id;
 }
 
-router.get("/portal/practitioner/membership", requirePortalSession, requirePractitioner, (req, res) => {
+router.get("/portal/practitioner/membership", requirePortalSession, requirePractitioner, async (req, res) => {
   const store = getStore(req, res);
   if (!store) return;
+  const session = sessionOf(req);
+  if (session.accountId) await reconcileMembership(store, session.accountId);
   const m = membershipOf(store);
   res.json({ membership: { active: m.active, billing: m.billing, activatedAt: m.activatedAt } });
 });
@@ -720,7 +796,18 @@ router.post("/portal/practitioner/membership/confirm", requirePortalSession, req
       return;
     }
     const billing = parseBilling(checkout.metadata?.["billing"]) ?? "monthly";
-    store.membership = { active: true, billing, activatedAt: Date.now(), sessionId };
+    const subscriptionId =
+      typeof checkout.subscription === "string" ? checkout.subscription : checkout.subscription?.id ?? null;
+    const customerId = typeof checkout.customer === "string" ? checkout.customer : checkout.customer?.id ?? null;
+    store.membership = {
+      active: true,
+      billing,
+      activatedAt: Date.now(),
+      sessionId,
+      subscriptionId,
+      customerId,
+      lastVerifiedAt: Date.now(),
+    };
     persistPracStore(session.accountId!);
     const m = membershipOf(store);
     res.json({ membership: { active: m.active, billing: m.billing, activatedAt: m.activatedAt } });

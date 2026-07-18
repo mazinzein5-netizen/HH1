@@ -8,6 +8,7 @@ import {
   membershipOf,
   newEntityId,
   persistPracStore,
+  reconcileMembership,
   type AvailabilitySlot,
   type Booking,
   type PracStore,
@@ -16,9 +17,12 @@ import {
 /**
  * Practitioners appear in the patient-facing directory only while their HIVE
  * HUB professional membership is active AND automated booking is switched on.
- * Membership lapsing removes them from patient booking immediately.
+ * Membership status is lazily re-verified against the backing Stripe
+ * subscription (with a short cache), so a lapsed subscription drops the
+ * practitioner out of patient booking within the re-verification window.
  */
-function acceptingBookings(store: PracStore): boolean {
+async function acceptingBookings(store: PracStore, accountId: string): Promise<boolean> {
+  await reconcileMembership(store, accountId);
   return membershipOf(store).active && store.settings.bookingEnabled;
 }
 
@@ -90,11 +94,11 @@ function slotTaken(bookings: Booking[], slotId: string, date: string): boolean {
  * GET /hive/practitioners
  * Public directory of practitioners with automated HIVE booking enabled.
  */
-router.get("/hive/practitioners", (_req, res) => {
-  const practitioners = listHealthcarePractitioners()
-    .map((p) => {
+router.get("/hive/practitioners", async (_req, res) => {
+  const entries = await Promise.all(
+    listHealthcarePractitioners().map(async (p) => {
       const store = getPracStoreById(p.id);
-      if (!store || !acceptingBookings(store)) return null;
+      if (!store || !(await acceptingBookings(store, p.id))) return null;
       const slots = patientSlots(store.settings);
       if (slots.length === 0) return null;
       const openCount = slots.filter((s) => !slotTaken(store.bookings, s.id, nextDateForDay(s.day))).length;
@@ -108,9 +112,9 @@ router.get("/hive/practitioners", (_req, res) => {
         audioConsultations: store.settings.audioConsultations,
         openSlots: openCount,
       };
-    })
-    .filter((p) => p !== null);
-  res.json({ practitioners });
+    }),
+  );
+  res.json({ practitioners: entries.filter((p) => p !== null) });
 });
 
 /**
@@ -118,10 +122,10 @@ router.get("/hive/practitioners", (_req, res) => {
  * Published video/audio availability slots for one practitioner, with a
  * `taken` flag for slots that already hold a booking.
  */
-router.get("/hive/practitioners/:id/slots", (req, res) => {
+router.get("/hive/practitioners/:id/slots", async (req, res) => {
   const entry = practitionerDirectoryEntry(req.params.id);
   const store = entry ? getPracStoreById(entry.id) : null;
-  if (!entry || !store || !acceptingBookings(store)) {
+  if (!entry || !store || !(await acceptingBookings(store, entry.id))) {
     res.status(404).json({ error: "This practitioner is not accepting HIVE bookings." });
     return;
   }
@@ -155,10 +159,10 @@ router.get("/hive/practitioners/:id/slots", (req, res) => {
  * Books the given open slot. The booking appears in the practitioner's
  * "Upcoming consultations" list as confirmed.
  */
-router.post("/hive/practitioners/:id/book", (req, res) => {
+router.post("/hive/practitioners/:id/book", async (req, res) => {
   const entry = practitionerDirectoryEntry(req.params.id);
   const store = entry ? getPracStoreById(entry.id) : null;
-  if (!entry || !store || !acceptingBookings(store)) {
+  if (!entry || !store || !(await acceptingBookings(store, entry.id))) {
     res.status(404).json({ error: "This practitioner is not accepting HIVE bookings." });
     return;
   }
