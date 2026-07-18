@@ -156,8 +156,36 @@ router.get("/app/latest", (_req, res) => {
   res.json(androidRelease);
 });
 
-router.get("/app/download/android", (_req, res) => {
-  res.redirect(302, androidRelease.apkUrl);
+/**
+ * Stream the APK through the API so we can attach a versioned filename
+ * (HealthHIVE-v1.0.2.apk). A plain redirect to the expo.dev artifact makes
+ * every download save under the same opaque hash name, which confuses
+ * repeat installs ("file (1).apk") and stale-cache reuse on Android.
+ * Falls back to a redirect if the upstream fetch fails.
+ */
+router.get("/app/download/android", async (_req, res) => {
+  const { version, apkUrl } = androidRelease;
+  const filename = `HealthHIVE-v${version}.apk`;
+  try {
+    const upstream = await fetch(apkUrl, { redirect: "follow" });
+    if (!upstream.ok || !upstream.body) {
+      throw new Error(`upstream HTTP ${upstream.status}`);
+    }
+    res.status(200);
+    res.setHeader("Content-Type", "application/vnd.android.package-archive");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Cache-Control", "no-store");
+    const len = upstream.headers.get("content-length");
+    if (len) res.setHeader("Content-Length", len);
+    const { Readable } = await import("node:stream");
+    const stream = Readable.fromWeb(upstream.body as never);
+    stream.on("error", () => res.destroy());
+    res.on("close", () => stream.destroy());
+    stream.pipe(res);
+  } catch (err) {
+    logger.error({ err, apkUrl }, "APK proxy download failed — falling back to redirect");
+    if (!res.headersSent) res.redirect(302, apkUrl);
+  }
 });
 
 /**
