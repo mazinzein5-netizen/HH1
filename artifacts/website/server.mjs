@@ -34,7 +34,8 @@ if (!port || Number.isNaN(port)) {
 
 const SITE_URL = "https://healthhive.app";
 const DEFAULT_IMAGE = `${SITE_URL}/opengraph.jpg`;
-const IMAGE_ALT = "Health HIVE — connected health platform";
+const IMAGE_ALT =
+  "Health HIVE — safe, auditable digitisation of patient files for primary and secondary care in Ireland";
 
 /**
  * Each entry covers one public route.
