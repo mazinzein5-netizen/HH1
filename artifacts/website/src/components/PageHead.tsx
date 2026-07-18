@@ -13,6 +13,8 @@ interface PageHeadProps {
   ogDescription?: string;
   ogImage?: string;
   ogImageAlt?: string;
+  keywords?: string;
+  jsonLd?: object[];
 }
 
 export function PageHead({
@@ -23,6 +25,8 @@ export function PageHead({
   ogDescription,
   ogImage = DEFAULT_IMAGE,
   ogImageAlt = DEFAULT_IMAGE_ALT,
+  keywords,
+  jsonLd,
 }: PageHeadProps) {
   const canonical = `${SITE_URL}${path}`;
   const resolvedOgTitle = ogTitle ?? title;
@@ -32,7 +36,10 @@ export function PageHead({
     <Helmet>
       <title>{title} | {SITE_NAME}</title>
       <meta name="description" content={description} />
+      {keywords && <meta name="keywords" content={keywords} />}
       <link rel="canonical" href={canonical} />
+      <meta property="og:site_name" content={SITE_NAME} />
+      <meta property="og:locale" content="en_IE" />
       <meta property="og:title" content={resolvedOgTitle} />
       <meta property="og:description" content={resolvedOgDescription} />
       <meta property="og:type" content="website" />
@@ -46,6 +53,11 @@ export function PageHead({
       <meta name="twitter:description" content={resolvedOgDescription} />
       <meta name="twitter:image" content={ogImage} />
       <meta name="twitter:image:alt" content={ogImageAlt} />
+      {jsonLd?.map((schema, i) => (
+        <script key={i} type="application/ld+json">
+          {JSON.stringify(schema)}
+        </script>
+      ))}
     </Helmet>
   );
 }

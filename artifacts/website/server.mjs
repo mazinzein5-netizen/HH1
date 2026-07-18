@@ -47,16 +47,16 @@ const ROUTE_META = [
   {
     match: (p) => p === "/" || p === "",
     path: "/",
-    title: "Health HIVE Ecosystem | Connected Health Platform Ireland",
+    title: "Safe Digitisation of Patient Files in Ireland | Health HIVE",
     description:
-      "Health HIVE is Ireland's connected health ecosystem — patients keep their records organised and clinicians stay supported on call, all in one secure platform.",
-    ogTitle: "Health HIVE Ecosystem",
+      "Health HIVE is an Irish digital health platform for the safe, auditable digitisation of patient files in primary and secondary care — patient-held records, streamlined clinical documentation and GDPR-first data protection, aligned with Digital for Care 2024–2030 and the Sláintecare direction.",
+    ogTitle: "Health HIVE — Safe, Auditable Digital Patient Records for Ireland",
     ogDescription:
-      "Ireland's connected health platform. Patients keep their records organised; clinicians stay supported on call.",
+      "Irish digital health platform for the safe digitisation of patient files across primary and secondary care. Audit-ready records, GDPR-first, aligned with Ireland's Digital for Care framework.",
     body: `
       <header>
-        <h1>Health HIVE Ecosystem</h1>
-        <p>Ireland's connected health platform — patients keep their records organised and clinicians stay supported on call.</p>
+        <h1>Health HIVE — Safe Digitisation of Patient Files in Ireland</h1>
+        <p>An Irish digital health platform for the safe, auditable digitisation of patient files in primary and secondary care — patient-held records, streamlined clinical documentation and GDPR-first data protection.</p>
       </header>
       <main>
         <section>
@@ -64,12 +64,16 @@ const ROUTE_META = [
           <p>Keep your health records organised, share them securely with clinicians in emergencies, and stay in control of your data at all times.</p>
         </section>
         <section>
-          <h2>For Clinicians</h2>
-          <p>Stay supported on call with instant access to patient-approved records, emergency shares, and biometric-secured portal access.</p>
+          <h2>For GPs, Hospitals &amp; Clinicians</h2>
+          <p>Streamlined, audit-ready clinical documentation with instant access to patient-approved records, emergency shares, and biometric-secured portal access — less paperwork in primary and secondary care.</p>
+        </section>
+        <section>
+          <h2>Aligned with Ireland's Digital Health Direction</h2>
+          <p>Designed in step with Digital for Care 2024–2030, the Sláintecare direction, HIQA's information-management standards, the Health Information Act, GDPR and the Irish Data Protection Act 2018. Alignment reflects design goals, not endorsement or certification by any public body.</p>
         </section>
         <section>
           <h2>The HIVE Ecosystem</h2>
-          <p>A connected platform built in Ireland that spans patient health records, clinical decision support, data exchange, and emergency care co-ordination.</p>
+          <p>A connected platform built in Dublin, Ireland that spans patient health records, clinical decision support, encrypted data exchange, and emergency care co-ordination.</p>
         </section>
         <nav>
           <a href="/book">Book a Consultation</a>

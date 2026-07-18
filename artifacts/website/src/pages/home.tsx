@@ -11,6 +11,7 @@ import { VideoEmbed } from "@/components/VideoEmbed";
 import { VideoShowcase } from "@/components/VideoShowcase";
 import { ExchangeSection } from "@/components/ExchangeSection";
 import { PortalAdvertsSection } from "@/components/PortalAdvertsSection";
+import { IrishAlignmentSection } from "@/components/IrishAlignmentSection";
 import { HiveMark } from "@/components/HiveMark";
 import { AttentionVideo } from "@/components/AttentionVideo";
 import { 
@@ -98,11 +99,42 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-[100dvh] bg-transparent text-foreground overflow-x-hidden font-sans">
       <PageHead
-        title="Connected Health Platform"
-        description="Health HIVE is Ireland's connected health ecosystem — patients keep records organised and clinicians stay supported on call, all in one secure platform."
+        title="Safe Digitisation of Patient Files in Ireland"
+        description="Health HIVE is an Irish digital health platform for the safe, auditable digitisation of patient files in primary and secondary care — patient-held records, streamlined clinical documentation and GDPR-first data protection, aligned with Digital for Care 2024–2030 and the Sláintecare direction."
         path="/"
-        ogTitle="Health HIVE Ecosystem"
-        ogDescription="Ireland's connected health platform. Patients keep their records organised; clinicians stay supported on call."
+        ogTitle="Health HIVE — Safe, Auditable Digital Patient Records for Ireland"
+        ogDescription="Irish digital health platform for the safe digitisation of patient files across primary and secondary care. Audit-ready records, GDPR-first, aligned with Ireland's Digital for Care framework."
+        keywords="digital health Ireland, digital patient records, safe digitisation patient files, audit trail patient records, GDPR healthcare Ireland, Digital for Care 2030, Sláintecare digital, HIQA information standards, GP practice software Ireland, hospital documentation Ireland, primary care digitisation, secondary care digitisation"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "Health HIVE",
+            legalName: "IbnCeena Ltd",
+            url: "https://healthhive.app",
+            logo: "https://healthhive.app/favicon.svg",
+            email: "info@ibnceena.ie",
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: "Dublin",
+              addressCountry: "IE",
+            },
+            description:
+              "Irish digital health platform for the safe, auditable digitisation of patient files in primary and secondary care.",
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "HIVE Companion",
+            operatingSystem: "Android",
+            applicationCategory: "HealthApplication",
+            offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+            description:
+              "Patient-held digital health record app — organised records, prescriptions, standardised questionnaires and an emergency health card, with all personal data stored on the device.",
+            url: "https://healthhive.app/",
+            publisher: { "@type": "Organization", name: "Health HIVE" },
+          },
+        ]}
       />
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <CircuitHexBackground />
@@ -207,7 +239,7 @@ export default function Home() {
               transition={{ duration: 0.9, delay: 0.22, ease: SMOOTH_EASE }}
               className="text-base sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light glass-panel px-5 sm:px-6 py-4 rounded-3xl"
             >
-              An intricate health documentation ecosystem. Long specialist waiting lists &amp; health systems under pressure can benefit from this digital health solution platform. HIVE Health is smart, safe, efficient and a cost effective augmentation available to all parties.
+              Safe, auditable digitisation of the patient file for primary and secondary care in Ireland. Long specialist waiting lists &amp; health systems under pressure can benefit from this digital health platform — smart, safe, efficient and cost effective for patients, GPs and hospital teams alike.
             </motion.p>
             
             <motion.div 
@@ -766,6 +798,9 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Section: Irish digital health alignment */}
+        <IrishAlignmentSection />
+
         {/* Section: Professional portal adverts */}
         <PortalAdvertsSection />
 
@@ -779,7 +814,9 @@ export default function Home() {
                   <span className="font-semibold text-xl tracking-tight text-foreground">HEALTH <HiveMark /></span>
                 </div>
                 <p className="text-muted-foreground mb-6 max-w-sm">
-                  Connecting the healthcare experience for patients and clinicians with precision, privacy, and clinical alignment.
+                  Health HIVE is an Irish digital health platform for the safe, auditable
+                  digitisation of patient files in primary and secondary care — patient-held
+                  records, streamlined clinical documentation and GDPR-first data protection.
                 </p>
                 <div className="flex gap-4">
                   <a href="mailto:info@ibnceena.ie" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 text-sm">
