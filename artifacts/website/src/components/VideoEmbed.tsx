@@ -25,9 +25,17 @@ export function VideoEmbed({
   // Pre-mount the live preview shortly before it scrolls into view so it
   // feels instant, without loading every video up-front on page load.
   const nearView = useInView(ref, { once: true, margin: "600px 0px" });
-  // Attention gate: the embed stays live only while it is near the viewport;
-  // scrolled far away it unmounts (and its animation stops consuming work).
-  const activeView = useInView(ref, { margin: "300px 0px" });
+  // Attention gate with hysteresis: mount when the embed comes within 300px
+  // of the viewport, but only unmount once it is more than 900px away. The
+  // gap between the two thresholds prevents reload flicker when the video
+  // sits right at a single mount/unmount boundary.
+  const enterView = useInView(ref, { margin: "300px 0px" });
+  const farView = useInView(ref, { margin: "900px 0px" });
+  const [previewMounted, setPreviewMounted] = useState(false);
+  useEffect(() => {
+    if (enterView) setPreviewMounted(true);
+    else if (!farView) setPreviewMounted(false);
+  }, [enterView, farView]);
   const inView = useInView(ref, { once: true, amount: 0.25 });
   const [tabVisible, setTabVisible] = useState(
     typeof document === "undefined" ? true : !document.hidden
@@ -222,8 +230,10 @@ export function VideoEmbed({
             hovered && expandable ? "ring-1 ring-[#f5c518]/50" : "ring-1 ring-transparent"
           }`}
         >
-          {/* Idle state — pulsing hive mark until the section scrolls into view */}
-          {!revealed && (
+          {/* Idle state — pulsing hive mark until the section scrolls into
+              view. Reduced-motion users keep this static placeholder instead
+              of an autoplaying preview; the video opens on click. */}
+          {(!revealed || reducedMotion) && (
             <div
               className="absolute inset-0 flex items-center justify-center"
               aria-hidden="true"
@@ -266,7 +276,7 @@ export function VideoEmbed({
             transition={{ duration: reducedMotion ? 0.3 : 1, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-0"
           >
-            {nearView && activeView && tabVisible && (
+            {nearView && previewMounted && tabVisible && !reducedMotion && (
               <iframe
                 src={src}
                 title={title}
