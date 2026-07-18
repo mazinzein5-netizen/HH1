@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
+import { clearSuperuser, storeSuperuserToken, verifySuperuser } from "@/utils/superuser";
 
 /** Web-only: dev preview frames pass ?preview=1 to skip the consent gate (never persisted). */
 function isWebPreview(): boolean {
@@ -24,28 +25,29 @@ function isWebPilotPreview(): boolean {
 
 const CONSENT_KEY = "@hive_consent_v1";
 const PILOT_KEY = "@hive_pilot_mode";
-export const SUPERUSER_KEY = "@hive_superuser_v1";
 export const PILOT_ACTIVATION_CODE = "HIVE-PILOT-2026";
 
 const API = () => `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
 
 /**
  * Founder superuser unlock — the code is validated by the server against the
- * SUPERUSER_PASSWORD secret. Nothing is hardcoded client-side; a wrong code
- * or an unreachable server never unlocks anything.
+ * SUPERUSER_PASSWORD secret. Nothing is hardcoded client-side; success returns
+ * a server-signed, expiring token which is re-verified server-side on every
+ * launch (see utils/superuser.ts). A wrong code or an unreachable server
+ * never unlocks anything.
  */
-async function validateSuperuserCode(code: string): Promise<boolean> {
+async function requestSuperuserToken(code: string): Promise<string | null> {
   try {
     const res = await fetch(`${API()}/app/superuser/unlock`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code }),
     });
-    if (!res.ok) return false;
-    const data = (await res.json()) as { ok?: boolean };
-    return data.ok === true;
+    if (!res.ok) return null;
+    const data = (await res.json()) as { ok?: boolean; token?: string };
+    return data.ok === true && typeof data.token === "string" ? data.token : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -79,14 +81,15 @@ export function AppModeProvider({
   useEffect(() => {
     (async () => {
       try {
-        const [consent, pilot, superuser] = await Promise.all([
+        const [consent, pilot] = await Promise.all([
           AsyncStorage.getItem(CONSENT_KEY),
           AsyncStorage.getItem(PILOT_KEY),
-          AsyncStorage.getItem(SUPERUSER_KEY),
         ]);
         setConsentAccepted(!!consent || isWebPreview());
         setPilotMode(pilot === "true" || isWebPilotPreview());
-        setSuperuserMode(superuser === "true");
+        // Superuser is only granted after the server re-verifies the stored
+        // signed token (fail closed if offline or the token was tampered with).
+        void verifySuperuser().then(setSuperuserMode);
       } catch {
         setConsentAccepted(isWebPreview());
       } finally {
@@ -108,11 +111,10 @@ export function AppModeProvider({
       return true;
     }
     // Not the pilot code — check the founder superuser code with the server.
-    if (await validateSuperuserCode(code.trim())) {
-      await AsyncStorage.multiSet([
-        [PILOT_KEY, "true"],
-        [SUPERUSER_KEY, "true"],
-      ]);
+    const token = await requestSuperuserToken(code.trim());
+    if (token) {
+      await storeSuperuserToken(token);
+      await AsyncStorage.setItem(PILOT_KEY, "true");
       setPilotMode(true);
       setSuperuserMode(true);
       return true;
@@ -121,7 +123,8 @@ export function AppModeProvider({
   }
 
   async function deactivatePilot() {
-    await AsyncStorage.multiRemove([PILOT_KEY, SUPERUSER_KEY]);
+    await AsyncStorage.removeItem(PILOT_KEY);
+    await clearSuperuser();
     setPilotMode(false);
     setSuperuserMode(false);
   }
@@ -132,6 +135,7 @@ export function AppModeProvider({
     await deleteAllDocuments();
     await deleteAllIdentityData();
     await AsyncStorage.clear();
+    await clearSuperuser();
     setPilotMode(false);
     setSuperuserMode(false);
     setConsentAccepted(false);

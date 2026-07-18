@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
@@ -522,13 +522,79 @@ export function listPortalAccountsAdmin(): AdminAccountEntry[] {
     .sort((x, y) => y.createdAt - x.createdAt);
 }
 
+// ── Mobile superuser tokens ─────────────────────────────────────────────────
+// The app never trusts a local boolean: unlock issues a server-signed token
+// which the app must present back to /app/superuser/verify (on every launch
+// and at privileged checks) before any founder benefit is granted.
+
+const SUPERUSER_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/** HMAC key derived from the secret — rotating the secret revokes all tokens. */
+function superuserTokenKey(): Buffer | null {
+  const secret = process.env.SUPERUSER_PASSWORD;
+  if (!secret || secret.length < 12) return null;
+  return createHash("sha256").update(`hive-superuser-token:${secret}`).digest();
+}
+
+function signSuperuserToken(): string | null {
+  const key = superuserTokenKey();
+  if (!key) return null;
+  const payload = Buffer.from(
+    JSON.stringify({ su: 1, iat: Date.now(), exp: Date.now() + SUPERUSER_TOKEN_TTL_MS }),
+  ).toString("base64url");
+  const sig = createHmac("sha256", key).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
+}
+
+function verifySuperuserToken(token: string): boolean {
+  const key = superuserTokenKey();
+  if (!key) return false;
+  const parts = token.split(".");
+  if (parts.length !== 2) return false;
+  const [payload, sig] = parts;
+  const expected = createHmac("sha256", key).update(payload).digest();
+  let given: Buffer;
+  try {
+    given = Buffer.from(sig, "base64url");
+  } catch {
+    return false;
+  }
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return false;
+  try {
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      su?: number;
+      exp?: number;
+    };
+    return data.su === 1 && typeof data.exp === "number" && data.exp > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+// Simple in-memory rate limit for unlock attempts (brute-force protection).
+const unlockAttempts = new Map<string, { count: number; resetAt: number }>();
+function unlockRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = unlockAttempts.get(ip);
+  if (!entry || entry.resetAt < now) {
+    unlockAttempts.set(ip, { count: 1, resetAt: now + 15 * 60 * 1000 });
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > 10;
+}
+
 /**
  * POST /app/superuser/unlock — server-validated founder unlock for the
  * mobile app. Body: { code }. The code is the SUPERUSER_PASSWORD secret;
- * nothing is hardcoded client-side and no client boolean grants access
- * without this round-trip.
+ * nothing is hardcoded client-side. Returns a signed, expiring token the
+ * app must re-verify server-side before granting any benefit.
  */
 router.post("/app/superuser/unlock", (req, res) => {
+  if (unlockRateLimited(req.ip ?? "unknown")) {
+    res.status(429).json({ error: "TOO_MANY_ATTEMPTS" });
+    return;
+  }
   const secret = process.env.SUPERUSER_PASSWORD;
   const { code } = req.body as Record<string, unknown>;
   if (!secret || secret.length < 12 || typeof code !== "string") {
@@ -541,7 +607,30 @@ router.post("/app/superuser/unlock", (req, res) => {
     res.status(401).json({ error: "INVALID_CODE" });
     return;
   }
+  const token = signSuperuserToken();
+  if (!token) {
+    res.status(401).json({ error: "INVALID_CODE" });
+    return;
+  }
   logger.info("Mobile superuser unlock granted");
+  res.json({
+    ok: true,
+    token,
+    grants: { pilotMode: true, tier: "red", allTiers: true },
+  });
+});
+
+/**
+ * POST /app/superuser/verify — the app calls this on launch and before
+ * privileged checks with its stored token. Signature + expiry are checked
+ * server-side; rotating SUPERUSER_PASSWORD revokes all outstanding tokens.
+ */
+router.post("/app/superuser/verify", (req, res) => {
+  const { token } = req.body as Record<string, unknown>;
+  if (typeof token !== "string" || !verifySuperuserToken(token)) {
+    res.status(401).json({ error: "INVALID_TOKEN" });
+    return;
+  }
   res.json({ ok: true, grants: { pilotMode: true, tier: "red", allTiers: true } });
 });
 

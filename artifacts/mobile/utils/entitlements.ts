@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getMembership, PlanTier } from "@/utils/membershipStore";
+import { verifySuperuser } from "@/utils/superuser";
 
 /* ────────────────────────────────────────────────────────────────────────────
  * On-device monthly usage tracking (Zero-Server framework).
@@ -71,11 +72,11 @@ type UsageMap = Partial<Record<MeteredFeature, number>>;
  * HIVE node, online or through the insurer.
  */
 export async function getPlanTier(userId: string): Promise<PlanTier> {
-  // Founder superuser (server-validated unlock) gets the top card's benefits,
-  // which include everything in the Gold and Blue cards.
+  // Founder superuser gets the top card's benefits (covers Gold and Blue).
+  // The grant is server-verified: verifySuperuser() checks the stored signed
+  // token against the server (memoized per session), never a local boolean.
   try {
-    const superuser = await AsyncStorage.getItem("@hive_superuser_v1");
-    if (superuser === "true") return "red";
+    if (await verifySuperuser()) return "red";
   } catch {
     /* fall through to the normal membership lookup */
   }
