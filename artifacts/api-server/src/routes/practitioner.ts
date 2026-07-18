@@ -8,7 +8,7 @@ import {
   type PortalSessionInfo,
 } from "./portalAuth";
 import { getUncachableStripeClient } from "../stripeClient";
-import { liveMedShareForPatient } from "./medExchange";
+import { liveMedShareForPatient, sessionIsVerifiedDoctor } from "./medExchange";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -581,7 +581,7 @@ router.get("/portal/practitioner/patients/:id", requirePortalSession, requirePra
   // appear inside the patient file itself, with freshness.
   const session = sessionOf(req);
   let liveMedications = null;
-  if (session.email && !session.demo) {
+  if (session.email && !session.demo && sessionIsVerifiedDoctor(session)) {
     liveMedications = liveMedShareForPatient(accountKeyForEmail(session.email), patient.fullName);
   }
   res.json({ patient: { ...patient, liveMedications } });

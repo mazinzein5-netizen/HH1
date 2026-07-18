@@ -113,6 +113,7 @@ export interface LiveMedShareForFile {
  * Live medication share for a specific patient file, matched on the
  * provider's account key AND the patient's display name. Used by the
  * practitioner patient-file endpoint so live meds appear in the file itself.
+ * Callers must already have enforced doctor role + account verification.
  */
 export function liveMedShareForPatient(providerKey: string, patientFullName: string): LiveMedShareForFile | null {
   sweepGrants();
@@ -123,7 +124,7 @@ export function liveMedShareForPatient(providerKey: string, patientFullName: str
     let payload: unknown = null;
     if (g.blob) {
       try {
-        payload = decryptBlob(g.keyHex, g.blob.iv, g.blob.ciphertext);
+        payload = sanitizeSnapshot(decryptBlob(g.keyHex, g.blob.iv, g.blob.ciphertext));
         g.accessCount += 1;
       } catch {
         return null;
@@ -194,6 +195,44 @@ function sessionOf(req: Request): PortalSessionInfo {
   return (req as Request & { portalSession: PortalSessionInfo }).portalSession;
 }
 
+/** Defense in depth: reads require a VERIFIED doctor account (or founder). */
+export function sessionIsVerifiedDoctor(session: PortalSessionInfo): boolean {
+  if (session.superuser) return true;
+  if (!session.accountId) return false;
+  const entry = practitionerDirectoryEntry(session.accountId);
+  return !!entry && entry.verified && GRANTABLE_ROLES.includes(entry.role);
+}
+
+/** Validate + narrow the decrypted snapshot so malformed payloads can never
+ * reach practitioner screens. Throws when the shape is not a med snapshot. */
+function sanitizeSnapshot(raw: unknown): {
+  patientName?: string;
+  generatedAt: string;
+  medications: { medication: string; dose: string; frequency: string; route: string; status?: string }[];
+  notes?: string;
+} {
+  if (!raw || typeof raw !== "object") throw new Error("snapshot is not an object");
+  const o = raw as Record<string, unknown>;
+  if (!Array.isArray(o.medications)) throw new Error("snapshot has no medications array");
+  const str = (v: unknown, max: number): string => (typeof v === "string" ? v.slice(0, max) : "");
+  const medications = o.medications.slice(0, 100).map((m) => {
+    const med = (m ?? {}) as Record<string, unknown>;
+    return {
+      medication: str(med.medication, 160),
+      dose: str(med.dose, 80),
+      frequency: str(med.frequency, 80),
+      route: str(med.route, 80),
+      ...(typeof med.status === "string" ? { status: med.status.slice(0, 40) } : {}),
+    };
+  });
+  return {
+    ...(typeof o.patientName === "string" ? { patientName: o.patientName.slice(0, 120) } : {}),
+    generatedAt: str(o.generatedAt, 40) || new Date().toISOString(),
+    medications,
+    ...(typeof o.notes === "string" ? { notes: o.notes.slice(0, 600) } : {}),
+  };
+}
+
 // ── Patient-side endpoints (called from the mobile app) ─────────────────────
 
 /**
@@ -201,7 +240,11 @@ function sessionOf(req: Request): PortalSessionInfo {
  * Doctor-role practitioners the patient can grant live medication access to.
  */
 router.get("/med-exchange/providers", (_req, res) => {
-  const providers = listHealthcarePractitioners().filter((p) => GRANTABLE_ROLES.includes(p.role));
+  // Only VERIFIED doctor accounts may receive live medication data — a
+  // self-declared role during signup is not enough.
+  const providers = listHealthcarePractitioners().filter(
+    (p) => GRANTABLE_ROLES.includes(p.role) && p.verified,
+  );
   res.json({ providers });
 });
 
@@ -231,10 +274,11 @@ router.post("/med-exchange/grants", (req, res) => {
     return;
   }
   const provider = practitionerDirectoryEntry(providerId.trim());
-  if (!provider || !GRANTABLE_ROLES.includes(provider.role)) {
+  if (!provider || !GRANTABLE_ROLES.includes(provider.role) || !provider.verified) {
     res.status(404).json({
       error: "PROVIDER_NOT_FOUND",
-      message: "Live medication access can only be granted to a GP or treating physician on the HIVE portal.",
+      message:
+        "Live medication access can only be granted to a VERIFIED GP or treating physician on the HIVE portal.",
     });
     return;
   }
@@ -419,6 +463,13 @@ router.get("/med-exchange/live", requirePortalSession, (req, res) => {
     });
     return;
   }
+  if (!sessionIsVerifiedDoctor(session)) {
+    res.status(403).json({
+      error: "VERIFICATION_REQUIRED",
+      message: "Complete account verification to receive live medication data.",
+    });
+    return;
+  }
   const myKey = accountKeyForEmail(session.email);
   const shares: unknown[] = [];
   for (const g of grants.values()) {
@@ -426,10 +477,10 @@ router.get("/med-exchange/live", requirePortalSession, (req, res) => {
     let payload: unknown = null;
     if (g.blob) {
       try {
-        payload = decryptBlob(g.keyHex, g.blob.iv, g.blob.ciphertext);
+        payload = sanitizeSnapshot(decryptBlob(g.keyHex, g.blob.iv, g.blob.ciphertext));
         g.accessCount += 1;
       } catch (err) {
-        logger.warn({ err, grantId: g.grantId }, "Could not decrypt live medication snapshot");
+        logger.warn({ err, grantId: g.grantId }, "Could not decrypt/validate live medication snapshot");
         continue;
       }
     }
@@ -460,6 +511,10 @@ router.get("/med-exchange/consent-log", requirePortalSession, (req, res) => {
   }
   if (!session.email || !session.role || !GRANTABLE_ROLES.includes(session.role)) {
     res.status(403).json({ error: "DOCTOR_ROLE_REQUIRED" });
+    return;
+  }
+  if (!sessionIsVerifiedDoctor(session)) {
+    res.status(403).json({ error: "VERIFICATION_REQUIRED" });
     return;
   }
   const myKey = accountKeyForEmail(session.email);

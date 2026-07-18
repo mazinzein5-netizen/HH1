@@ -257,10 +257,30 @@ router.post("/portal/webauthn/register-options", async (req, res) => {
  */
 router.post("/portal/webauthn/register-verify", async (req, res) => {
   sweep();
-  const { webauthnToken, response } = req.body as { webauthnToken?: unknown; response?: unknown };
+  const { webauthnToken, response, devSimulate } = req.body as {
+    webauthnToken?: unknown;
+    response?: unknown;
+    devSimulate?: unknown;
+  };
   const pending = typeof webauthnToken === "string" ? registrationChallenges.get(webauthnToken) : undefined;
   const account = pending ? accountById(pending.accountId) : undefined;
-  if (!pending || !pending.challenge || !account || response == null) {
+  if (!pending || !account) {
+    res.status(401).json({ error: "Registration window expired — please sign up again." });
+    return;
+  }
+  // DEV-ONLY parity with /portal/2fa/verify devSimulate: environments without
+  // a platform authenticator can complete verification. Never in production.
+  if (devSimulate === true) {
+    if (isProduction) {
+      res.status(400).json({ error: "Passkey registration could not be verified." });
+      return;
+    }
+    if (account.mode === "full") account.status = "verified";
+    registrationChallenges.delete(webauthnToken as string);
+    res.json({ verified: true, devSimulated: true });
+    return;
+  }
+  if (!pending.challenge || response == null) {
     res.status(401).json({ error: "Registration window expired — please sign up again." });
     return;
   }
@@ -278,6 +298,9 @@ router.post("/portal/webauthn/register-verify", async (req, res) => {
       return;
     }
     account.credential = verification.registrationInfo.credential;
+    // Passkey bound to a platform authenticator with user verification is the
+    // identity anchor for full-mode accounts — mark the account verified.
+    if (account.mode === "full") account.status = "verified";
     registrationChallenges.delete(webauthnToken as string);
     res.json({ verified: true });
   } catch (err) {
