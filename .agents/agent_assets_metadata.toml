@@ -191,3 +191,9 @@ id = "Hs8Urf_jjm0ODH68ITuc_"
 uri = "file://attached_assets/hive-apk-qr.png"
 type = "image"
 title = "HIVE Companion APK — scan to download"
+
+[[outputs]]
+id = "0tmHdOzyz34j50OfPM4x6"
+uri = "file://exports/website-source.md"
+type = "text"
+title = "Health HIVE Website — Full Source Code"
