@@ -20,6 +20,8 @@ import {
   getMembership,
   getPracSettings,
   isDoctorRole,
+  listLiveMedShares,
+  type LiveMedShare,
   listPracBookings,
   listPracPatients,
   startConsultSession,
@@ -41,6 +43,8 @@ import {
   Crown,
   FolderHeart,
   Mic,
+  Pill,
+  RadioTower,
   MicOff,
   PhoneOff,
   Plus,
@@ -52,6 +56,17 @@ import {
 } from "lucide-react";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/** Human-readable freshness for a live snapshot, e.g. "2 min ago". */
+function freshness(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 60_000) return "just now";
+  const mins = Math.round(ms / 60_000);
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.floor(mins / 60);
+  if (h < 24) return `${h} h ago`;
+  return `${Math.floor(h / 24)} d ago`;
+}
 
 type CallState = "connecting" | "connected";
 
@@ -93,6 +108,34 @@ export default function Practitioner() {
   const superuser = !!account?.superuser;
   const doctor = isPractitioner && (isDoctorRole(account?.role) || superuser);
   const isMember = membership?.active === true;
+
+  // Live medication shares (consent-based, live from patient devices)
+  const [liveShares, setLiveShares] = useState<LiveMedShare[] | null>(null);
+  const [liveSharesDemo, setLiveSharesDemo] = useState(false);
+  const [liveSharesError, setLiveSharesError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!allowed || !isPractitioner || !doctor) return;
+    let cancelled = false;
+    const loadShares = async () => {
+      try {
+        const r = await listLiveMedShares();
+        if (cancelled) return;
+        setLiveShares(r.shares);
+        setLiveSharesDemo(!!r.demo);
+        setLiveSharesError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setLiveShares([]);
+        setLiveSharesError((err as ApiError).message ?? null);
+      }
+    };
+    void loadShares();
+    const iv = setInterval(loadShares, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+    };
+  }, [allowed, isPractitioner, doctor]);
 
   const [adminAccounts, setAdminAccounts] = useState<AdminAccount[] | null>(null);
   const [adminOpenId, setAdminOpenId] = useState<string | null>(null);
@@ -518,6 +561,81 @@ export default function Practitioner() {
                         </div>
                       )}
                     </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Live medications — consent-based, live from patient devices */}
+        {doctor && (
+          <Card className="mb-8 border-primary/25 bg-card/60 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RadioTower className="h-5 w-5 text-primary" /> Live medications from patient devices
+              </CardTitle>
+              <CardDescription>
+                Patients who granted you live access to their medication list from HIVE COMPANION.
+                Snapshots are encrypted, relayed in memory only, and disappear when the patient
+                withdraws consent or it expires. Shares are patient-declared — always confirm the
+                patient&apos;s identity with them before acting on a list.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {liveSharesDemo && (
+                <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">
+                  Demo access — this is fictional demo data. Register and verify to receive real patient shares.
+                </div>
+              )}
+              {liveSharesError && (
+                <p className="text-sm text-muted-foreground">{liveSharesError}</p>
+              )}
+              {liveShares === null ? (
+                <p className="text-sm text-muted-foreground">Checking for live shares…</p>
+              ) : liveShares.length === 0 ? (
+                !liveSharesError && (
+                  <p className="text-sm text-muted-foreground">
+                    No patients are currently sharing their medications with you. Patients grant access
+                    in HIVE COMPANION under Emergency &amp; sharing.
+                  </p>
+                )
+              ) : (
+                <div className="grid gap-3">
+                  {liveShares.map((s) => (
+                    <div key={s.grantId} className="rounded-xl border border-border bg-background/40 p-4">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="font-semibold">{s.patientName}</span>
+                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px]">
+                          LIVE FROM PATIENT DEVICE
+                        </Badge>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {s.updatedAt ? `Updated ${freshness(s.updatedAt)}` : "Waiting for first update from the device…"}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mb-2">
+                        Consent given {new Date(s.grantedAt).toLocaleDateString("en-IE")} · expires{" "}
+                        {new Date(s.expiresAt).toLocaleDateString("en-IE")} · revocable by the patient at any time
+                      </div>
+                      {s.payload && s.payload.medications.length > 0 ? (
+                        <ul className="grid gap-1.5 text-sm">
+                          {s.payload.medications.map((m, i) => (
+                            <li key={i} className="rounded-lg border border-border bg-card/50 px-3 py-2 flex items-center gap-2">
+                              <Pill className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <span className="font-medium">{m.medication}</span>
+                              <span className="text-muted-foreground text-xs">
+                                {m.dose} · {m.frequency} · {m.route}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : s.payload ? (
+                        <p className="text-sm text-muted-foreground">No active medications on the patient's device.</p>
+                      ) : null}
+                      {s.payload?.notes && (
+                        <p className="text-[11px] text-muted-foreground mt-2">{s.payload.notes}</p>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}

@@ -34,6 +34,16 @@ import {
   startCaretakerSharing,
   stopCaretakerSharing,
 } from "@/utils/emergencyShare";
+import {
+  getMedGrant,
+  grantMedAccess,
+  listMedProviders,
+  MED_CONSENT_WORDING,
+  MedGrant,
+  MedProvider,
+  pushMedSnapshot,
+  revokeMedAccess,
+} from "@/utils/medExchange";
 import { readingsFromDevice } from "@/utils/healthMonitor";
 
 const TTL_OPTIONS = [
@@ -68,6 +78,14 @@ export default function EmergencyShareScreen() {
   const [busy, setBusy] = useState(false);
   const [, forceTick] = useState(0);
 
+  const [medGrant, setMedGrant] = useState<MedGrant | null>(null);
+  const [medProviders, setMedProviders] = useState<MedProvider[] | null>(null);
+  const [medProviderId, setMedProviderId] = useState<string | null>(null);
+  const [medConsented, setMedConsented] = useState(false);
+  const [medBusy, setMedBusy] = useState(false);
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
   const [redTier, setRedTier] = useState(false);
   const [link, setLink] = useState<CaretakerLink | null>(null);
   const [linkBusy, setLinkBusy] = useState(false);
@@ -79,6 +97,8 @@ export default function EmergencyShareScreen() {
   useEffect(() => {
     getActiveShare().then(setShare);
     getCaretakerLink().then(setLink);
+    getMedGrant().then(setMedGrant);
+    listMedProviders().then(setMedProviders).catch(() => setMedProviders([]));
     getPlanTier(user?.id ?? "unknown").then((t) => setRedTier(t === "red"));
     const tick = setInterval(() => forceTick((n) => n + 1), 30_000);
     return () => clearInterval(tick);
@@ -128,6 +148,59 @@ export default function EmergencyShareScreen() {
     const iv = setInterval(pushSnapshot, PUSH_INTERVAL_MS);
     return () => clearInterval(iv);
   }, [link, pushSnapshot]);
+
+  // ── Live medication push: on grant + whenever the kardex changes ──
+  useEffect(() => {
+    if (!medGrant) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const ok = await pushMedSnapshot(medGrant, dataRef.current, user?.fullName);
+        if (!ok && !cancelled) {
+          setMedGrant(null);
+          Alert.alert(
+            "Live sharing stopped",
+            "Your medication sharing consent is no longer active on the HIVE relay. You can grant it again below."
+          );
+          return;
+        }
+        if (!cancelled) setMedGrant((g) => (g ? { ...g, lastPushedAt: new Date().toISOString() } : g));
+      } catch {
+        // transient network failure — retried on next kardex change / app open
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [medGrant?.grantId, data.kardex, user?.fullName]);
+
+  async function handleGrantMeds() {
+    if (!medConsented || !medProviderId) return;
+    setMedBusy(true);
+    try {
+      const fresh = await grantMedAccess(medProviderId, user?.fullName ?? "HIVE patient");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setMedGrant(fresh);
+      setMedConsented(false);
+      setMedProviderId(null);
+    } catch {
+      Alert.alert("Couldn't grant access", "Please check your connection and try again.");
+    } finally {
+      setMedBusy(false);
+    }
+  }
+
+  async function handleRevokeMeds() {
+    if (!medGrant) return;
+    setMedBusy(true);
+    try {
+      await revokeMedAccess(medGrant);
+      setMedGrant(null);
+    } finally {
+      setMedBusy(false);
+    }
+  }
 
   // ── Actions ──
   async function handleGenerate() {
@@ -296,6 +369,133 @@ export default function EmergencyShareScreen() {
           </View>
         )}
 
+        {/* ── Live medication sharing with a named doctor ── */}
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground, marginTop: 20 }]}>
+          LIVE MEDICATION SHARING
+        </Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: medGrant ? "rgba(42,72,122,0.5)" : colors.border }]}>
+          {medGrant ? (
+            <>
+              <Text style={[styles.shareTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                Sharing live with {medGrant.provider.fullName}
+              </Text>
+              <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                {medGrant.provider.role} · {medGrant.provider.workplace}
+              </Text>
+              <Text style={[styles.shareMeta, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
+                Consent given {new Date(medGrant.grantedAt).toLocaleDateString("en-IE")} · expires{" "}
+                {new Date(medGrant.expiresAt).toLocaleDateString("en-IE")}
+                {medGrant.lastPushedAt
+                  ? ` · last update sent ${new Date(medGrant.lastPushedAt).toLocaleTimeString("en-IE", { hour: "2-digit", minute: "2-digit" })}`
+                  : ""}
+              </Text>
+              <Text style={[styles.shareHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                Your current medication list is sent encrypted from this phone whenever it changes. Only this doctor's
+                verified portal account can read it. Withdrawing consent removes it from the relay immediately.
+              </Text>
+              <TouchableOpacity
+                style={[styles.dangerBtn, { borderColor: "rgba(220,38,38,0.5)" }]}
+                onPress={handleRevokeMeds}
+                disabled={medBusy}
+                activeOpacity={0.8}
+              >
+                {medBusy ? <ActivityIndicator size="small" color="#dc2626" /> : (
+                  <>
+                    <Feather name="x-circle" size={16} color="#dc2626" />
+                    <Text style={[styles.dangerBtnText, { color: "#dc2626", fontFamily: "Inter_600SemiBold" }]}>
+                      Withdraw consent
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.cardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                Let your GP or treating physician see your current medications live from this phone — encrypted in
+                transit, held only in memory on the HIVE relay, revocable at any time.
+              </Text>
+              {medProviders === null ? (
+                <ActivityIndicator size="small" color={colors.mutedForeground} />
+              ) : medProviders.length === 0 ? (
+                <Text style={[styles.shareHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  No doctors are registered on the HIVE portal yet. Ask your GP to join the HIVE HUB.
+                </Text>
+              ) : (
+                <>
+                  <Text style={[styles.fieldLabel, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
+                    CHOOSE YOUR DOCTOR
+                  </Text>
+                  <View style={{ gap: 8 }}>
+                    {medProviders.map((p) => (
+                      <TouchableOpacity
+                        key={p.id}
+                        onPress={() => { Haptics.selectionAsync(); setMedProviderId(p.id); }}
+                        style={[
+                          styles.providerRow,
+                          {
+                            backgroundColor: medProviderId === p.id ? "rgba(42,72,122,0.12)" : colors.secondary,
+                            borderColor: medProviderId === p.id ? "rgba(42,72,122,0.55)" : colors.border,
+                          },
+                        ]}
+                        activeOpacity={0.8}
+                      >
+                        <MaterialCommunityIcons
+                          name={medProviderId === p.id ? "radiobox-marked" : "radiobox-blank"}
+                          size={18}
+                          color={medProviderId === p.id ? "#2A487A" : colors.mutedForeground}
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.providerName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+                            {p.fullName}
+                          </Text>
+                          <Text style={[styles.providerMeta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                            {p.role} · {p.workplace}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <View style={styles.consentRow}>
+                    <Switch
+                      value={medConsented}
+                      onValueChange={(v) => { Haptics.selectionAsync(); setMedConsented(v); }}
+                      trackColor={{ true: "#2A487A" }}
+                    />
+                    <Text style={[styles.consentText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
+                      {MED_CONSENT_WORDING}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.primaryBtn, { backgroundColor: medConsented && medProviderId ? "#2A487A" : colors.secondary }]}
+                    onPress={handleGrantMeds}
+                    disabled={!medConsented || !medProviderId || medBusy}
+                    activeOpacity={0.85}
+                  >
+                    {medBusy ? <ActivityIndicator size="small" color="#fff" /> : (
+                      <>
+                        <MaterialCommunityIcons
+                          name="pill"
+                          size={18}
+                          color={medConsented && medProviderId ? "#fff" : colors.mutedForeground}
+                        />
+                        <Text
+                          style={[
+                            styles.primaryBtnText,
+                            { color: medConsented && medProviderId ? "#fff" : colors.mutedForeground, fontFamily: "Inter_700Bold" },
+                          ]}
+                        >
+                          Grant live medication access
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
+            </>
+          )}
+        </View>
+
         {/* ── Caretaker sharing ── */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground, marginTop: 20 }]}>CARETAKER SHARING</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: link ? "rgba(201,134,10,0.45)" : colors.border }]}>
@@ -392,6 +592,9 @@ const styles = StyleSheet.create({
   shareMeta: { fontSize: 12.5, textAlign: "center" },
   shareHint: { fontSize: 12.5, lineHeight: 18 },
   lockedRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
+  providerRow: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 10, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 12 },
+  providerName: { fontSize: 14 },
+  providerMeta: { fontSize: 12 },
   privacyBox: { flexDirection: "row", gap: 8, borderRadius: 12, padding: 12, marginTop: 18, alignItems: "flex-start" },
   privacyText: { fontSize: 12, lineHeight: 17, flex: 1 },
 });

@@ -534,3 +534,32 @@ export function confirmMembershipDevSimulate(): Promise<{ membership: ProMembers
 export function startConsultSession(bookingId: string): Promise<{ session: ConsultSession }> {
   return pracFetch(`/bookings/${encodeURIComponent(bookingId)}/session`, { method: "POST" });
 }
+
+// ── Consent-based live medication exchange ─────────────────────────────────
+
+export interface LiveMedShare {
+  grantId: string;
+  patientName: string;
+  grantedAt: string;
+  expiresAt: string;
+  /** When the patient device last pushed a snapshot — null until first push. */
+  updatedAt: string | null;
+  payload: {
+    patientName?: string;
+    generatedAt: string;
+    medications: { medication: string; dose: string; frequency: string; route: string; status?: string }[];
+    notes?: string;
+  } | null;
+}
+
+/**
+ * Live medication snapshots patients have consented to share with THIS
+ * provider account. Demo sessions receive canned demo data only.
+ */
+export async function listLiveMedShares(): Promise<{ demo?: boolean; shares: LiveMedShare[] }> {
+  const res = await fetch(`${API_BASE}/med-exchange/live`, {
+    headers: { ...authHeader() },
+  });
+  if (!res.ok) throw await parseError(res);
+  return (await res.json()) as { demo?: boolean; shares: LiveMedShare[] };
+}
