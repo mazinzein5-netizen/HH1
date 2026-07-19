@@ -4,6 +4,18 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
+import BookPage from "@/pages/book";
+import PortalLanding from "@/portal/Landing";
+import PortalSignup from "@/portal/Signup";
+import PortalLogin from "@/portal/Login";
+import PortalEmergency from "@/portal/Emergency";
+import PortalCaretaker from "@/portal/Caretaker";
+import PortalPricing from "@/portal/Pricing";
+import PortalPrivacy from "@/portal/Privacy";
+import PortalPractitioner from "@/portal/Practitioner";
+import PortalSupportiveCare from "@/portal/SupportiveCare";
+import PortalFirstResponder from "@/portal/FirstResponder";
+import PracticePatientFile from "@/portal/PracticePatientFile";
 
 const queryClient = new QueryClient();
 
@@ -11,6 +23,18 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/book" component={BookPage} />
+      <Route path="/portal" component={PortalLanding} />
+      <Route path="/portal/signup" component={PortalSignup} />
+      <Route path="/portal/login" component={PortalLogin} />
+      <Route path="/portal/emergency" component={PortalEmergency} />
+      <Route path="/portal/caretaker" component={PortalCaretaker} />
+      <Route path="/portal/pricing" component={PortalPricing} />
+      <Route path="/portal/privacy" component={PortalPrivacy} />
+      <Route path="/portal/practitioner" component={PortalPractitioner} />
+      <Route path="/portal/supportive" component={PortalSupportiveCare} />
+      <Route path="/portal/responder" component={PortalFirstResponder} />
+      <Route path="/portal/practitioner/patients/:id" component={PracticePatientFile} />
       <Route component={NotFound} />
     </Switch>
   );

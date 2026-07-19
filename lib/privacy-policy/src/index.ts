@@ -1,4 +1,4 @@
-export const PRIVACY_POLICY_APP_NAME = "HIVE Intake : Patient Portal";
+export const PRIVACY_POLICY_APP_NAME = "HIVE Companion™ : Patient Portal";
 export const PRIVACY_POLICY_COMPANY = "IbnCeena Ltd.";
 export const PRIVACY_POLICY_LAST_UPDATED = "July 2026";
 
@@ -11,7 +11,7 @@ export const PRIVACY_POLICY_SECTIONS: PrivacyPolicySection[] = [
   {
     heading: "Who we are",
     body:
-      "HIVE Intake : Patient Portal is developed by IbnCeena Ltd. This app is a personal health record organiser and health guideline information viewer.",
+      "HIVE Companion™ : Patient Portal is developed by IbnCeena Ltd. This app is a personal health record organiser and health guideline information viewer.",
   },
   {
     heading: "Not a medical device",
@@ -26,12 +26,17 @@ export const PRIVACY_POLICY_SECTIONS: PrivacyPolicySection[] = [
   {
     heading: "What leaves your device",
     body:
-      "If you use the HIVE Bot guideline assistant or the guided intake organiser, the text of your questions is sent to an AI service to generate a response. This text is not linked to your identity and is not stored by the app's servers. If you use the pharmacy finder, your coordinates (or the town or Eircode you type) are sent only to the OpenStreetMap lookup service to run the search — never to HIVE servers, and the app does not store your location. Everything else stays on your device.",
+      "If you use the HIVE Bot guideline assistant or the guided intake organiser, the text of your questions is sent to an AI service to generate a response. This text is not linked to your identity and is not stored by the app's servers. If you use the pharmacy finder or the GP practice finder, your coordinates or the search text you type (such as a practice name and town) are sent only to the OpenStreetMap lookup service to run the search — never to HIVE servers, and never any of your health information. If you ask the app to draft an appointment-request email to a GP practice, only the practice name and the short reason you typed are sent to the AI service to write the draft; the email is never sent for you — you review it and send it yourself from your own email app. Everything else stays on your device.",
   },
   {
     heading: "Sharing is always your choice",
     body:
       "The app only shares your information when you explicitly choose to — for example, when you use a Share button to send your health card or a questionnaire summary to your GP. Sharing uses your device's own share sheet, and you control the recipient.",
+  },
+  {
+    heading: "Emergency & caretaker sharing",
+    body:
+      "If you generate an emergency share code, a snapshot of your allergies, conditions and current medications is held in the HIVE relay's memory only — never written to a database — and is deleted automatically when the time window you chose runs out, or immediately when you revoke it. If you opt into caretaker sharing (Red Geriatric Pack), your phone sends your latest location and vital-sign readings to the relay about once a minute; only the most recent update is kept, and everything is deleted the moment you stop sharing. Both features are strictly opt-in and start only after your explicit consent in the app.",
   },
   {
     heading: "Your rights (GDPR)",

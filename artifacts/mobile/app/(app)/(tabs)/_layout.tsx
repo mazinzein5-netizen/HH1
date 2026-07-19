@@ -17,7 +17,7 @@ export default function TabLayout() {
   const { connectedCount } = useSmartDevices();
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-  const fabBottom = bottomPad + 64 + 14;
+  const fabBottom = bottomPad + 64 + 8;
 
   return (
     <View style={{ flex: 1 }}>
@@ -89,9 +89,9 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      {/* Queen B — draggable Pixar bee companion */}
+      {/* Sarah — draggable Pixar bee companion */}
       <QueenBeeWidget
-        onPress={() => hiveBot.open()}
+        onPress={() => hiveBot.openBubble()}
         initialBottom={fabBottom}
         initialRight={16}
       />

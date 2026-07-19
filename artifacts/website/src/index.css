@@ -61,15 +61,15 @@
   --popover-foreground: 232 47% 15%;
   --popover-border: 45 20% 85%;
 
-  /* Slightly darker gold for contrast in light mode */
-  --primary: 45 90% 45%;
-  --primary-foreground: 0 0% 100%;
+  /* Darker gold for contrast in light mode; dark navy text on gold meets AA */
+  --primary: 42 95% 38%;
+  --primary-foreground: 232 47% 12%;
 
   --secondary: 45 20% 95%;
   --secondary-foreground: 232 47% 15%;
 
   --muted: 45 20% 92%;
-  --muted-foreground: 232 20% 40%;
+  --muted-foreground: 232 24% 34%;
 
   --accent: 45 20% 92%;
   --accent-foreground: 232 47% 15%;
@@ -84,34 +84,34 @@
 }
 
 .dark {
-  /* Deep Navy background (#07070f) */
-  --background: 240 36% 4%;
+  /* Matte black rubber base */
+  --background: 240 6% 4%;
   --foreground: 0 0% 100%;
   
-  --border: 232 47% 15%;
-  --input: 232 47% 15%;
+  --border: 240 5% 16%;
+  --input: 240 5% 16%;
   --ring: 47 91% 53%;
   
-  /* Lighter Navy for cards (#0d1024) */
-  --card: 232 47% 10%;
+  /* Lifted charcoal for cards — polished panel on the rubber surface */
+  --card: 240 5% 9%;
   --card-foreground: 0 0% 100%;
-  --card-border: 232 47% 15%;
+  --card-border: 240 5% 17%;
 
-  --popover: 232 47% 10%;
+  --popover: 240 5% 9%;
   --popover-foreground: 0 0% 100%;
-  --popover-border: 232 47% 15%;
+  --popover-border: 240 5% 17%;
 
   /* Gold accents (#F5C518) */
   --primary: 47 91% 53%;
-  --primary-foreground: 240 36% 4%;
+  --primary-foreground: 240 6% 4%;
 
-  --secondary: 232 47% 15%;
+  --secondary: 240 5% 14%;
   --secondary-foreground: 0 0% 100%;
 
-  --muted: 232 47% 15%;
-  --muted-foreground: 232 10% 65%;
+  --muted: 240 5% 14%;
+  --muted-foreground: 240 6% 76%;
 
-  --accent: 232 47% 15%;
+  --accent: 240 5% 14%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 62.8% 30.6%;
@@ -126,6 +126,38 @@
   body {
     @apply font-sans antialiased bg-background text-foreground transition-colors duration-500;
   }
+
+  /* Clearly visible keyboard focus on every interactive element,
+     including glass-panel buttons where a 1px ring gets lost. */
+  a:focus-visible,
+  button:focus-visible,
+  [tabindex]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  iframe:focus-visible,
+  video:focus-visible {
+    outline: 3px solid hsl(var(--ring));
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+/* Skip link — hidden until focused */
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -100px;
+  z-index: 100;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 600;
+  transition: top 0.2s ease;
+}
+.skip-link:focus-visible {
+  top: 1rem;
 }
 
 /* Glassmorphism utilities */
@@ -134,7 +166,12 @@
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
 }
 .dark .glass-panel {
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  /* Glass over rubber: darker fill, crisp top-edge highlight like a polished pane */
+  background-color: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
+    0 12px 40px 0 rgba(0, 0, 0, 0.55);
 }
 
 .glass-panel-heavy {
@@ -142,7 +179,11 @@
   box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.08);
 }
 .dark .glass-panel-heavy {
-  box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.4);
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    0 20px 60px 0 rgba(0, 0, 0, 0.65);
 }
 
 .hive-gradient-text {
@@ -161,27 +202,12 @@
   background: linear-gradient(135deg, #F5C518, #D4A017);
 }
 
-/* Hexagon animations */
-@keyframes hex-drift {
-  0% { transform: translateY(0) rotateX(60deg) rotateZ(-45deg); }
-  50% { transform: translateY(-20px) rotateX(60deg) rotateZ(-45deg); }
-  100% { transform: translateY(0) rotateX(60deg) rotateZ(-45deg); }
+/* Smooth native scrolling (anchor jumps handled in JS respect this too) */
+html {
+  scroll-behavior: smooth;
 }
-
-.hex-grid-container {
-  perspective: 1000px;
-  transform-style: preserve-3d;
-}
-
-.hex-grid-surface {
-  animation: hex-drift 20s ease-in-out infinite;
-  will-change: transform;
-}
-
-@media (prefers-reduced-motion: reduce), (max-width: 640px) {
-  .hex-grid-surface {
-    animation: none;
-    transform: rotateX(60deg) rotateZ(-45deg);
-    will-change: auto;
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }

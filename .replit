@@ -11,9 +11,30 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "surgical-freshness"
+
+[[workflows.workflow]]
+name = "surgical-freshness"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/scripts run check:surgical-freshness"
+
+[workflows.workflow.metadata]
+isValidation = true
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
+integrations = ["stripe:1.0.0", "whop:1.0.0", "github:1.0.0"]
 
 [postMerge]
 path = "scripts/post-merge.sh"
@@ -21,3 +42,12 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+WHOP_COMPANY_ID = "biz_mjz96vMfyMl2nB"
+WHOP_PLAN_GOLD_MONTHLY = "plan_vqCtx62oTlrWN"
+WHOP_PLAN_GOLD_YEARLY = "plan_O7zITndGBC8hb"
+WHOP_PLAN_RED_MONTHLY = "plan_Ouq7pAqHcH7gK"
+WHOP_PLAN_RED_YEARLY = "plan_UyYEJnA7SVwbR"

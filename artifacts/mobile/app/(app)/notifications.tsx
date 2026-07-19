@@ -15,7 +15,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { getMemoryPermission, setMemoryPermission } from "@/utils/chatMemory";
+import { disableWatcherMode, enableWatcherMode, isWatcherModeEnabled } from "@/utils/watcherMode";
 import { useColors } from "@/hooks/useColors";
+import { Alert } from "react-native";
 
 const PREF_KEY = "hive_notification_prefs";
 
@@ -92,14 +94,41 @@ export default function NotificationsScreen() {
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const [prefs, setPrefs] = useState<NotifPrefs>(DEFAULT_PREFS);
+  const [watcher, setWatcher] = useState(false);
 
   useEffect(() => {
     (async () => {
       const loaded = await loadPrefs();
       const mem    = await getMemoryPermission();
       setPrefs({ ...loaded, queenBMemory: mem === true });
+      setWatcher(await isWatcherModeEnabled());
     })();
   }, []);
+
+  async function toggleWatcher(v: boolean) {
+    if (!v) {
+      setWatcher(false);
+      await disableWatcherMode();
+      return;
+    }
+    const res = await enableWatcherMode();
+    if (res.ok) {
+      setWatcher(true);
+      if (res.reason === "web") {
+        Alert.alert(
+          "Watcher Mode",
+          "Watcher Mode is saved. In the browser preview Sarah can only watch while this tab is open — on your phone she'll send daily check-ins even when the app is closed."
+        );
+      }
+    } else if (res.reason === "permission") {
+      Alert.alert(
+        "Watcher Mode",
+        "Sarah needs notification permission to check in while the app is closed. You can enable notifications for HIVE in your device settings."
+      );
+    } else {
+      Alert.alert("Watcher Mode", "Couldn't turn on Watcher Mode just now — please try again.");
+    }
+  }
 
   async function toggle(key: keyof NotifPrefs, val: boolean) {
     const next = { ...prefs, [key]: val };
@@ -179,15 +208,23 @@ export default function NotificationsScreen() {
           />
         </View>
 
-        {/* Queen B memory */}
+        {/* Sarah memory & watcher */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: "rgba(201,134,10,0.4)" }]}>
-          <Text style={[styles.cardLabel, { color: "#C9860A" }]}>QUEEN B COMPANION</Text>
+          <Text style={[styles.cardLabel, { color: "#C9860A" }]}>SARAH COMPANION</Text>
           <PrefRow
             icon="brain" iconColor="#C9860A"
             label="Remember conversations"
-            sub="Queen B recalls past conversations and continues where you left off. Stored only on this device."
+            sub="Sarah recalls past conversations and continues where you left off. Stored only on this device."
             value={prefs.queenBMemory}
             onToggle={(v) => toggle("queenBMemory", v)}
+            colors={colors}
+          />
+          <PrefRow
+            icon="eye-check-outline" iconColor="#C9860A"
+            label="Watcher Mode"
+            sub="Sarah stays on watch when the app is closed: daily morning and evening check-in notifications on your phone — tap one and she's ready to chat. Everything stays on this device."
+            value={watcher}
+            onToggle={toggleWatcher}
             colors={colors}
           />
         </View>

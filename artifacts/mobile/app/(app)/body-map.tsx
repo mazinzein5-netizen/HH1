@@ -707,7 +707,7 @@ export default function BodyMapScreen() {
             >
               <MaterialCommunityIcons name="bee" size={20} color={colors.gold} />
               <Text style={[styles.primaryCtaText, { fontFamily: "Inter_600SemiBold", color: colors.foreground }]}>
-                Ask Queen B for Advice
+                Ask Sarah for Advice
               </Text>
             </TouchableOpacity>
           </View>

@@ -19,7 +19,7 @@ export interface PrescriptionPatientInfo {
 }
 
 const FOOTER_NOTE =
-  "Issued via HIVE COMPANION : Patient Portal — for pharmacy information only. This document is not a legal prescription unless signed by a registered prescriber.";
+  "Issued via HIVE COMPANION™ : Patient Portal — for pharmacy information only. This document is not a legal prescription unless signed by a registered prescriber.";
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -90,7 +90,7 @@ export function buildPrescriptionHtml(
 <body>
   <div class="header">
     <div>
-      <div class="brand">HIVE <span>INTAKE</span></div>
+      <div class="brand">HIVE <span>COMPANION</span>™</div>
       <div class="docTitle">CURRENT PRESCRIPTION RECORD</div>
     </div>
     <div class="dateBox">

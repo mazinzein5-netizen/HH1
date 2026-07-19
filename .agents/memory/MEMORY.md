@@ -1,6 +1,27 @@
 - [Mobile theming](mobile-theming.md) — light/dark palettes live in constants/colors.ts; useColors reads ThemeProvider; decorative gradient hexes in screens do NOT adapt.
+- [Video artifact tsconfig](video-artifact-tsconfig.md) — new video-js scaffolds may lack the DOM lib in tsconfig; add `"lib": ["esnext","dom","dom.iterable"]` when tsc can't find window/document.
+- [Pricing tiers](pricing-tiers.md) — Blue/Gold/Red model: pending paid records grant that tier's benefits; Infinity limits need Number.isFinite guards; Red price €150/€1,200 is an UNCONFIRMED placeholder.
+- [Mobile preview testing](mobile-preview-testing.md) — use ?preview=1 to skip ConsentGate in web screenshots; default web user is the guest/demo account.
 - [Triage deep-link reset](triage-deeplinks.md) — triage `?pathway=` links need a fresh `ts` param or the mounted tab keeps stale questionnaire state.
 - [OSM lookups](osm-lookups.md) — Overpass/Nominatim need a User-Agent; third-party lookups must be disclosed in three places; no fabricated patient data in exports.
 - [Clean vs pilot mode gating](clean-vs-pilot-mode.md) — store build must stay clinical-wording-free; pilot behavior gated by pilot code validated server-side, never a client boolean.
 - [Workspace lib typecheck ordering](workspace-lib-typecheck.md) — new lib/* packages need root tsconfig reference; run tsc --build (typecheck:libs) before artifact --noEmit or TS6305.
 - [Canvas mobile screen previews](canvas-screen-previews.md) — preview RN screens by iframing real Expo web routes with dev-only ?preview=1 consent bypass; never extract RN into vite sandbox.
+- [OpenAI config](openai-config.md) — chat = OpenRouter GLM 5.2 via AI Integrations proxy; OpenAI proxy kept only for transcription; no user API keys; re-run setup instead of requesting a key.
+- [Emergency portal auth](portal-auth.md) — portal relay endpoints need server-issued Bearer sessions; demo sessions only see canned demo codes; signup never pre-authenticates.
+- [Companion supervisor pattern](companion-supervisor.md) — pilot AI replies pass a second safety-review model call; on failure serve reply flagged supervised:false, never block.
+- [Stripe connector credentials](stripe-connector-credentials.md) — proxy needs `connector_name` (singular) and key lives in `settings.secret`; plural param silently returns 0 items.
+- [Whop connector](whop-connector.md) — proxy can ignore connector filter (pick item by name!); checkout create rejects company_id; membership plans in WHOP_PLAN_* env vars.
+- [Stripe checkout idempotency](stripe-checkout-idempotency.md) — checkout retries must reuse the same session (server idempotency key + client-side pending-session store) or timeouts can double-charge.
+- [AI proxy thinking tokens](ai-thinking-tokens.md) — reasoning silently eats max_tokens on structured calls; disable thinking via chat_template_kwargs or truncation follows.
+- [Website video embeds](website-video-embeds.md) — pop-out scale needs unclipped wrapper (frameClassName); audio lives in parent page; promo clip at 0.8x must span scenes 1-3 exactly.
+- [Expo route typegen](expo-route-typegen.md) — router.d.ts/expo-env.d.ts are gitignored dev-server artifacts; mobile typecheck regenerates them headlessly first or clean checkouts fail.
+- [Video export pipeline](video-export-pipeline.md) — no platform export tool; screencast-record video artifacts to MP4, aligning capture to a loop boundary via reload + startRecording.
+- [expo-audio voice](expo-audio-voice.md) — presets leave metering OFF; spread isMeteringEnabled:true or silence auto-stop is dead code; proxy transcription = gpt-4o-mini-transcribe, not whisper-1.
+- [Promo narration & captions](promo-narration.md) — per-scene TTS clips must fit fixed scene slots (trim+atempo ≤1.15x); captions burned in; store-safe wording only.
+- [Practitioner store persistence](practitioner-store-persistence.md) — stores persist as one JSONB doc per account; every mutation must call persistPracStore or it's lost on restart.
+- [Sarah companion](sarah-companion.md) — on-device intent layer for personal data; pilot+consent-gated GP letter; mic consent at first launch; legacy queenb_* keys kept.
+- [EAS APK builds](eas-apk-builds.md) — use EAS_NO_VCS=1; run `expo install --check` first: newer-SDK expo packages crash installed APKs with NoClassDefFoundError while dev mode hides it.
+- [Pro membership](pro-membership.md) — practitioner bookings/video gated server-side by PracStore.membership; patient-facing booking uses acceptingBookings(); Stripe lookup keys hive_pro_monthly/yearly.
+- [Android splash & icon checks](android-splash-icons.md) — Android 12+ clips splash icons to a circle; use expo-splash-screen plugin + prebuild inspection to verify without a device.
+- [H.264 in Playwright](h264-in-playwright.md) — test Chromium can't decode H.264 MP4s; swap a tiny VP9 webm onto the same element to e2e-test video autoplay/observer logic.

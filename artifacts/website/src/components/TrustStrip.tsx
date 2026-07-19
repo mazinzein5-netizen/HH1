@@ -4,23 +4,23 @@ export function TrustStrip() {
   const items = [
     {
       icon: <ShieldCheck className="h-6 w-6 text-primary mb-3" />,
-      title: "GDPR Aligned",
-      description: "Built for strict European privacy standards",
+      title: "GDPR & DPA 2018",
+      description: "Built for GDPR and the Irish Data Protection Act 2018",
     },
     {
       icon: <HardDrive className="h-6 w-6 text-primary mb-3" />,
-      title: "On-Device Storage",
-      description: "Data lives on your phone, not in the cloud",
+      title: "Audit-Ready Records",
+      description: "Safe digitisation of patient files with auditability by design",
     },
     {
       icon: <MapPin className="h-6 w-6 text-primary mb-3" />,
       title: "Irish Company",
-      description: "Headquartered and registered in Dublin",
+      description: "Headquartered and registered in Dublin, Ireland",
     },
     {
       icon: <Flag className="h-6 w-6 text-primary mb-3" />,
-      title: "EU Based",
-      description: "Operating under European Union law",
+      title: "National Alignment",
+      description: "In step with Digital for Care 2024–2030 and the Sláintecare direction",
     },
   ];
 
@@ -31,7 +31,7 @@ export function TrustStrip() {
           {items.map((item, i) => (
             <div key={i} className="flex flex-col items-center text-center">
               {item.icon}
-              <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">{item.title}</h4>
+              <p className="font-bold text-foreground text-sm uppercase tracking-wider">{item.title}</p>
               <p className="text-muted-foreground text-xs mt-1 max-w-[200px]">{item.description}</p>
             </div>
           ))}

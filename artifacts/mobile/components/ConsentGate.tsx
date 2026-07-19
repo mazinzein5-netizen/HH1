@@ -18,6 +18,8 @@ import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useAppMode } from "@/context/AppModeContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
+import { ensureVoiceSetup } from "@/hooks/useVoiceInput";
+import { useTheme } from "@/context/ThemeContext";
 
 const CONSENT_POINTS = [
   {
@@ -35,10 +37,17 @@ const CONSENT_POINTS = [
     title: "Delete everything, any time",
     body: "A \"Delete all my data\" option in Settings permanently erases all stored information.",
   },
+  {
+    icon: "microphone" as const,
+    title: "Talking to Sarah with your voice",
+    body: "You can speak to Sarah, your AI companion, instead of typing. When you do, the short recording is sent to a secure transcription service to turn it into text, then discarded straight away — it is never stored. We'll ask for microphone access now so it's ready when you need it.",
+  },
 ];
+
 
 export default function ConsentGate() {
   const colors = useColors();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { prefs } = useLogoTheme();
   const { acceptConsent } = useAppMode();
@@ -49,6 +58,10 @@ export default function ConsentGate() {
 
   async function handleAccept() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Ask for the microphone once, right at first launch, so voice chat with
+    // Sarah works immediately (disclosure text is on this screen). This also
+    // records the voice disclosure so the chat never re-prompts.
+    await ensureVoiceSetup();
     await acceptConsent();
   }
 
@@ -72,7 +85,7 @@ export default function ConsentGate() {
 
         <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
           Welcome to{"\n"}
-          <Text style={{ color: colors.goldLight }}>HIVE COMPANION : Patient Portal</Text>
+          <Text style={{ color: colors.goldLight }}>HIVE COMPANION™ : Patient Portal</Text>
         </Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
           Before you begin, please review how this app works and how your information is handled.
@@ -82,10 +95,10 @@ export default function ConsentGate() {
         <View style={[styles.disclaimerCard, { backgroundColor: colors.goldBg, borderColor: colors.goldBorder }]}>
           <MaterialCommunityIcons name="information" size={20} color={colors.gold} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.disclaimerTitle, { color: colors.goldLight, fontFamily: "Inter_700Bold" }]}>
+            <Text style={[styles.disclaimerTitle, { color: isDark ? colors.goldLight : "#6B21A8", fontFamily: "Inter_700Bold" }]}>
               Not a medical device
             </Text>
-            <Text style={[styles.disclaimerBody, { color: "rgba(255,255,255,0.75)", fontFamily: "Inter_400Regular" }]}>
+            <Text style={[styles.disclaimerBody, { color: isDark ? colors.mutedForeground : "#7E22CE", fontFamily: "Inter_400Regular" }]}>
               This app is for information and administrative use only. It does not diagnose or treat any
               condition and does not replace professional medical advice. If you are worried about your
               health, contact your GP — or call 112 in an emergency.

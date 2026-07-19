@@ -19,7 +19,7 @@ const FEATURES = [
   { icon: "heart-pulse",          color: "#e11d48", label: "Live Health Monitoring",    body: "Real-time vitals, ECG, SpO₂, sleep, and metabolic tracking." },
   { icon: "clipboard-pulse",      color: "#4F6EF7", label: "AI Clinical Intake",        body: "Guided symptom questionnaires with AI triage recommendations." },
   { icon: "pill",                 color: "#22c55e", label: "Medication Management",     body: "Complete kardex, drug interaction flagging, and safety alerts." },
-  { icon: "bee",                  color: "#C9860A", label: "Queen B AI Companion",      body: "24/7 intelligent health companion with voice and sign language." },
+  { icon: "bee",                  color: "#C9860A", label: "Sarah AI Companion",      body: "24/7 intelligent health companion with voice and sign language." },
   { icon: "video",                color: "#0ea5e9", label: "Telemedicine",              body: "Connect instantly with GPs, specialists, and interpreters." },
   { icon: "shield-lock-outline",  color: "#7c3aed", label: "Zero-Server Privacy",       body: "All data stays on your device. Nothing uploaded to any server." },
 ];
