@@ -1,0 +1,44 @@
+name: Auto-update .env.example
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  update-env-example:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies (optional)
+        run: |
+          if [ -f package-lock.json ]; then npm ci --prefer-offline --no-audit --no-fund || true; fi
+
+      - name: Run env extractor
+        run: |
+          node scripts/extract-envs.js . --write
+
+      - name: Commit .env.example if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git status --porcelain | grep -q ".env.example"; then
+            git add .env.example
+            git commit -m "Auto-update .env.example (generated)" || echo "No changes to commit"
+            git push
+          else
+            echo "No changes to .env.example"
+          fi

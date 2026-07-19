@@ -22,14 +22,10 @@ import { useAuth } from "@/context/AuthContext";
 import { usePatient, type KardexEntry } from "@/context/PatientContext";
 import { useColors } from "@/hooks/useColors";
 import {
-  CATEGORY_META,
   deleteDocument,
-  type DocCategory,
-  type DocSource,
   formatFileSize,
   importDocument,
   listDocuments,
-  SOURCE_META,
   StoredDocument,
 } from "@/utils/documentsStore";
 import {
@@ -432,10 +428,6 @@ export default function DocumentsScreen() {
   const [emailModal, setEmailModal] = useState(false);
   const [pharmacyEmail, setPharmacyEmail] = useState("");
   const [anticoagMed, setAnticoagMed] = useState<KardexEntry | null>(null);
-  const [importModal, setImportModal] = useState(false);
-  const [importCategory, setImportCategory] = useState<DocCategory>("report");
-  const [importSource, setImportSource] = useState<DocSource>("gp");
-  const [docFilter, setDocFilter] = useState<DocCategory | "all">("all");
 
   const patient: PrescriptionPatientInfo = {
     fullName: user?.fullName ?? "",
@@ -453,22 +445,11 @@ export default function DocumentsScreen() {
 
   useEffect(() => { refreshDocs(); }, [refreshDocs]);
 
-  function handleImport() {
-    Haptics.selectionAsync();
-    setImportCategory("report");
-    setImportSource("gp");
-    setImportModal(true);
-  }
-
-  async function handleConfirmImport() {
-    setImportModal(false);
+  async function handleImport() {
     try {
       setBusy("import");
-      if (Platform.OS !== "web") {
-        // Let the modal finish dismissing before presenting the system picker (iOS quirk)
-        await new Promise((resolve) => setTimeout(resolve, 400));
-      }
-      const doc = await importDocument({ category: importCategory, source: importSource });
+      Haptics.selectionAsync();
+      const doc = await importDocument();
       if (doc) { await refreshDocs(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }
     } catch {
       Alert.alert("Import failed", "Could not import that file. Please try again.");
@@ -511,6 +492,12 @@ export default function DocumentsScreen() {
     catch {} finally { setBusy(null); }
   }
 
+  function docIcon(doc: StoredDocument): "file-pdf-box" | "file-image" | "file-document" {
+    if (doc.mimeType?.includes("pdf") || doc.name.toLowerCase().endsWith(".pdf")) return "file-pdf-box";
+    if (doc.mimeType?.startsWith("image/")) return "file-image";
+    return "file-document";
+  }
+
   function handleMedCard(entry: KardexEntry) {
     Haptics.selectionAsync();
     setAnticoagMed(entry);
@@ -547,82 +534,6 @@ export default function DocumentsScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
-      </Modal>
-
-      {/* ── Add document modal ── */}
-      <Modal visible={importModal} transparent animationType="fade" onRequestClose={() => setImportModal(false)}>
-        <View style={s.modalOverlay}>
-          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setImportModal(false)} />
-          <View style={[s.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[s.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Add a Document</Text>
-            <Text style={[s.modalBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Tell us what you are adding and where it came from, then choose the file.
-            </Text>
-
-            <Text style={[s.pickLabel, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>DOCUMENT TYPE</Text>
-            {(Object.keys(CATEGORY_META) as DocCategory[]).map((c) => {
-              const meta = CATEGORY_META[c];
-              const selected = importCategory === c;
-              return (
-                <TouchableOpacity
-                  key={c}
-                  activeOpacity={0.8}
-                  onPress={() => { Haptics.selectionAsync(); setImportCategory(c); }}
-                  style={[s.typeRow, {
-                    backgroundColor: selected ? meta.hex + "16" : colors.cardElevated,
-                    borderColor: selected ? meta.hex : colors.border,
-                  }]}
-                >
-                  <MaterialCommunityIcons name={meta.icon as any} size={20} color={meta.hex} />
-                  <Text style={[s.typeRowText, { color: colors.foreground, fontFamily: selected ? "Inter_700Bold" : "Inter_500Medium" }]}>
-                    {meta.label}
-                  </Text>
-                  <MaterialCommunityIcons
-                    name={selected ? "radiobox-marked" : "radiobox-blank"}
-                    size={20}
-                    color={selected ? meta.hex : colors.mutedForeground}
-                  />
-                </TouchableOpacity>
-              );
-            })}
-
-            <Text style={[s.pickLabel, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>RECEIVED FROM</Text>
-            <View style={s.sourceWrap}>
-              {(Object.keys(SOURCE_META) as DocSource[]).map((src) => {
-                const meta = SOURCE_META[src];
-                const selected = importSource === src;
-                return (
-                  <TouchableOpacity
-                    key={src}
-                    activeOpacity={0.8}
-                    onPress={() => { Haptics.selectionAsync(); setImportSource(src); }}
-                    style={[s.sourceChip, {
-                      backgroundColor: selected ? colors.glassPrimary : colors.cardElevated,
-                      borderColor: selected ? colors.primary : colors.border,
-                    }]}
-                  >
-                    <MaterialCommunityIcons name={meta.icon as any} size={15} color={selected ? colors.primary : colors.mutedForeground} />
-                    <Text style={[s.sourceChipText, {
-                      color: selected ? colors.primary : colors.mutedForeground,
-                      fontFamily: selected ? "Inter_700Bold" : "Inter_500Medium",
-                    }]}>
-                      {meta.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <View style={s.modalBtnRow}>
-              <TouchableOpacity style={[s.modalBtn, { backgroundColor: colors.cardElevated, borderColor: colors.border }]} onPress={() => setImportModal(false)}>
-                <Text style={[s.modalBtnText, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.modalBtn, { backgroundColor: colors.gold, borderColor: colors.gold }]} onPress={handleConfirmImport}>
-                <Text style={[s.modalBtnText, { color: "#1a1200", fontFamily: "Inter_700Bold" }]}>Choose File</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
       </Modal>
 
       {/* ── Anticoagulant safety modal ── */}
@@ -741,114 +652,38 @@ export default function DocumentsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Category filter */}
-        {docs.length > 0 && (
-          <View style={s.filterRow}>
-            {([["all", "All"], ["report", "Reports"], ["imaging", "Imaging"], ["prescription", "Prescriptions"]] as [DocCategory | "all", string][]).map(([key, label]) => {
-              const selected = docFilter === key;
-              return (
-                <TouchableOpacity
-                  key={key}
-                  activeOpacity={0.8}
-                  onPress={() => { Haptics.selectionAsync(); setDocFilter(key); }}
-                  style={[s.filterChip, {
-                    backgroundColor: selected ? colors.glassPrimary : colors.card,
-                    borderColor: selected ? colors.primary : colors.border,
-                  }]}
-                >
-                  <Text style={[s.filterChipText, {
-                    color: selected ? colors.primary : colors.mutedForeground,
-                    fontFamily: selected ? "Inter_700Bold" : "Inter_500Medium",
-                  }]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
         {loadingDocs ? (
           <ActivityIndicator size="small" color={colors.mutedForeground} style={{ marginTop: 20 }} />
         ) : docs.length === 0 ? (
           <View style={[s.emptyBox, { borderColor: colors.border }]}>
             <MaterialCommunityIcons name="file-document-outline" size={30} color={colors.mutedForeground} />
             <Text style={[s.emptyText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              No documents yet. Import medical reports, imaging reports (X-ray, MRI, CT), or prescriptions as PDFs or photos — all stored only on this device.
+              No reports yet. Import PDFs or photos of your medical reports to keep them with your prescription — all stored only on this device.
             </Text>
           </View>
         ) : (
-          (() => {
-            const filtered = docs.filter((d) => docFilter === "all" || (d.category ?? "report") === docFilter);
-            if (filtered.length === 0) {
-              return (
-                <View style={[s.emptyBox, { borderColor: colors.border }]}>
-                  <MaterialCommunityIcons name="filter-off-outline" size={26} color={colors.mutedForeground} />
-                  <Text style={[s.emptyText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                    No documents in this category yet. Tap Import to add one.
-                  </Text>
-                </View>
-              );
-            }
-            return filtered.map((doc) => {
-              const cat = (doc.category ?? "report") as DocCategory;
-              const cm = CATEGORY_META[cat];
-              return (
-                <View key={doc.id} style={[s.docRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <View style={[s.docIconWrap, { backgroundColor: cm.hex + "16", borderColor: cm.hex + "44" }]}>
-                    <MaterialCommunityIcons name={cm.icon as any} size={20} color={cm.hex} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.docName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>{doc.name}</Text>
-                    <Text style={[s.docMeta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
-                      {cm.shortLabel}
-                      {doc.source ? ` · ${SOURCE_META[doc.source].label}` : ""}
-                      {` · ${new Date(doc.addedAt).toLocaleDateString()}`}
-                      {formatFileSize(doc.sizeBytes) ? ` · ${formatFileSize(doc.sizeBytes)}` : ""}
-                    </Text>
-                  </View>
-                  <TouchableOpacity style={s.docActionBtn} onPress={() => handleViewDoc(doc)} hitSlop={8}>
-                    <MaterialCommunityIcons name="eye-outline" size={19} color={colors.primary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.docActionBtn} onPress={() => handleDeleteDoc(doc)} hitSlop={8}>
-                    <MaterialCommunityIcons name="trash-can-outline" size={19} color={colors.accent} />
-                  </TouchableOpacity>
-                </View>
-              );
-            });
-          })()
+          docs.map((doc) => (
+            <View key={doc.id} style={[s.docRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <MaterialCommunityIcons
+                name={docIcon(doc)}
+                size={26}
+                color={docIcon(doc) === "file-pdf-box" ? "#e5484d" : colors.primary}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[s.docName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>{doc.name}</Text>
+                <Text style={[s.docMeta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                  {new Date(doc.addedAt).toLocaleDateString()} {formatFileSize(doc.sizeBytes) ? `· ${formatFileSize(doc.sizeBytes)}` : ""}
+                </Text>
+              </View>
+              <TouchableOpacity style={s.docActionBtn} onPress={() => handleViewDoc(doc)} hitSlop={8}>
+                <MaterialCommunityIcons name="eye-outline" size={19} color={colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity style={s.docActionBtn} onPress={() => handleDeleteDoc(doc)} hitSlop={8}>
+                <MaterialCommunityIcons name="trash-can-outline" size={19} color={colors.accent} />
+              </TouchableOpacity>
+            </View>
+          ))
         )}
-
-        {/* How to receive documents */}
-        <View style={[s.channelCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={s.channelHeader}>
-            <MaterialCommunityIcons name="email-lock" size={17} color={colors.primary} />
-            <Text style={[s.channelTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-              How to receive your reports
-            </Text>
-          </View>
-
-          <View style={s.channelRow}>
-            <MaterialCommunityIcons name="email-lock" size={15} color={colors.mutedForeground} style={s.channelRowIcon} />
-            <Text style={[s.channelRowText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              <Text style={{ color: colors.foreground, fontFamily: "Inter_600SemiBold" }}>Healthmail:</Text> Ask your GP or consultant to send your reports to you by secure email. Save the attachment to your phone, then tap Import above.
-            </Text>
-          </View>
-
-          <View style={s.channelRow}>
-            <MaterialCommunityIcons name="hospital-building" size={15} color={colors.mutedForeground} style={s.channelRowIcon} />
-            <Text style={[s.channelRowText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              <Text style={{ color: colors.foreground, fontFamily: "Inter_600SemiBold" }}>GP surgery or hospital:</Text> Request copies of letters, imaging reports, and prescriptions at reception — they can email or print them for you.
-            </Text>
-          </View>
-
-          <View style={s.channelRow}>
-            <MaterialCommunityIcons name="office-building" size={15} color={colors.mutedForeground} style={s.channelRowIcon} />
-            <Text style={[s.channelRowText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              <Text style={{ color: colors.foreground, fontFamily: "Inter_600SemiBold" }}>Private practice:</Text> Private clinics can send results by email or through their patient portal — download the file, then import it here.
-            </Text>
-          </View>
-        </View>
 
         <Text style={[s.privacyNote, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
           Documents are stored only on this device. Nothing is uploaded by HIVE COMPANION.
@@ -898,28 +733,9 @@ const s = StyleSheet.create({
   emptyText: { fontSize: 12.5, lineHeight: 19, textAlign: "center" },
 
   docRow: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12 },
-  docIconWrap: { width: 38, height: 38, borderRadius: 11, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   docName: { fontSize: 14 },
   docMeta: { fontSize: 11.5, marginTop: 2 },
   docActionBtn: { padding: 4 },
-
-  filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  filterChip: { borderRadius: 20, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 7 },
-  filterChipText: { fontSize: 12.5 },
-
-  pickLabel: { fontSize: 10.5, letterSpacing: 1, marginTop: 6 },
-  typeRow: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 12, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 13 },
-  typeRowText: { fontSize: 14.5, flex: 1 },
-  sourceWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  sourceChip: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 20, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 8 },
-  sourceChipText: { fontSize: 12.5 },
-
-  channelCard: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 10, marginTop: 4 },
-  channelHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  channelTitle: { fontSize: 14 },
-  channelRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  channelRowIcon: { marginTop: 2 },
-  channelRowText: { fontSize: 12.5, lineHeight: 19, flex: 1 },
 
   privacyNote: { fontSize: 11, lineHeight: 17, textAlign: "center", marginTop: 6, paddingHorizontal: 8 },
 

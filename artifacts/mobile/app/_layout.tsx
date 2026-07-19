@@ -21,8 +21,6 @@ import { LogoThemeProvider } from "@/context/LogoThemeContext";
 import { PatientProvider } from "@/context/PatientContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { SmartDevicesProvider } from "@/context/SmartDevicesContext";
-import { HealthMonitorProvider } from "@/context/HealthMonitorContext";
-import HealthAlertModal from "@/components/HealthAlertModal";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -93,12 +91,9 @@ export default function RootLayout() {
                   <PatientProvider>
                     <ThemeProvider onReady={handleThemeReady}>
                       <SmartDevicesProvider>
-                        <HealthMonitorProvider>
-                          <LogoThemeProvider onReady={handleLogoThemeReady}>
-                            <RootLayoutNav />
-                            <HealthAlertModal />
-                          </LogoThemeProvider>
-                        </HealthMonitorProvider>
+                        <LogoThemeProvider onReady={handleLogoThemeReady}>
+                          <RootLayoutNav />
+                        </LogoThemeProvider>
                       </SmartDevicesProvider>
                     </ThemeProvider>
                   </PatientProvider>

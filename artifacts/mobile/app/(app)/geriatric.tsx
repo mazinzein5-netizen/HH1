@@ -2,26 +2,21 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { disableWatcherMode, enableWatcherMode, isWatcherModeEnabled } from "@/utils/watcherMode";
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
-import { useAuth } from "@/context/AuthContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { useColors } from "@/hooks/useColors";
-import { getPlanTier } from "@/utils/entitlements";
-import { PLAN_META, type PlanTier } from "@/utils/membershipStore";
 
 type ActiveSection = "cognitive" | "falls";
 
@@ -56,47 +51,6 @@ export default function GeriatricScreen() {
   const [cogScoreShown, setCogScoreShown] = useState(false);
   const [stratifyAnswers, setStratifyAnswers] = useState<(boolean | null)[]>(new Array(STRATIFY_ITEMS.length).fill(null));
   const [stratifyShown, setStratifyShown] = useState(false);
-  const [watcher, setWatcher] = useState(false);
-  const { user } = useAuth();
-  const [tier, setTier] = useState<PlanTier | null>(null);
-
-  useEffect(() => {
-    isWatcherModeEnabled().then(setWatcher);
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    getPlanTier(user?.id ?? "unknown")
-      .then((t) => { if (alive) setTier(t); })
-      .catch(() => { if (alive) setTier("blue"); });
-    return () => { alive = false; };
-  }, [user?.id]);
-
-  async function toggleWatcher(v: boolean) {
-    Haptics.selectionAsync();
-    if (!v) {
-      setWatcher(false);
-      await disableWatcherMode();
-      return;
-    }
-    const res = await enableWatcherMode();
-    if (res.ok) {
-      setWatcher(true);
-      if (res.reason === "web") {
-        Alert.alert(
-          "Watcher Mode",
-          "Watcher Mode is saved. In the browser preview Sarah can only watch while this tab is open — on a phone she'll send daily check-ins even when the app is closed."
-        );
-      }
-    } else if (res.reason === "permission") {
-      Alert.alert(
-        "Watcher Mode",
-        "Sarah needs notification permission to check in while the app is closed. You can enable notifications for HIVE in your device settings."
-      );
-    } else {
-      Alert.alert("Watcher Mode", "Couldn't turn on Watcher Mode just now — please try again.");
-    }
-  }
 
   function setOrientation(i: number, val: string) {
     const next = [...cogAnswers];
@@ -132,81 +86,26 @@ export default function GeriatricScreen() {
     { key: "falls", label: "Falls Risk", icon: "walk", color: "#f59e0b" },
   ];
 
-  const header = (
-    <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-        <Feather name="arrow-left" size={20} color={colors.foreground} />
-      </TouchableOpacity>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-          Geriatric & Cognitive Care
-        </Text>
-        <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          Memory check-in · Falls awareness
-        </Text>
-      </View>
-      <MaterialCommunityIcons name="brain" size={26} color="#a78bfa" />
-    </View>
-  );
-
-  // Geriatric & cognitive care is part of the Red Geriatric Safety Pack.
-  if (tier !== "red") {
-    return (
-      <View style={[styles.root, { backgroundColor: colors.background }]}>
-        <ThemedStatusBar />
-        <HoneycombWallpaper density={prefs.density} />
-        {header}
-        {tier === null ? null : (
-          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-            <View style={[styles.gateCard, { backgroundColor: colors.card, borderColor: "#E5294E55" }]}>
-              <MaterialCommunityIcons name="shield-star" size={40} color="#E5294E" />
-              <Text style={[styles.gateTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                Part of the Red Geriatric Safety Pack
-              </Text>
-              <Text style={[styles.gateBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                Cognitive screening, falls-risk checks and Sarah Watcher Mode are included with the Red
-                Geriatric Safety Pack — the complete elder-care membership.
-              </Text>
-              <View style={{ gap: 6, alignSelf: "stretch" }}>
-                {PLAN_META.red.features.map((f) => (
-                  <View key={f} style={styles.gateFeatureRow}>
-                    <MaterialCommunityIcons name="check-circle" size={15} color="#E5294E" />
-                    <Text style={[styles.gateFeatureText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-                      {f}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => { Haptics.selectionAsync(); router.push("/(app)/membership"); }}
-                style={{ alignSelf: "stretch" }}
-              >
-                <LinearGradient
-                  colors={["#B91C3C", "#E5294E", "#B91C3C"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.gateBtn}
-                >
-                  <MaterialCommunityIcons name="shield-star" size={18} color="#fff" />
-                  <Text style={[styles.gateBtnText, { fontFamily: "Inter_700Bold" }]}>
-                    Upgrade to the Red Geriatric Safety Pack
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        )}
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ThemedStatusBar />
       <HoneycombWallpaper density={prefs.density} />
 
-      {header}
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <Feather name="arrow-left" size={20} color={colors.foreground} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+            Geriatric & Cognitive Care
+          </Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Memory check-in · Falls awareness
+          </Text>
+        </View>
+        <MaterialCommunityIcons name="brain" size={26} color="#a78bfa" />
+      </View>
 
       {/* Section tabs */}
       <View style={[styles.tabRow, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
@@ -226,27 +125,6 @@ export default function GeriatricScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* ── SARAH WATCHER MODE ── */}
-        <View style={[styles.watcherCard, { backgroundColor: colors.card, borderColor: "rgba(201,134,10,0.4)" }]}>
-          <View style={[styles.watcherIcon, { backgroundColor: "rgba(201,134,10,0.15)" }]}>
-            <MaterialCommunityIcons name="eye-check-outline" size={20} color="#C9860A" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.watcherTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-              Sarah Watcher Mode
-            </Text>
-            <Text style={[styles.watcherSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              Sarah keeps watch even when the app is closed — gentle morning and evening check-ins on the phone, ready to chat with one tap. Ideal for older adults living alone.
-            </Text>
-          </View>
-          <Switch
-            value={watcher}
-            onValueChange={toggleWatcher}
-            trackColor={{ false: colors.border, true: "#C9860A" }}
-            thumbColor="#fff"
-          />
-        </View>
 
         {/* ── COGNITIVE SCREENING ── */}
         {activeSection === "cognitive" && (
@@ -457,17 +335,6 @@ const styles = StyleSheet.create({
   tabBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
   tabLabel: { fontSize: 12 },
   scroll: { padding: 16, gap: 14, paddingBottom: 60 },
-  gateCard: { borderRadius: 18, borderWidth: 1.5, padding: 22, alignItems: "center", gap: 14 },
-  gateTitle: { fontSize: 17, textAlign: "center" },
-  gateBody: { fontSize: 13.5, lineHeight: 20, textAlign: "center" },
-  gateFeatureRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  gateFeatureText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  gateBtn: { borderRadius: 14, paddingVertical: 15, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  gateBtnText: { color: "#fff", fontSize: 14.5 },
-  watcherCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, borderWidth: 1, padding: 14 },
-  watcherIcon: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  watcherTitle: { fontSize: 14 },
-  watcherSub: { fontSize: 11.5, lineHeight: 16, marginTop: 2 },
   section: { gap: 14 },
   cogHero: { borderRadius: 20, padding: 24, gap: 10, alignItems: "center" },
   cogHeroTitle: { fontSize: 20, letterSpacing: -0.4 },

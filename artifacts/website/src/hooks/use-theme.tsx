@@ -4,8 +4,7 @@ type Theme = "dark" | "light" | "system";
 
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Default to dark so the black rubber surface is the first impression
-    return (localStorage.getItem("theme") as Theme) || "dark";
+    return (localStorage.getItem("theme") as Theme) || "system";
   });
 
   useEffect(() => {

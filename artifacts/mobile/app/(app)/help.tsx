@@ -23,24 +23,24 @@ const FAQS: FAQ[] = [
     a: "Yes. All health data — medications, conditions, vitals, conversations — is stored exclusively on your device. Nothing is uploaded to any server. If you delete the app or tap 'Delete All My Data' in Settings, everything is permanently removed.",
   },
   {
-    q: "What does Sarah do?",
-    a: "Sarah is your AI health companion. She can answer questions about your medications, flag drug interactions, help you describe symptoms, and support you with health education. In Pilot Mode, she also provides clinical guidance from Irish and UK healthcare guidelines. She is not a replacement for your doctor.",
+    q: "What does Queen B do?",
+    a: "Queen B is your AI health companion. She can answer questions about your medications, flag drug interactions, help you describe symptoms, and support you with health education. In Pilot Mode, she also provides clinical guidance from Irish and UK healthcare guidelines. She is not a replacement for your doctor.",
   },
   {
     q: "How do I activate Pilot Mode?",
     a: "Go to Settings and long-press the version number at the bottom of the page for 1.2 seconds. You will be prompted to enter an access code provided by your pilot site coordinator.",
   },
   {
-    q: "Can Sarah speak to me out loud?",
-    a: "Yes. Tap the speaker icon in the Sarah chat header to toggle voice on or off. She uses text-to-speech in Irish English.",
+    q: "Can Queen B speak to me out loud?",
+    a: "Yes. Tap the speaker icon in the Queen B chat header to toggle voice on or off. She uses text-to-speech in Irish English.",
   },
   {
-    q: "How do I use voice input to talk to Sarah?",
-    a: "Tap the 'Voice' microphone button above the text box in Sarah's chat. On web and modern browsers, your speech will be transcribed automatically. On the installed native app, voice input is fully integrated.",
+    q: "How do I use voice input to talk to Queen B?",
+    a: "Tap the 'Voice' microphone button above the text box in Queen B's chat. On web and modern browsers, your speech will be transcribed automatically. On the installed native app, voice input is fully integrated.",
   },
   {
     q: "What is the sign language mode?",
-    a: "Tap 'Sign Language' in the Sarah chat input row to open the sign language camera. Position your hands in view, tap Start Signing, then Done when finished. You then type what you signed and Sarah responds. Automated sign recognition is coming in a future update.",
+    a: "Tap 'Sign Language' in the Queen B chat input row to open the sign language camera. Position your hands in view, tap Start Signing, then Done when finished. You then type what you signed and Queen B responds. Automated sign recognition is coming in a future update.",
   },
   {
     q: "How do I record a new health complaint?",
@@ -52,7 +52,7 @@ const FAQS: FAQ[] = [
   },
   {
     q: "How does drug interaction checking work?",
-    a: "Sarah automatically checks your current medications against any new drugs you mention in the chat, as well as against your known allergies. If a risk is detected, an amber 'Drug Interaction Alert' appears in the conversation. Always contact your GP or pharmacist before changing any medication.",
+    a: "Queen B automatically checks your current medications against any new drugs you mention in the chat, as well as against your known allergies. If a risk is detected, an amber 'Drug Interaction Alert' appears in the conversation. Always contact your GP or pharmacist before changing any medication.",
   },
   {
     q: "I see a 'Coming Soon' badge — when will it be available?",

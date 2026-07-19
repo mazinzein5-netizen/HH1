@@ -2,14 +2,13 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Modal,
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -24,14 +23,6 @@ import Toast from "@/components/Toast";
 import { useLogoTheme } from "@/context/LogoThemeContext";
 import { ThemeMode, useTheme } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
-import {
-  BiometricSupport,
-  disableBiometricLogin,
-  enableBiometricLogin,
-  getBiometricLogin,
-  getBiometricSupport,
-  promptBiometric,
-} from "@/utils/biometricAuth";
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: "white-balance-sunny" | "moon-waning-crescent" | "cellphone-cog" }[] = [
   { mode: "light", label: "Light", icon: "white-balance-sunny" },
@@ -44,7 +35,6 @@ const SECTIONS = [
     title: "Account",
     items: [
       { icon: "account-circle" as const, label: "Patient Profile", sub: "Edit name, DOB, blood type", action: "profile" },
-      { icon: "card-account-details-outline" as const, label: "Membership & Verification", sub: "Free trial, plans, ID verification, payment", action: "membership" },
       { icon: "bell-outline" as const, label: "Notifications", sub: "Medication reminders, appointments", action: "notifications" },
       { icon: "shield-lock-outline" as const, label: "Privacy & GDPR", sub: "How your data is stored and protected", action: "privacy" },
     ],
@@ -86,7 +76,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { prefs } = useLogoTheme();
-  const { mode, setMode, isDark } = useTheme();
+  const { mode, setMode } = useTheme();
   const { pilotMode, activatePilot, deactivatePilot, deleteAllData } = useAppMode();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -95,58 +85,6 @@ export default function SettingsScreen() {
   const [pilotModalVisible, setPilotModalVisible] = useState(false);
   const [pilotCode, setPilotCode] = useState("");
   const [pilotError, setPilotError] = useState("");
-  const [bioSupport, setBioSupport] = useState<BiometricSupport | null>(null);
-  const [bioEnabled, setBioEnabled] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      const [support, record] = await Promise.all([getBiometricSupport(), getBiometricLogin()]);
-      setBioSupport(support);
-      setBioEnabled(!!record && record.userId === user?.id);
-    })();
-  }, [user?.id]);
-
-  const bioAllowed = !!bioSupport?.available && !user?.isGuest;
-
-  function biometricSub(): string {
-    if (user?.isGuest) return "Sign in to your own account to use this.";
-    if (!bioSupport) return "Checking what this device supports…";
-    if (bioSupport.available) return `Unlock the app with ${bioSupport.label} instead of your password.`;
-    switch (bioSupport.reason) {
-      case "web":          return "Works on your phone — Face ID or fingerprint.";
-      case "expo-go":      return "Not available in the Expo Go testing app — install the real HIVE Companion app build to use Face ID or fingerprint sign-in.";
-      case "not-enrolled": return "First set up Face ID or a fingerprint in your phone's own settings.";
-      default:             return "This device doesn't support biometric sign-in.";
-    }
-  }
-
-  async function handleBiometricToggle(next: boolean) {
-    if (!bioAllowed || !user) return;
-    Haptics.selectionAsync();
-    if (next) {
-      const prompt = await promptBiometric(`Confirm ${bioSupport!.label} to enable quick sign-in`, "Cancel");
-      if (!prompt.success) {
-        setToastMessage(
-          prompt.reason === "cancel"
-            ? "Cancelled — biometric sign-in was not enabled."
-            : prompt.message ?? "The biometric check didn't complete."
-        );
-        setToastVisible(true);
-        return;
-      }
-      const firstName = (user.fullName || user.username).trim().split(/\s+/)[0];
-      await enableBiometricLogin(user.id, firstName);
-      setBioEnabled(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setToastMessage(`You can now sign in with ${bioSupport!.label}`);
-      setToastVisible(true);
-    } else {
-      await disableBiometricLogin();
-      setBioEnabled(false);
-      setToastMessage("Biometric sign-in turned off");
-      setToastVisible(true);
-    }
-  }
 
   function handleAction(action: string) {
     Haptics.selectionAsync();
@@ -163,7 +101,6 @@ export default function SettingsScreen() {
       case "about":           router.push("/(app)/about");             break;
       case "help":            router.push("/(app)/help");              break;
       case "profile":         router.push("/(app)/(tabs)/profile");    break;
-      case "membership":      router.push("/(app)/membership");        break;
       default:
         setToastMessage("Coming soon — available in a future update");
         setToastVisible(true);
@@ -319,31 +256,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Security */}
-        <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.sectionGroupLabel, { color: colors.mutedForeground }]}>SECURITY</Text>
-          <View style={styles.settingRow}>
-            <View style={[styles.settingIcon, { backgroundColor: colors.cardElevated }]}>
-              <MaterialCommunityIcons name={bioSupport?.icon ?? "fingerprint"} size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                Biometric Sign-In
-              </Text>
-              <Text style={[styles.settingSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                {biometricSub()}
-              </Text>
-            </View>
-            <Switch
-              value={bioEnabled}
-              onValueChange={handleBiometricToggle}
-              disabled={!bioAllowed}
-              trackColor={{ false: colors.border, true: colors.gold }}
-              thumbColor="#fff"
-            />
-          </View>
-        </View>
-
         {/* Settings sections */}
         {SECTIONS.map((section) => (
           <View key={section.title} style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -429,10 +341,8 @@ export default function SettingsScreen() {
 
         <TouchableOpacity activeOpacity={1} onLongPress={handleVersionLongPress} delayLongPress={1200}>
           <Text style={[styles.versionText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            HIVE COMPANION™ : Patient Portal v2.0 · IbnCeena Ltd.{"\n"}
-            <Text style={{ color: isDark ? "#E8590C" : "#C2410C", fontFamily: "Inter_500Medium" }}>
-              Not a medical device — for information and administrative use only.
-            </Text>
+            HIVE COMPANION : Patient Portal v2.0 · IbnCeena Ltd.{"\n"}
+            Not a medical device — for information and administrative use only.
             {pilotMode ? "\nPilot programme active" : ""}
           </Text>
         </TouchableOpacity>

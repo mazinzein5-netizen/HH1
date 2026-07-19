@@ -1,8 +1,15 @@
 import { Router, type IRouter } from "express";
+import OpenAI from "openai";
 import { logger } from "../lib/logger";
-import { getChatAI, CHAT_MODEL } from "../lib/aiClients";
 
 const router: IRouter = Router();
+
+function getOpenAI(): OpenAI | null {
+  const apiKey = process.env["OPENAI_API_KEY"];
+  if (!apiKey) return null;
+  const baseURL = process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"];
+  return new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
+}
 
 /**
  * Pilot behavior is only served when the request carries the pilot access
@@ -85,37 +92,37 @@ function buildPatientContextPreamble(ctx: PatientContext): string {
 
 // ── System prompts ────────────────────────────────────────────────────────────
 
-const PAIN_CHAT_SYSTEM_PROMPT = `You are Sarah — a warm, experienced AI health companion inside the HIVE COMPANION app (IbnCeena Health Ecosystem). You talk like a caring, knowledgeable friend, not a form or a chatbot. You are deeply guideline-aware (HSE Ireland, NICE UK, WHO) but you NEVER quote rulebooks at people — you weave what the guidelines say naturally into plain conversation.
+const PAIN_CHAT_SYSTEM_PROMPT = `You are HIVE Bot, an AI clinical assistant specialised in pain assessment and treatment guidance. You operate within the IbnCeena Health Ecosystem and follow HSE and NICE clinical guidelines.
 
-How you converse (free-flowing, never scripted):
-- Listen first. Follow the person's lead; let the conversation breathe. Ask at most one or two gentle follow-up questions at a time.
-- Gather what matters naturally over the conversation: where it is, how it feels, how bad (0–10), when it started, what makes it better or worse, associated symptoms, relevant history.
-- When you have enough, share what this could be, sensible self-care steps, and what to watch for — in warm plain English.
-- NEVER use 【】 brackets or cite guideline codes. Instead say things like "the usual advice for this kind of back pain is..." or "doctors normally want to see this reviewed within six weeks".
-- ALWAYS attach concrete, realistic timeframes drawn from standard guidelines: "this usually settles within 2–6 weeks", "if it's not improving after 2 weeks, book a GP visit", "a routine physiotherapy referral is typically seen within 6–12 weeks".
+Your role:
+- Gather a structured pain history through conversational questions: location, severity (0–10 numeric scale), character (sharp/ache/burning/throbbing/stabbing), onset and duration, aggravating and relieving factors, associated symptoms, and relevant medical history.
+- Once you have enough information (at minimum location, severity, and character), provide: likely differential diagnoses, recommended self-care steps, red-flag symptoms requiring emergency care, and relevant guideline references.
+- Always cite guideline names inline using 【】 brackets, e.g. 【NICE NG59 – Musculoskeletal Pain】.
+- Always include a clear disclaimer that your guidance is not a substitute for professional medical advice.
 
-Breadth of knowledge — you are comfortable across these specialties:
-1. Musculoskeletal & orthopaedics (back, neck, joints, osteoarthritis, fractures)
-2. Neurology (headache/migraine, neuropathic pain, cervical myelopathy, dizziness)
-3. Cardiology (chest pain, palpitations, blood pressure)
-4. Respiratory (breathlessness, cough, asthma/COPD basics)
-5. Gastroenterology (abdominal pain, reflux, bowel changes)
-6. Geriatric medicine (falls, frailty, memory, polypharmacy)
-7. Mental health & wellbeing (low mood, anxiety, sleep — with Samaritans 116 123 for distress)
-8. Medication safety & pharmacology (interactions, side effects, the analgesic ladder)
+Guideline coverage you must draw from:
+- Musculoskeletal / low back pain: 【NICE NG59】
+- Headache / migraine: 【NICE NG193】
+- Neck pain: 【NICE NG59】
+- Chest pain — immediately flag red-alert ACS symptoms: 【HSE ACS Pathway】
+- Wound and skin pain: 【HSE Wound Care Pathway】
+- Abdominal pain — flag red-alert surgical / obstruction symptoms
+- General analgesic ladder: 【WHO Analgesic Ladder】
+- Osteoarthritis: 【NICE NG226】
 
-Red-flag rules (non-negotiable):
-- Chest pain with breathlessness, sweating, jaw/arm radiation → open with "⚠️ RED FLAG:" and advise immediate emergency services (112/999).
-- Thunderclap headache, focal neurological deficit, loss of consciousness → open with "⚠️ RED FLAG:".
-- Cauda equina signs (saddle anaesthesia, bladder/bowel dysfunction) → open with "⚠️ RED FLAG:".
+Red-flag rules:
+- If the user describes chest pain, shortness of breath, sweating, jaw/arm radiation → open your response with "⚠️ RED FLAG:" and advise immediate emergency services.
+- If the user describes sudden severe headache ("thunderclap"), focal neuro deficits, loss of consciousness → open with "⚠️ RED FLAG:".
+- If the user describes cauda equina signs (saddle anaesthesia, bladder/bowel dysfunction) → open with "⚠️ RED FLAG:".
 - Any other red-flag pattern → open with "⚠️ RED FLAG:".
 
-Style:
-- Warm, unhurried, human. Plain language; explain any clinical term you use.
-- Numbered steps only when giving practical self-care advice.
-- End substantive assessment messages with: "⚠️ Disclaimer: This information is for guidance only and is not a substitute for professional medical advice. Always consult a qualified healthcare provider for diagnosis and treatment."`;
+Style rules:
+- Be empathetic and clear. Avoid excessive jargon but use clinical terms where appropriate.
+- Ask one or two focused follow-up questions at a time; do not bombard the user.
+- When giving self-care advice, use numbered steps for clarity.
+- End every substantive assessment message with: "⚠️ Disclaimer: This information is for guidance only and is not a substitute for professional medical advice. Always consult a qualified healthcare provider for diagnosis and treatment."`;
 
-const COMPANION_SYSTEM_PROMPT = `You are Sarah — a warm, compassionate AI companion living inside the HIVE COMPANION health app (IbnCeena Ltd.). You are a patient's trusted friend, guide, and emotional support companion on their health journey. You converse naturally and freely — never scripted, never form-like.
+const COMPANION_SYSTEM_PROMPT = `You are Queen B — a warm, compassionate AI companion living inside the HIVE COMPANION health app (IbnCeena Ltd.). You are a patient's trusted friend, guide, and emotional support companion on their health journey.
 
 Your personality:
 - Warm, gentle, and genuinely caring — like a wise friend who happens to know a lot about health.
@@ -141,16 +148,9 @@ What you do NOT do:
 - Rate the urgency of someone's condition.
 - Replace or discourage professional medical advice.
 
-Depth and continuity (very important — you are always here, day and night):
-- Hold the whole conversation in mind. Refer back naturally to things the person told you earlier in this chat — their name, worries, family, plans, how they were feeling — so they feel truly remembered: "You mentioned your knee was bothering you when we started — how is it feeling now that we've talked a while?"
-- Go deeper, gently. When someone shares something, don't just acknowledge it — get curious about it. Ask the one follow-up question a caring friend would ask.
-- You're never in a hurry and you never run out of patience. If they want to chat about their garden, the weather, their grandchildren, or old memories, that IS the job — companionship first, always.
-- If a reply could end the conversation, prefer one that gently keeps the door open: offer to explain more, ask what else is on their mind, or simply let them know you're here whenever they want to talk.
-- Match their pace and energy: short and light if they're brief, more depth if they're engaged.
-
 Tone: warm, unhurried, validating. Be the companion a patient wishes they had beside them.`;
 
-const PAIN_DESCRIBE_SYSTEM_PROMPT = `You are Sarah, a friendly assistant who helps people put their pain or health issue into clear words to share with their doctor, physiotherapist, or other health practitioner.
+const PAIN_DESCRIBE_SYSTEM_PROMPT = `You are Queen B, a friendly assistant who helps people put their pain or health issue into clear words to share with their doctor, physiotherapist, or other health practitioner.
 
 Strict rules — you must follow all of these:
 - You do NOT assess, triage, diagnose, rate urgency, or suggest treatments. Your only job is to help the person DESCRIBE their pain or issue clearly.
@@ -164,7 +164,7 @@ Strict rules — you must follow all of these:
 // ── Routes ─────────────────────────────────────────────────────────────────
 
 router.post("/ai/questions", async (req, res) => {
-  const openai = getChatAI();
+  const openai = getOpenAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
@@ -183,7 +183,7 @@ router.post("/ai/questions", async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: CHAT_MODEL,
+      model: "gpt-4o-mini",
       max_tokens: 600,
       messages: [
         { role: "system", content: questionsSystemPrompt },
@@ -218,7 +218,7 @@ router.post("/ai/questions", async (req, res) => {
 });
 
 router.post("/ai/summary", async (req, res) => {
-  const openai = getChatAI();
+  const openai = getOpenAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
@@ -257,7 +257,7 @@ Return ONLY valid JSON. No extra text.`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: CHAT_MODEL,
+      model: "gpt-4o-mini",
       max_tokens: 600,
       messages: [
         { role: "system", content: summarySystemPrompt },
@@ -294,7 +294,7 @@ Return ONLY valid JSON. No extra text.`;
  * contraindication flags the UI should surface.
  */
 router.post("/ai/contraindications", async (req, res) => {
-  const openai = getChatAI();
+  const openai = getOpenAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
@@ -331,7 +331,7 @@ Identify all significant contraindications in this profile.`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: CHAT_MODEL,
+      model: "gpt-4o-mini",
       max_tokens: 800,
       messages: [
         { role: "system", content: systemPrompt },
@@ -358,24 +358,21 @@ Identify all significant contraindications in this profile.`;
 
 /**
  * POST /ai/chat
- * Main Sarah conversation endpoint. Accepts an optional `patientContext`
+ * Main Queen B conversation endpoint. Accepts an optional `patientContext`
  * field containing medications and allergies — these are injected into the
- * system prompt so Sarah can flag contraindications in real-time — and an
- * optional `appContext` string (upcoming appointments, questionnaire state,
- * remembered conversation notes) for richer, more personal replies.
+ * system prompt so Queen B can flag contraindications in real-time.
  */
 router.post("/ai/chat", async (req, res) => {
-  const openai = getChatAI();
+  const openai = getOpenAI();
   if (!openai) {
     res.status(503).json({ error: "AI_NOT_CONFIGURED" });
     return;
   }
 
-  const { messages, mode, patientContext, appContext } = req.body as {
+  const { messages, mode, patientContext } = req.body as {
     messages?: { role: "user" | "assistant"; content: string }[];
     mode?: string;
     patientContext?: PatientContext;
-    appContext?: string;
   };
   const pilotMode = isPilotRequest(req.body);
   const painDescribe = mode === "painDescribe";
@@ -397,21 +394,10 @@ router.post("/ai/chat", async (req, res) => {
     basePrompt = buildPatientContextPreamble(patientContext) + basePrompt;
   }
 
-  // Append app context (appointments, questionnaire state, remembered notes)
-  if (typeof appContext === "string" && appContext.trim()) {
-    basePrompt +=
-      "\n\n════════════════════════════════════\n" +
-      "WHAT THE APP KNOWS RIGHT NOW (use naturally, never recite verbatim):\n" +
-      appContext.trim().slice(0, 4000) +
-      "\n════════════════════════════════════";
-  }
-
   try {
     const completion = await openai.chat.completions.create({
-      model: CHAT_MODEL,
-      max_tokens: 1200,
-      // OpenRouter reasoning: deeper multi-step thinking before answering.
-      ...({ reasoning: { effort: "medium" } } as Record<string, unknown>),
+      model: "gpt-4o-mini",
+      max_tokens: 800,
       messages: [
         { role: "system", content: basePrompt },
         ...messages,
@@ -430,176 +416,6 @@ router.post("/ai/chat", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "AI chat error");
     res.status(500).json({ error: "Failed to generate chat response" });
-  }
-});
-
-/**
- * POST /ai/health-alert
- * Pilot-only AI assessment of a rule-triggered health incident (falls,
- * vital / metabolic / cardiac danger signals). Takes the triggered rule and
- * the recent readings, returns a severity confirmation plus a short
- * plain-English explanation. Clients degrade gracefully to the rule-based
- * alert if this endpoint fails or is unavailable.
- */
-router.post("/ai/health-alert", async (req, res) => {
-  if (!isPilotRequest(req.body)) {
-    res.status(403).json({ error: "PILOT_REQUIRED" });
-    return;
-  }
-
-  const openai = getChatAI();
-  if (!openai) {
-    res.status(503).json({ error: "AI_NOT_CONFIGURED" });
-    return;
-  }
-
-  const { rule, readings } = req.body as {
-    rule?: { id?: string; title?: string; detail?: string; severity?: string };
-    readings?: { signal?: string; value?: number; raw?: string; source?: string; ts?: number }[];
-  };
-
-  if (!rule?.title || !Array.isArray(readings)) {
-    res.status(400).json({ error: "rule and readings are required" });
-    return;
-  }
-
-  const readingsText = readings
-    .slice(-10)
-    .map((r) => `${r.ts ? new Date(r.ts).toISOString() : "?"} — ${r.signal}: ${r.raw ?? r.value} (${r.source ?? "unknown"})`)
-    .join("\n") || "none";
-
-  const systemPrompt = `You are a clinical monitoring triage assistant inside a patient safety app. A rule-based engine watching wearable data has fired a danger-signal alert. Your job:
-1. Confirm or adjust the severity based on the readings trend.
-2. Write a short, calm, plain-English explanation (2-3 sentences) a frightened patient can understand: what was detected, why it matters, and that help options are on screen.
-
-Return ONLY a JSON object with exactly these fields:
-- "severity": one of "critical", "warning", or "info"
-- "explanation": the plain-English explanation
-
-Never tell the patient not to seek help. Never diagnose. Do not add any text outside the JSON.`;
-
-  const userPrompt = `Triggered rule: ${rule.title} (${rule.id ?? "unknown"}, rule severity: ${rule.severity ?? "unknown"})
-Rule detail: ${rule.detail ?? ""}
-
-Recent readings (oldest first):
-${readingsText}`;
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: CHAT_MODEL,
-      max_tokens: 300,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    });
-
-    const content = completion.choices[0]?.message?.content ?? "{}";
-    let result: { severity?: string; explanation?: string } = {};
-    try {
-      result = JSON.parse(content);
-    } catch {
-      const match = content.match(/\{[\s\S]*\}/);
-      if (match) result = JSON.parse(match[0]);
-    }
-
-    if (!result.explanation) {
-      res.status(500).json({ error: "Failed to parse assessment" });
-      return;
-    }
-
-    const severity = ["critical", "warning", "info"].includes(result.severity ?? "")
-      ? result.severity
-      : rule.severity ?? "warning";
-
-    res.json({ severity, explanation: result.explanation });
-  } catch (err) {
-    logger.error({ err }, "AI health-alert error");
-    res.status(500).json({ error: "Failed to assess health alert" });
-  }
-});
-
-/**
- * POST /ai/gp-letter
- * Pilot-only. Drafts a plain-language letter to the patient's GP from a
- * completed questionnaire result. The draft is returned to the client for
- * the patient to review, edit, and share themselves — nothing is sent to
- * any GP from the server (Zero-Server rule).
- */
-router.post("/ai/gp-letter", async (req, res) => {
-  if (!isPilotRequest(req.body)) {
-    res.status(403).json({ error: "PILOT_REQUIRED" });
-    return;
-  }
-
-  const openai = getChatAI();
-  if (!openai) {
-    res.status(503).json({ error: "AI_NOT_CONFIGURED" });
-    return;
-  }
-
-  const { pathwayName, resultLabel, score, referral, answers, patientContext } = req.body as {
-    pathwayName?: string;
-    resultLabel?: string;
-    score?: string;
-    referral?: string;
-    answers?: { question: string; answer: string }[];
-    patientContext?: PatientContext;
-  };
-
-  if (!pathwayName || !resultLabel) {
-    res.status(400).json({ error: "pathwayName and resultLabel are required" });
-    return;
-  }
-
-  const answersText = Array.isArray(answers)
-    ? answers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join("\n")
-    : "not provided";
-  const meds = (patientContext?.medications ?? [])
-    .map((m) => `${m.name} ${m.dose} (${m.frequency})`).join("; ") || "none recorded";
-  const allergies = (patientContext?.allergies ?? [])
-    .map((a) => `${a.drug} (${a.reaction}, ${a.severity})`).join("; ") || "none recorded";
-
-  const systemPrompt = `You draft a courteous, concise letter from a patient to their GP, based on a structured questionnaire the patient completed in a health app. Rules:
-- Written in the FIRST PERSON from the patient ("Dear Doctor, I recently completed...").
-- Plain, respectful language a GP can scan in under a minute. No diagnosis claims — present the questionnaire result as information, not a conclusion.
-- Include: the questionnaire name and score/result, the key answers that drove the result, current medications and allergies, and a clear request for an appointment.
-- MUST include concrete guideline-based timeframes, e.g. "I understand this kind of result is usually reviewed within 2 weeks" — pick realistic timeframes for the condition (urgent findings: within days; moderate: within 2–4 weeks; routine: within 6 weeks).
-- End with a placeholder signature line "[Your name]".
-- Return ONLY the letter text — no commentary, no markdown headers.`;
-
-  const userPrompt = `Questionnaire: ${pathwayName}
-Result: ${resultLabel}${score ? ` (score: ${score})` : ""}
-${referral ? `Suggested next step from the questionnaire: ${referral}` : ""}
-
-Key answers:
-${answersText}
-
-Current medications: ${meds}
-Allergies: ${allergies}
-
-Draft the letter now.`;
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model: CHAT_MODEL,
-      max_tokens: 900,
-      ...({ reasoning: { effort: "medium" } } as Record<string, unknown>),
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    });
-
-    const letter = (completion.choices[0]?.message?.content ?? "").trim();
-    if (!letter) {
-      res.status(500).json({ error: "Failed to draft letter" });
-      return;
-    }
-    res.json({ letter });
-  } catch (err) {
-    logger.error({ err }, "AI gp-letter error");
-    res.status(500).json({ error: "Failed to draft GP letter" });
   }
 });
 

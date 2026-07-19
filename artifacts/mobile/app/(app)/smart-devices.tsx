@@ -2,7 +2,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React from "react";
 import {
   Platform,
   ScrollView,
@@ -14,12 +14,8 @@ import {
 import ThemedStatusBar from "@/components/ThemedStatusBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HoneycombWallpaper from "@/components/HoneycombWallpaper";
-import { RedUpgradeCard, usePlanTier } from "@/components/RedTierGate";
-import { useSmartDevices, type VitalSummary } from "@/context/SmartDevicesContext";
+import { useSmartDevices } from "@/context/SmartDevicesContext";
 import { useLogoTheme } from "@/context/LogoThemeContext";
-import { useAppMode } from "@/context/AppModeContext";
-import { useHealthMonitor } from "@/context/HealthMonitorContext";
-import { availabilityLabel, VENDOR_BRIDGES } from "@/utils/healthBridges";
 import { useColors } from "@/hooks/useColors";
 
 type Category = "rings" | "watches" | "cgm";
@@ -58,99 +54,11 @@ export default function SmartDevicesScreen() {
   const { prefs } = useLogoTheme();
   const topPad = Platform.OS === "web" ? 0 : insets.top;
 
-  const { devices, connectedCount, vitalsSummary, toggleDevice } = useSmartDevices();
-  const scrollRef = useRef<ScrollView>(null);
-  const categoryYs = useRef<Partial<Record<Category, number>>>({});
-  const [highlightedCategory, setHighlightedCategory] = useState<Category | null>(null);
-  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function goToCategory(cat: Category) {
-    Haptics.selectionAsync();
-    const y = categoryYs.current[cat];
-    if (y != null) {
-      scrollRef.current?.scrollTo({ y: Math.max(y - 12, 0), animated: true });
-    }
-    if (highlightTimer.current) clearTimeout(highlightTimer.current);
-    setHighlightedCategory(cat);
-    highlightTimer.current = setTimeout(() => setHighlightedCategory(null), 2200);
-  }
-
-  const { pilotMode } = useAppMode();
-  const {
-    monitoringActive,
-    alertHistory,
-    bridgeStates,
-    connectBridge,
-    disconnectBridge,
-    triggerDemoFall,
-    clearHistory,
-  } = useHealthMonitor();
-
-  const VITAL_DISPLAY: Record<
-    VitalSummary["key"],
-    { icon: keyof typeof MaterialCommunityIcons.glyphMap; color: string; hintText: string }
-  > = {
-    heartRate: { icon: "heart-pulse", color: "#ef4444", hintText: "Pair a smart ring" },
-    spo2: { icon: "water-percent", color: "#4F6EF7", hintText: "Pair a wearable" },
-    glucose: { icon: "water-percent", color: "#f59e0b", hintText: "Pair a glucose monitor" },
-    falls: { icon: "alert-circle", color: "#22c55e", hintText: "Pair a wearable" },
-  };
-
-  const liveReadings: {
-    label: string;
-    value: string;
-    unit: string;
-    icon: keyof typeof MaterialCommunityIcons.glyphMap;
-    color: string;
-    hint?: { text: string; category: Category };
-  }[] = vitalsSummary.map((v) => {
-    const display = VITAL_DISPLAY[v.key];
-    return {
-      label: v.label,
-      value: v.value,
-      unit: v.unit,
-      icon: display.icon,
-      color: display.color,
-      hint: v.available ? undefined : { text: display.hintText, category: v.pairCategory },
-    };
-  });
+  const { devices, connectedCount, toggleDevice } = useSmartDevices();
 
   function handleToggle(id: string) {
     Haptics.selectionAsync();
     toggleDevice(id);
-  }
-
-  const tier = usePlanTier();
-
-  const header = (
-    <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-        <Feather name="arrow-left" size={20} color={colors.foreground} />
-      </TouchableOpacity>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-          Smart Devices
-        </Text>
-        <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          ECG · Blood Pressure · CGM · HRV
-        </Text>
-      </View>
-      <MaterialCommunityIcons name="devices" size={26} color="#22c55e" />
-    </View>
-  );
-
-  // Smart-device monitoring is part of the Red Geriatric Safety Pack.
-  if (tier !== "red") {
-    return (
-      <View style={[styles.root, { backgroundColor: colors.background }]}>
-        <ThemedStatusBar />
-        <HoneycombWallpaper density={prefs.density} />
-        {header}
-        {tier === null ? null : (
-          <RedUpgradeCard blurb="ECG, blood-pressure, glucose and HRV monitoring from smart devices is included with the Red Geriatric Safety Pack — the complete elder-care membership." />
-        )}
-      </View>
-    );
   }
 
   return (
@@ -158,9 +66,23 @@ export default function SmartDevicesScreen() {
       <ThemedStatusBar />
       <HoneycombWallpaper density={prefs.density} />
 
-      {header}
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: topPad + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <Feather name="arrow-left" size={20} color={colors.foreground} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+            Smart Devices
+          </Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            ECG · Blood Pressure · CGM · HRV
+          </Text>
+        </View>
+        <MaterialCommunityIcons name="devices" size={26} color="#22c55e" />
+      </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Hero */}
         <LinearGradient colors={["#0a2818", "#0d0d1a"]} style={styles.hero}>
@@ -196,36 +118,22 @@ export default function SmartDevicesScreen() {
           <>
             <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>LIVE READINGS</Text>
             <View style={styles.readingsGrid}>
-              {liveReadings.map((r) => (
-                <TouchableOpacity
+              {[
+                { label: "Heart Rate",    value: "72",   unit: "bpm",    icon: "heart-pulse"    as const, color: "#ef4444" },
+                { label: "SpO₂",          value: "98",   unit: "%",      icon: "water-percent"  as const, color: "#4F6EF7" },
+                { label: "Blood Glucose", value: "5.4",  unit: "mmol/L", icon: "water-percent"  as const, color: "#f59e0b" },
+                { label: "Falls Detected",value: "0",    unit: "today",  icon: "alert-circle"   as const, color: "#22c55e" },
+              ].map((r) => (
+                <LinearGradient
                   key={r.label}
-                  activeOpacity={r.hint ? 0.8 : 1}
-                  disabled={!r.hint}
-                  onPress={r.hint ? () => goToCategory(r.hint!.category) : undefined}
-                  style={styles.readingCardWrap}
+                  colors={[r.color + "22", r.color + "11"]}
+                  style={[styles.readingCard, { borderColor: r.color + "44" }]}
                 >
-                  <LinearGradient
-                    colors={[r.color + "22", r.color + "11"]}
-                    style={[styles.readingCard, { borderColor: r.color + "44" }]}
-                  >
-                    <MaterialCommunityIcons name={r.icon} size={22} color={r.color} />
-                    <Text style={[styles.readingValue, { color: r.color, fontFamily: "Inter_700Bold" }]}>{r.value}</Text>
-                    <Text style={[styles.readingUnit, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>{r.unit}</Text>
-                    <Text style={[styles.readingLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
-                    {r.hint && (
-                      <View style={[styles.hintPill, { borderColor: CATEGORY_META[r.hint.category].color + "66", backgroundColor: CATEGORY_META[r.hint.category].color + "1a" }]}>
-                        <MaterialCommunityIcons
-                          name={CATEGORY_META[r.hint.category].icon}
-                          size={11}
-                          color={CATEGORY_META[r.hint.category].color}
-                        />
-                        <Text style={[styles.hintText, { color: CATEGORY_META[r.hint.category].color, fontFamily: "Inter_600SemiBold" }]}>
-                          {r.hint.text}
-                        </Text>
-                      </View>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
+                  <MaterialCommunityIcons name={r.icon} size={22} color={r.color} />
+                  <Text style={[styles.readingValue, { color: r.color, fontFamily: "Inter_700Bold" }]}>{r.value}</Text>
+                  <Text style={[styles.readingUnit, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>{r.unit}</Text>
+                  <Text style={[styles.readingLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{r.label}</Text>
+                </LinearGradient>
               ))}
             </View>
           </>
@@ -235,17 +143,9 @@ export default function SmartDevicesScreen() {
         {CATEGORIES.map((cat) => {
           const meta = CATEGORY_META[cat];
           const group = devices.filter((d) => d.category === cat);
-          const highlighted = highlightedCategory === cat;
           return (
-            <View
-              key={cat}
-              onLayout={(e) => { categoryYs.current[cat] = e.nativeEvent.layout.y; }}
-            >
-              <View style={[styles.categoryHeader, {
-                borderColor: highlighted ? meta.color : meta.color + "33",
-                backgroundColor: highlighted ? meta.color + "26" : meta.color + "0d",
-                borderWidth: highlighted ? 2 : 1,
-              }]}>
+            <View key={cat}>
+              <View style={[styles.categoryHeader, { borderColor: meta.color + "33", backgroundColor: meta.color + "0d" }]}>
                 <MaterialCommunityIcons name={meta.icon} size={15} color={meta.color} />
                 <View style={{ flex: 1, marginLeft: 8 }}>
                   <Text style={[styles.groupLabel, { color: meta.color, marginBottom: 1 }]}>{meta.label}</Text>
@@ -308,136 +208,6 @@ export default function SmartDevicesScreen() {
           </View>
         </View>
 
-        {/* ── Health Platform Monitoring — pilot mode only ─────────────────── */}
-        {pilotMode && (
-          <>
-            <Text style={[styles.groupLabel, { color: "#f59e0b", marginTop: 10 }]}>
-              HEALTH PLATFORM MONITORING · PILOT
-            </Text>
-
-            {/* Monitoring status */}
-            <View style={[styles.pilotCard, { backgroundColor: colors.card, borderColor: monitoringActive ? "#22c55e55" : colors.border }]}>
-              <MaterialCommunityIcons
-                name={monitoringActive ? "shield-check" : "shield-outline"}
-                size={22}
-                color={monitoringActive ? "#22c55e" : colors.mutedForeground}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.pilotCardTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                  {monitoringActive ? "Monitoring active" : "Monitoring paused"}
-                </Text>
-                <Text style={[styles.pilotCardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  {monitoringActive
-                    ? "Falls, heart rate, SpO₂, ECG changes and glucose are being watched. A full-screen alert appears if a danger signal is detected."
-                    : "Connect at least one device above to start watching for falls and dangerous vital changes."}
-                </Text>
-              </View>
-            </View>
-
-            {/* Platform bridges */}
-            {VENDOR_BRIDGES.map((b) => {
-              const avail = b.availability();
-              const ready = avail === "available";
-              const state = bridgeStates[b.id] ?? { connected: false, connecting: false, error: null };
-              return (
-                <View key={b.id} style={[styles.pilotCard, { backgroundColor: colors.card, borderColor: state.connected ? "#22c55e55" : colors.border }]}>
-                  <MaterialCommunityIcons
-                    name={b.icon as keyof typeof MaterialCommunityIcons.glyphMap}
-                    size={22}
-                    color={state.connected || ready ? "#22c55e" : colors.mutedForeground}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.pilotCardTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{b.name}</Text>
-                    <Text style={[styles.pilotCardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{b.description}</Text>
-                    <Text style={[styles.pilotSignals, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                      Signals: {b.signals.map((s) => s.label).join(" · ")}
-                    </Text>
-                    {state.error && (
-                      <Text style={[styles.pilotSignals, { color: "#f59e0b", fontFamily: "Inter_400Regular" }]}>
-                        {state.error}
-                      </Text>
-                    )}
-                  </View>
-                  {state.connected ? (
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => { disconnectBridge(b.id).catch(() => {}); }}
-                      style={[styles.pilotBadge, { borderColor: "#22c55e55", backgroundColor: "#22c55e18" }]}
-                    >
-                      <Text style={[styles.pilotBadgeText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>
-                        Connected · Disconnect
-                      </Text>
-                    </TouchableOpacity>
-                  ) : ready ? (
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      disabled={state.connecting}
-                      onPress={() => { connectBridge(b.id).catch(() => {}); }}
-                      style={[styles.pilotBadge, { borderColor: "#22c55e55", backgroundColor: "#22c55e18" }]}
-                    >
-                      <Text style={[styles.pilotBadgeText, { color: "#22c55e", fontFamily: "Inter_600SemiBold" }]}>
-                        {state.connecting ? "Connecting…" : "Connect"}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={[styles.pilotBadge, { borderColor: colors.border, backgroundColor: "transparent" }]}>
-                      <Text style={[styles.pilotBadgeText, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>
-                        {availabilityLabel(avail)}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-
-            {/* Demo fall trigger */}
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                triggerDemoFall();
-              }}
-              style={[styles.demoBtn, { borderColor: "#ef444455", backgroundColor: "#ef44441a" }]}
-            >
-              <MaterialCommunityIcons name="human-handsdown" size={18} color="#ef4444" />
-              <Text style={[styles.demoBtnText, { color: "#ef4444", fontFamily: "Inter_600SemiBold" }]}>
-                Simulate a fall (demo)
-              </Text>
-            </TouchableOpacity>
-
-            {/* Recent alerts */}
-            {alertHistory.length > 0 && (
-              <>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
-                  <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>RECENT ALERTS</Text>
-                  <TouchableOpacity onPress={clearHistory} activeOpacity={0.7}>
-                    <Text style={[styles.clearLink, { color: colors.mutedForeground, fontFamily: "Inter_600SemiBold" }]}>Clear</Text>
-                  </TouchableOpacity>
-                </View>
-                {alertHistory.slice(0, 10).map((a) => (
-                  <View key={a.id} style={[styles.pilotCard, { backgroundColor: colors.card, borderColor: a.severity === "critical" ? "#ef444444" : "#f59e0b44" }]}>
-                    <MaterialCommunityIcons
-                      name={a.signal === "fall" ? "human-handsdown" : "heart-pulse"}
-                      size={20}
-                      color={a.severity === "critical" ? "#ef4444" : "#f59e0b"}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.pilotCardTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{a.title}</Text>
-                      <Text style={[styles.pilotCardBody, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                        {a.aiExplanation ?? a.detail}
-                      </Text>
-                      <Text style={[styles.pilotSignals, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                        {new Date(a.ts).toLocaleString()} · {a.source} ·{" "}
-                        {a.status === "ok" ? "Marked OK" : a.status === "escalated" ? "Escalated" : "Active"}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-              </>
-            )}
-          </>
-        )}
-
         <View style={{ height: 32 }} />
       </ScrollView>
     </View>
@@ -490,19 +260,10 @@ const styles = StyleSheet.create({
   readingsGrid: {
     flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 8,
   },
-  readingCardWrap: {
-    flex: 1, minWidth: "44%",
-  },
   readingCard: {
-    flex: 1, borderRadius: 14, borderWidth: 1,
+    flex: 1, minWidth: "44%", borderRadius: 14, borderWidth: 1,
     padding: 14, alignItems: "center", gap: 4,
   },
-  hintPill: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    borderRadius: 20, borderWidth: 1,
-    paddingHorizontal: 8, paddingVertical: 3, marginTop: 4,
-  },
-  hintText: { fontSize: 10 },
   readingValue: { fontSize: 22, letterSpacing: -0.5 },
   readingUnit: { fontSize: 11 },
   readingLabel: { fontSize: 11, textAlign: "center" },
@@ -531,20 +292,4 @@ const styles = StyleSheet.create({
   },
   fallTitle: { fontSize: 14, marginBottom: 4 },
   fallSub: { fontSize: 12, lineHeight: 18 },
-
-  pilotCard: {
-    flexDirection: "row", alignItems: "flex-start", gap: 12,
-    borderRadius: 14, borderWidth: 1, padding: 14,
-  },
-  pilotCardTitle: { fontSize: 14 },
-  pilotCardBody: { fontSize: 12, lineHeight: 17, marginTop: 2 },
-  pilotSignals: { fontSize: 10.5, marginTop: 4 },
-  pilotBadge: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
-  pilotBadgeText: { fontSize: 10 },
-  demoBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    borderRadius: 12, borderWidth: 1, paddingVertical: 13,
-  },
-  demoBtnText: { fontSize: 14 },
-  clearLink: { fontSize: 11 },
 });

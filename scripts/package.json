@@ -5,19 +5,10 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
-    "export:promo": "node ./record-promo.mjs",
-    "check:promo-freshness": "node ./check-promo-freshness.mjs",
-    "export:surgical": "node ./record-surgical.mjs",
-    "check:surgical-freshness": "node ./check-surgical-freshness.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:"
-  },
-  "dependencies": {
-    "puppeteer-core": "^25.3.0",
-    "stripe": "^22.3.2",
-    "stripe-replit-sync": "^1.0.0"
   }
 }

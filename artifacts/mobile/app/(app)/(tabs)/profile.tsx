@@ -65,7 +65,7 @@ const MEMBER_GRADES: { key: MemberGrade; label: string; color: string; gradient:
     label: "Geriatric Safety",
     color: "#E5294E",
     gradient: ["#5c1010", "#9e2020", "#5c1010"],
-    benefits: ["All Gold Features", "Unlimited Pain Complaints", "10 Free HIVE Doc Consultations", "Falls Detection & Cognitive Screening", "Smart Device Link", "24/7 SOS Auto-Call", "Carer Access Portal"],
+    benefits: ["All Gold Features", "Falls Detection", "Cognitive Screening", "Smart Device Link", "24/7 SOS Auto-Call", "Carer Access Portal"],
   },
 ];
 

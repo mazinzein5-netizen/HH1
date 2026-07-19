@@ -1,5 +1,5 @@
 /**
- * Sarah conversation memory — stored only on-device with explicit user permission.
+ * Queen B conversation memory — stored only on-device with explicit user permission.
  * Zero-server rule: nothing is uploaded or sent anywhere.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";

@@ -35,14 +35,10 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 ## User preferences
 
 - Elderly-friendly UI: minimalist layouts, big text, large tap targets, high contrast throughout the mobile app.
-- "Not a medical device" fine print should stand out in dark orange (theme-conditional: #E8590C dark mode, #C2410C light mode for contrast).
-- All video voiceovers/narration must use an Irish accent (TTS voice: "John - Irish Man", voice_id GFyWqnwcF2mv6dWlo3u1 — the only Irish-accented voice in the library). App speech already uses en-IE.
 
 ## Gotchas
 
 _Populate as you build — sharp edges, "always run X before Y" rules._
-
-- **New Android release (EAS build):** the download version lives in the `app_releases` DB row, not in code. After a build, the founder logs into the portal and calls `PUT /api/app/release` with `{ version, versionCode, apkUrl }` (expo.dev APK link). The website download section and mobile update banner pick it up immediately — no code edit or redeploy. Validation rejects malformed versions/URLs and versionCode regressions.
 
 ## Pointers
 

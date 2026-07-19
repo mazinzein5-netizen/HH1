@@ -1,5 +1,5 @@
 /**
- * Sign Language Modal — camera-based input for Sarah.
+ * Sign Language Modal — camera-based input for Queen B.
  * Uses browser getUserMedia on web (works in Expo Web preview).
  * Graceful native fallback — full camera available in the installed app.
  */
@@ -141,7 +141,7 @@ export default function SignLanguageModal({ visible, onClose, onSubmit }: Props)
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Sign Language Mode</Text>
               <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                {isWeb ? "Sarah is watching — sign to her" : "Available in the installed app"}
+                {isWeb ? "Queen B is watching — sign to her" : "Available in the installed app"}
               </Text>
             </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeBtn} activeOpacity={0.7}>
@@ -214,7 +214,7 @@ export default function SignLanguageModal({ visible, onClose, onSubmit }: Props)
                 <View style={[styles.transHint, { backgroundColor: "rgba(79,70,229,0.08)", borderColor: "rgba(79,70,229,0.25)" }]}>
                   <MaterialCommunityIcons name="information-outline" size={15} color="#4f46e5" />
                   <Text style={[styles.transHintText, { color: "#4f46e5", fontFamily: "Inter_500Medium" }]}>
-                    Type what you just signed — Sarah will respond to it. Automated sign recognition is coming soon.
+                    Type what you just signed — Queen B will respond to it. Automated sign recognition is coming soon.
                   </Text>
                 </View>
               )}
@@ -249,7 +249,7 @@ export default function SignLanguageModal({ visible, onClose, onSubmit }: Props)
                   activeOpacity={0.85}
                 >
                   <MaterialCommunityIcons name="bee" size={18} color="#fff" />
-                  <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>Send to Sarah</Text>
+                  <Text style={[styles.primaryBtnText, { fontFamily: "Inter_700Bold" }]}>Send to Queen B</Text>
                 </TouchableOpacity>
               </View>
             </View>

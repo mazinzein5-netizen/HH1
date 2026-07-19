@@ -124,7 +124,7 @@ function EduSheet({ cond, edu, colors, onClose, onAskQueenB }: EduSheetProps) {
           </Text>
         </View>
 
-        {/* Sarah CTA */}
+        {/* Queen B CTA */}
         <TouchableOpacity
           style={[sheet.queenBBtn, { backgroundColor: "rgba(201,134,10,0.12)", borderColor: "rgba(201,134,10,0.45)" }]}
           onPress={onAskQueenB}
@@ -132,7 +132,7 @@ function EduSheet({ cond, edu, colors, onClose, onAskQueenB }: EduSheetProps) {
         >
           <MaterialCommunityIcons name="bee" size={22} color="#C9860A" />
           <View style={{ flex: 1 }}>
-            <Text style={[sheet.queenBTitle, { color: "#C9860A", fontFamily: "Inter_700Bold" }]}>Discuss with Sarah</Text>
+            <Text style={[sheet.queenBTitle, { color: "#C9860A", fontFamily: "Inter_700Bold" }]}>Discuss with Queen B</Text>
             <Text style={[sheet.queenBSub, { color: "#C9860A", fontFamily: "Inter_400Regular" }]}>
               Ask questions, get personalised guidance, and continue the conversation
             </Text>
@@ -277,7 +277,7 @@ export default function MedicalHistoryScreen() {
     if (!selected) return;
     const edu = getConditionEdu(selected.name, selected.icd10);
     setSelected(null);
-    // Brief delay so modal closes before Sarah opens
+    // Brief delay so modal closes before Queen B opens
     setTimeout(() => openBot(edu.queenBSeed), 250);
   }
 
@@ -305,7 +305,7 @@ export default function MedicalHistoryScreen() {
         <View style={[styles.eduHint, { backgroundColor: "rgba(201,134,10,0.08)", borderColor: "rgba(201,134,10,0.28)" }]}>
           <MaterialCommunityIcons name="gesture-tap" size={16} color="#C9860A" />
           <Text style={[styles.eduHintText, { color: "#C9860A", fontFamily: "Inter_500Medium" }]}>
-            Tap any condition to read patient education and discuss it with Sarah
+            Tap any condition to read patient education and discuss it with Queen B
           </Text>
         </View>
 
