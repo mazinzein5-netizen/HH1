@@ -163,18 +163,44 @@ router.get("/app/latest", (_req, res) => {
  * repeat installs ("file (1).apk") and stale-cache reuse on Android.
  * Falls back to a redirect if the upstream fetch fails.
  */
-router.get("/app/download/android", async (_req, res) => {
+router.get("/app/download/android", async (req, res) => {
   const { version, apkUrl } = androidRelease;
   const filename = `HealthHIVE-v${version}.apk`;
   try {
-    const upstream = await fetch(apkUrl, { redirect: "follow" });
-    if (!upstream.ok || !upstream.body) {
+    // Forward Range requests so Android's DownloadManager (and browsers) can
+    // resume an interrupted 100MB download instead of restarting from zero.
+    // Only single ranges are forwarded (multipart/byteranges responses would
+    // not match the APK content type we set); multi-range clients get the
+    // full file, which is always a valid response to a Range request.
+    const rawRange = req.headers.range;
+    const range =
+      typeof rawRange === "string" && /^bytes=\d*-\d*$/.test(rawRange.trim())
+        ? rawRange.trim()
+        : undefined;
+    const upstream = await fetch(apkUrl, {
+      redirect: "follow",
+      headers: range ? { Range: range } : undefined,
+    });
+    if (upstream.status === 416) {
+      // Pass through "range not satisfiable" so download managers restart
+      // cleanly instead of looping on a redirect.
+      res.status(416);
+      const contentRange416 = upstream.headers.get("content-range");
+      if (contentRange416) res.setHeader("Content-Range", contentRange416);
+      res.setHeader("Accept-Ranges", "bytes");
+      res.end();
+      return;
+    }
+    if ((!upstream.ok && upstream.status !== 206) || !upstream.body) {
       throw new Error(`upstream HTTP ${upstream.status}`);
     }
-    res.status(200);
+    res.status(upstream.status === 206 ? 206 : 200);
     res.setHeader("Content-Type", "application/vnd.android.package-archive");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Accept-Ranges", "bytes");
+    const contentRange = upstream.headers.get("content-range");
+    if (contentRange) res.setHeader("Content-Range", contentRange);
     const len = upstream.headers.get("content-length");
     if (len) res.setHeader("Content-Length", len);
     const { Readable } = await import("node:stream");

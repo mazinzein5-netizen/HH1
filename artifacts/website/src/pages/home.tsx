@@ -587,7 +587,10 @@ export default function Home() {
                 </div>
 
                 <p className="text-sm text-muted-foreground mb-16 max-w-xl mx-auto">
-                  Android: after downloading, tap the file and allow installation when your phone asks. The iPhone &amp; iPad version is on its way via the App Store.
+                  {appVersion ? (
+                    <>Saves as <span className="font-mono text-foreground/80" data-testid="text-apk-filename">HealthHIVE-v{appVersion}.apk</span>. </>
+                  ) : null}
+                  Android: after downloading, tap the file and allow installation when your phone asks. If the download pauses, it now resumes automatically. The iPhone &amp; iPad version is on its way via the App Store.
                 </p>
 
                 <div className="text-sm font-medium glass-panel p-6 rounded-2xl text-left inline-block max-w-2xl mx-auto border-primary/20">
