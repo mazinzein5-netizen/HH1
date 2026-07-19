@@ -19,7 +19,33 @@ import {
   type HealthcareRole,
   type VerificationMode,
 } from "./lib/store";
-import { Camera, Upload, Check, Fingerprint, AlertTriangle } from "lucide-react";
+import { Camera, Upload, Check, Fingerprint, AlertTriangle, ShieldCheck } from "lucide-react";
+
+type LinkedProvider = "apple" | "google";
+
+const PROVIDER_LABEL: Record<LinkedProvider, string> = {
+  apple: "Apple",
+  google: "Google",
+};
+
+function AppleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M16.365 1.43c0 1.14-.418 2.2-1.253 3.036-.87.87-1.966 1.375-3.02 1.288a3.06 3.06 0 0 1-.023-.379c0-1.096.475-2.27 1.322-3.117.422-.435.96-.797 1.612-1.086C15.653.883 16.244.755 16.34.75c.017.226.025.453.025.68zm4.166 16.25c-.522 1.206-.773 1.744-1.445 2.81-.938 1.487-2.262 3.34-3.902 3.354-1.458.014-1.833-.955-3.812-.944-1.98.011-2.393.962-3.851.948-1.64-.015-2.894-1.688-3.833-3.175-2.625-4.157-2.9-9.035-1.28-11.63 1.15-1.844 2.966-2.923 4.673-2.923 1.738 0 2.83.953 4.267.953 1.394 0 2.243-.955 4.253-.955 1.52 0 3.13.828 4.276 2.258-3.757 2.06-3.147 7.424.654 9.304z" />
+    </svg>
+  );
+}
+
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47a5.57 5.57 0 0 1-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
+      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09A11.99 11.99 0 0 0 12 24z" />
+      <path fill="#FBBC05" d="M5.27 14.29A7.19 7.19 0 0 1 4.9 12c0-.8.14-1.57.37-2.29V6.62H1.29a11.99 11.99 0 0 0 0 10.76l3.98-3.09z" />
+      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z" />
+    </svg>
+  );
+}
 
 export default function Signup() {
   const [, navigate] = useLocation();
@@ -30,6 +56,7 @@ export default function Signup() {
       : "healthcare";
 
   const [accountType, setAccountType] = useState<AccountType>(initialType);
+  const [linkedProvider, setLinkedProvider] = useState<LinkedProvider | null>(null);
   const [fullName, setFullName] = useState("");
   const [workplace, setWorkplace] = useState("");
   const [email, setEmail] = useState("");
@@ -182,6 +209,7 @@ export default function Signup() {
       accountId,
       email: email.trim(),
       hasPasskey,
+      linkedProvider: linkedProvider ?? undefined,
       verification:
         mode === "full"
           ? {
@@ -213,6 +241,57 @@ export default function Signup() {
           Pilot: accounts and any verification images are stored only on this
           device. Verification images are never sent to a server.
         </p>
+
+        {/* Quick sign-up with Apple / Google (privacy-preserving) */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Quick sign-up</CardTitle>
+            <CardDescription>
+              Link your account to Apple or Google as a sign-in label.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setLinkedProvider(linkedProvider === "apple" ? null : "apple")}
+                aria-pressed={linkedProvider === "apple"}
+                data-testid="button-signup-apple"
+                className={`rounded-xl border p-4 flex items-center justify-center gap-2.5 font-semibold transition-colors ${
+                  linkedProvider === "apple"
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-primary/40"
+                }`}
+              >
+                <AppleIcon className="h-5 w-5" />
+                Sign up with Apple
+                {linkedProvider === "apple" && <Check className="h-4 w-4 text-primary" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLinkedProvider(linkedProvider === "google" ? null : "google")}
+                aria-pressed={linkedProvider === "google"}
+                data-testid="button-signup-google"
+                className={`rounded-xl border p-4 flex items-center justify-center gap-2.5 font-semibold transition-colors ${
+                  linkedProvider === "google"
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:border-primary/40"
+                }`}
+              >
+                <GoogleIcon className="h-5 w-5" />
+                Sign up with Google
+                {linkedProvider === "google" && <Check className="h-4 w-4 text-primary" />}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground flex items-start gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              Privacy first: no data is ever sent to Apple or Google. Your choice is
+              stored only on this device as a label for your account.
+              {linkedProvider &&
+                ` Confirm your details below — your account will be created here and linked to ${PROVIDER_LABEL[linkedProvider]}.`}
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Account type */}
         <Card className="mb-6">

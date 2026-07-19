@@ -34,6 +34,11 @@ export interface LocalProfile {
   email: string;
   /** Whether a WebAuthn passkey was registered at signup on this device. */
   hasPasskey: boolean;
+  /**
+   * Provider the user chose at sign-up ("apple" | "google"). Stored on THIS
+   * device only as a label — no data is ever sent to Apple or Google.
+   */
+  linkedProvider?: "apple" | "google";
   passkeyId?: string;
   /** Verification images stay on THIS device only (data URLs). */
   verification?: {

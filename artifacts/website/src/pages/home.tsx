@@ -5,6 +5,14 @@ import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion
 import { HiveLogo } from "@/components/HiveLogo";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { CircuitHexBackground } from "@/components/CircuitHexBackground";
 import { TrustStrip } from "@/components/TrustStrip";
 import { VideoEmbed } from "@/components/VideoEmbed";
@@ -19,7 +27,8 @@ import {
   Stethoscope, Mail, Activity,
   AlertCircle, Heart, Shield,
   MapPin, Pill, Video, Users,
-  Menu, X, Building2, ClipboardList, Sparkles, Clock, Euro
+  Menu, X, Building2, ClipboardList, Sparkles, Clock, Euro,
+  ChevronDown, UserPlus, LogIn, Download
 } from "lucide-react";
 
 // Shared, deliberate easing — a soft "settle" curve used across the whole page
@@ -154,18 +163,61 @@ export default function Home() {
             <a href="#ecosystem" className="hover:text-primary transition-colors">Ecosystem</a>
             <a href="#companion" className="hover:text-primary transition-colors">HIVE Companion</a>
             <a href="#exchange" className="hover:text-primary transition-colors">Data Exchange</a>
-            <a href="#surgical-assistant" className="hover:text-primary transition-colors">Surgical Assistant</a>
+            <a href="#surgical-assistant" className="hover:text-primary transition-colors">HIVE Hospital Surgical Assistant</a>
             <a href="#enterprise" className="hover:text-primary transition-colors">For Hospitals &amp; GPs</a>
             <a href="#portals" className="hover:text-primary transition-colors">Portals</a>
             <Link href="/book" className="hover:text-primary transition-colors">Book a Consultation</Link>
           </nav>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Button asChild variant="outline" className="hidden sm:flex border-primary/30 hover:border-primary text-primary hover:bg-primary/10 transition-all duration-300 glass-panel">
-              <Link href="/portal/practitioner">
-                Clinician Sign In
-              </Link>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="hidden sm:flex border-primary/30 hover:border-primary text-primary hover:bg-primary/10 transition-all duration-300 glass-panel"
+                  data-testid="button-signin-menu"
+                >
+                  <LogIn aria-hidden="true" className="mr-2 h-4 w-4" />
+                  Sign In / Sign Up
+                  <ChevronDown aria-hidden="true" className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel>Quick connect</DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                  <Link href="/portal/practitioner" className="cursor-pointer" data-testid="link-quick-practitioner">
+                    <Stethoscope aria-hidden="true" className="mr-2 h-4 w-4 text-primary" />
+                    GP &amp; HIVE HUB — HIVE Hospital Surgical Assistant
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/portal/supportive" className="cursor-pointer" data-testid="link-quick-supportive">
+                    <Heart aria-hidden="true" className="mr-2 h-4 w-4 text-primary" />
+                    Supportive Care Sign In
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/portal/responder" className="cursor-pointer" data-testid="link-quick-responder">
+                    <Activity aria-hidden="true" className="mr-2 h-4 w-4 text-primary" />
+                    First Responders Sign In
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/portal/signup" className="cursor-pointer" data-testid="link-quick-signup">
+                    <UserPlus aria-hidden="true" className="mr-2 h-4 w-4 text-primary" />
+                    Create an account
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <a href="/api/app/download/android" className="cursor-pointer" data-testid="link-quick-download">
+                    <Download aria-hidden="true" className="mr-2 h-4 w-4 text-primary" />
+                    Download HIVE Companion{appVersion ? ` (v${appVersion})` : ""}
+                  </a>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               size="icon"
@@ -189,7 +241,7 @@ export default function Home() {
               <a href="#ecosystem" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Ecosystem</a>
               <a href="#companion" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">HIVE Companion</a>
               <a href="#exchange" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Data Exchange</a>
-              <a href="#surgical-assistant" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Surgical Assistant</a>
+              <a href="#surgical-assistant" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">HIVE Hospital Surgical Assistant</a>
               <a href="#enterprise" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">For Hospitals &amp; GPs</a>
               <a href="#portals" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">Portals</a>
               <Link href="/book" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-foreground hover:text-primary hover:bg-muted/50 transition-colors">
@@ -204,6 +256,12 @@ export default function Home() {
               <Link href="/portal/responder" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
                 First Responders Sign In
               </Link>
+              <Link href="/portal/signup" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
+                Create an Account
+              </Link>
+              <a href="/api/app/download/android" onClick={() => setMenuOpen(false)} className="py-3 px-2 rounded-lg text-primary hover:bg-muted/50 transition-colors">
+                Download HIVE Companion{appVersion ? ` (v${appVersion})` : ""}
+              </a>
             </div>
           </nav>
         )}
@@ -325,7 +383,7 @@ export default function Home() {
                   <div className="glass-panel-heavy p-6 rounded-2xl transform rotate-3 hover:rotate-0 transition-transform duration-500 hover:border-primary/50 mt-8 md:mt-16 group">
                     <div className="flex items-center gap-3 mb-6">
                       <Activity className="h-6 w-6 text-primary" />
-                      <span className="text-sm font-semibold tracking-wide text-foreground">Surgical Assistant</span>
+                      <span className="text-sm font-semibold tracking-wide text-foreground">HIVE Hospital Surgical Assistant</span>
                     </div>
                     <div className="space-y-3">
                       <div className="h-2 w-full bg-muted rounded-full"></div>
@@ -668,7 +726,7 @@ export default function Home() {
 
                 <Button asChild size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-auto min-h-14 whitespace-normal px-6 sm:px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
                   <Link href="/portal/practitioner">
-                    Open HIVE Surgical Assistant <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4 flex-shrink-0" />
+                    Open HIVE Hospital Surgical Assistant <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4 flex-shrink-0" />
                   </Link>
                 </Button>
               </motion.div>
@@ -830,7 +888,7 @@ export default function Home() {
                 <ul className="space-y-3 text-sm">
                   <li><a href="#companion" className="text-muted-foreground hover:text-primary transition-colors">HIVE Companion App</a></li>
                   <li><a href="#exchange" className="text-muted-foreground hover:text-primary transition-colors">Encrypted Data Exchange</a></li>
-                  <li><a href="#surgical-assistant" className="text-muted-foreground hover:text-primary transition-colors">Surgical Assistant</a></li>
+                  <li><a href="#surgical-assistant" className="text-muted-foreground hover:text-primary transition-colors">HIVE Hospital Surgical Assistant</a></li>
                   <li><a href="#enterprise" className="text-muted-foreground hover:text-primary transition-colors">For Hospitals &amp; GP Practices</a></li>
                   <li><a href={`${import.meta.env.BASE_URL}portal`} className="text-muted-foreground hover:text-primary transition-colors">Emergency Portal</a></li>
                 </ul>

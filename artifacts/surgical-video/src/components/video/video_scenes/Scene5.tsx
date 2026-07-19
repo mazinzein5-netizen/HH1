@@ -52,7 +52,7 @@ export function Scene5() {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
       >
         <div className="text-[2vw] font-bold tracking-[0.3em] text-text-secondary uppercase mb-4">
-          Health Hive
+          HIVE Hospital
         </div>
         <div className="text-[4.5vw] font-display font-bold text-white tracking-tight">
           Surgical Assistant
