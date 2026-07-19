@@ -1,0 +1,12 @@
+[build]
+command = "pnpm --filter @workspace/website build"
+publish = "artifacts/website/dist/public"
+
+[build.environment]
+NODE_VERSION = "22"
+PNPM_VERSION = "10.30.3"
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
