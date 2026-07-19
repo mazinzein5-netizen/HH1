@@ -6,6 +6,7 @@ import {
 } from "./portalAuth";
 import {
   getPracStoreById,
+  isComplimentaryMembershipRole,
   membershipOf,
   newEntityId,
   persistPracStore,
@@ -25,6 +26,9 @@ import {
 async function acceptingBookings(store: PracStore, accountId: string): Promise<boolean> {
   // Founder superuser can test the booking flow without a paid membership.
   if (isSuperuserAccount(accountId)) return store.settings.bookingEnabled;
+  // Supportive-care / first-responder roles hold a complimentary membership.
+  const role = practitionerDirectoryEntry(accountId)?.role;
+  if (isComplimentaryMembershipRole(role)) return store.settings.bookingEnabled;
   await reconcileMembership(store, accountId);
   return membershipOf(store).active && store.settings.bookingEnabled;
 }

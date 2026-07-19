@@ -277,14 +277,14 @@ export function MembershipWorkspace({
                 onClick={() => upgrade("monthly")}
               >
                 <Crown className="h-4 w-4" />
-                {checkoutBusy === "monthly" ? "Opening checkout…" : "€49 / month"}
+                {checkoutBusy === "monthly" ? "Opening checkout…" : "€55 / month"}
               </Button>
               <Button
                 variant="outline"
                 disabled={checkoutBusy !== null}
                 onClick={() => upgrade("yearly")}
               >
-                {checkoutBusy === "yearly" ? "Opening checkout…" : "€490 / year — 2 months free"}
+                {checkoutBusy === "yearly" ? "Opening checkout…" : "€495 / year — 25% off"}
               </Button>
               {checkoutBusy === "confirm" && (
                 <span className="text-sm text-muted-foreground">Verifying your payment…</span>

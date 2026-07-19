@@ -574,6 +574,8 @@ export interface ProMembership {
   active: boolean;
   billing: MembershipBilling | null;
   activatedAt: number | null;
+  /** True when the role (supportive care / first responder) gets membership free. */
+  complimentary?: boolean;
 }
 
 export interface ConsultSession {

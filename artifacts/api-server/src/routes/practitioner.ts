@@ -84,6 +84,11 @@ async function requireMembership(req: Request, res: Response, next: NextFunction
     next();
     return;
   }
+  if (isComplimentaryMembershipRole(session.role)) {
+    // Supportive-care and first-responder roles: membership features are free.
+    next();
+    return;
+  }
   if (session.accountId) await reconcileMembership(store, session.accountId);
   if (!membershipOf(store).active) {
     res.status(403).json({
@@ -1020,10 +1025,22 @@ router.post("/portal/practitioner/bookings/:id/session", requirePortalSession, r
  * belongs to this account. The client can never flip the entitlement.
  * ──────────────────────────────────────────────────────────────────────────── */
 
+// Stripe prices are immutable once seeded, so an amount change needs a new
+// lookup key — the old hive_pro_monthly/hive_pro_yearly prices stay attached
+// to existing subscriptions but are never sold again.
 const PRO_PRICES: Record<MembershipBilling, { lookupKey: string; unitAmount: number; interval: "month" | "year" }> = {
-  monthly: { lookupKey: "hive_pro_monthly", unitAmount: 4900, interval: "month" }, // €49.00
-  yearly: { lookupKey: "hive_pro_yearly", unitAmount: 49000, interval: "year" }, // €490.00
+  monthly: { lookupKey: "hive_pro_monthly_5500", unitAmount: 5500, interval: "month" }, // €55.00
+  yearly: { lookupKey: "hive_pro_yearly_49500", unitAmount: 49500, interval: "year" }, // €495.00 (25% off 12×€55)
 };
+
+/**
+ * Supportive-care and first-responder roles get the HUB membership features
+ * free of charge — only doctor roles (GP, hospital doctor, outpatient
+ * specialist) pay for the professional membership.
+ */
+export function isComplimentaryMembershipRole(role: string | null | undefined): boolean {
+  return !!role && (SUPPORTIVE_ROLES.includes(role) || role === FIRST_RESPONDER_ROLE);
+}
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -1070,6 +1087,11 @@ router.get("/portal/practitioner/membership", requirePortalSession, requirePract
     res.json({ membership: { active: true, billing: null, activatedAt: null, superuser: true } });
     return;
   }
+  if (isComplimentaryMembershipRole(session.role)) {
+    // Supportive-care and first-responder roles get membership free of charge.
+    res.json({ membership: { active: true, billing: null, activatedAt: null, complimentary: true } });
+    return;
+  }
   if (session.accountId) await reconcileMembership(store, session.accountId);
   const m = membershipOf(store);
   res.json({ membership: { active: m.active, billing: m.billing, activatedAt: m.activatedAt } });
@@ -1078,6 +1100,13 @@ router.get("/portal/practitioner/membership", requirePortalSession, requirePract
 router.post("/portal/practitioner/membership/checkout", requirePortalSession, requirePractitioner, async (req, res) => {
   const store = getStore(req, res);
   if (!store) return;
+  if (isComplimentaryMembershipRole(sessionOf(req).role)) {
+    res.status(400).json({
+      error: "MEMBERSHIP_COMPLIMENTARY",
+      message: "Membership is included free of charge for your role — no payment is needed.",
+    });
+    return;
+  }
   if (membershipOf(store).active) {
     res.status(400).json({ error: "Your membership is already active." });
     return;
