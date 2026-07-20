@@ -932,7 +932,7 @@ export default function Home() {
               <div>
                 <h3 className="font-semibold text-foreground mb-4">Legal</h3>
                 <ul className="space-y-3 text-sm">
-                  <li><a href="/api/privacy" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
+                  <li><a href="/privacy" target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
                 </ul>
               </div>
             </div>

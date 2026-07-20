@@ -66,6 +66,10 @@ app.use((req, res, next) =>
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+app.get("/api/privacy", (_req, res) => res.redirect(301, "/privacy"));
+app.get("/api/support", (_req, res) => res.redirect(301, "/support"));
+
 app.use("/", privacyRouter);
 app.use("/", supportRouter);
 

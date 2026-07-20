@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type Request, type IRouter } from "express";
 import {
   PRIVACY_POLICY_APP_NAME,
   PRIVACY_POLICY_COMPANY,
@@ -16,13 +16,26 @@ function escapeHtml(text: string): string {
 }
 
 const SUPPORT_EMAIL = "support@ibncena.com";
+const APP_NAME = escapeHtml(PRIVACY_POLICY_APP_NAME);
+const COMPANY = escapeHtml(PRIVACY_POLICY_COMPANY);
+const DESCRIPTION = `Get help with ${APP_NAME}. Contact our support team by email and find answers to common questions about your account and health data.`;
 
-const page = `<!DOCTYPE html>
+function buildPage(canonicalUrl: string, privacyUrl: string): string {
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Support — ${escapeHtml(PRIVACY_POLICY_APP_NAME)}</title>
+<title>Support — ${APP_NAME}</title>
+<meta name="description" content="${DESCRIPTION}">
+<link rel="canonical" href="${canonicalUrl}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Support — ${APP_NAME}">
+<meta property="og:description" content="${DESCRIPTION}">
+<meta property="og:url" content="${canonicalUrl}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Support — ${APP_NAME}">
+<meta name="twitter:description" content="${DESCRIPTION}">
 <style>
   :root { color-scheme: light dark; }
   body {
@@ -50,10 +63,10 @@ const page = `<!DOCTYPE html>
 <body>
 <main>
   <h1>Support</h1>
-  <p class="muted">${escapeHtml(PRIVACY_POLICY_APP_NAME)} · ${escapeHtml(PRIVACY_POLICY_COMPANY)}</p>
+  <p class="muted">${APP_NAME} · ${COMPANY}</p>
   <section class="card">
     <h2>Contact us</h2>
-    <p>For help with ${escapeHtml(PRIVACY_POLICY_APP_NAME)}, email us at <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>. We aim to respond within 24 hours.</p>
+    <p>For help with ${APP_NAME}, email us at <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a>. We aim to respond within 24 hours.</p>
   </section>
   <section class="card">
     <h2>In-app help</h2>
@@ -61,15 +74,23 @@ const page = `<!DOCTYPE html>
   </section>
   <section class="card">
     <h2>Privacy</h2>
-    <p>Our privacy policy is available at <a href="/api/privacy">/api/privacy</a>. Your health data is stored only on your device; deleting the app or using "Delete all my data" in Settings removes it.</p>
+    <p>Our privacy policy is available at <a href="${privacyUrl}">/privacy</a>. Your health data is stored only on your device; deleting the app or using "Delete all my data" in Settings removes it.</p>
   </section>
-  <footer class="muted">&copy; ${escapeHtml(PRIVACY_POLICY_COMPANY)}</footer>
+  <footer class="muted">&copy; ${COMPANY}</footer>
 </main>
 </body>
 </html>`;
+}
 
-router.get("/support", (_req, res) => {
-  res.type("html").send(page);
+function baseUrl(req: Request): string {
+  const proto = (req.headers["x-forwarded-proto"] as string) || req.protocol || "https";
+  const host = (req.headers["x-forwarded-host"] as string) || req.hostname;
+  return `${proto}://${host}`;
+}
+
+router.get("/support", (req, res) => {
+  const base = baseUrl(req);
+  res.type("html").send(buildPage(`${base}/support`, `${base}/privacy`));
 });
 
 export default router;
