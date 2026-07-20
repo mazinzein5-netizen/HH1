@@ -584,7 +584,7 @@ export default function Home() {
                     className="w-24 sm:w-28 object-contain drop-shadow-[0_0_25px_rgba(245,197,24,0.35)]"
                   />
                 </div>
-                <h2 className="text-[clamp(2rem,4.5vw,3.75rem)] font-bold mb-8 tracking-tight text-foreground text-balance">Gold Standards in documentation and advanced privacy features</h2>
+                <h2 className="text-[clamp(2rem,4.5vw,3.75rem)] font-bold mb-8 tracking-tight text-foreground text-balance">Try the HIVE Companion Application </h2>
                 <p className="text-xl md:text-2xl font-light mb-12 text-foreground/80 leading-relaxed max-w-3xl mx-auto">
                   ALL personal data stays on your device — nothing is uploaded to a server. No tracking, no ads. You can "Delete all my data" at any time.
                 </p>
@@ -709,9 +709,7 @@ export default function Home() {
                   className="w-40 sm:w-48 rounded-3xl glass-panel border border-primary/20 shadow-[0_12px_40px_rgba(0,0,0,0.3)] mb-8"
                 />
                 <h2 className="text-[clamp(2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground leading-tight text-balance"><HiveMark /> Hospital Surgical Assistant</h2>
-                <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light">
-                  HIVE Hospital digitises the patient file into a member-accessed platform — organising patient flow and flagging safety risks with advanced algorithmic workflows, supported by robust evidence. Advanced AI risk oversight coming soon.
-                </p>
+                <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light">Patient’s current prescriptions and medical history are presentable to healthcare professionals when on the HIVE network.HIVE Hospital digitizes the patient file into a member-accessed platform — organizing patient flow and flagging safety risks with advanced algorithmic workflows, supported by robust evidence. Advanced AI risk oversight coming soon.</p>
                 
                 <ul className="space-y-6 mb-12">
                   <li className="flex items-start gap-4 p-4 rounded-2xl glass-panel border-transparent hover:border-primary/30 transition-colors">
