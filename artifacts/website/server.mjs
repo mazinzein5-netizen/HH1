@@ -50,10 +50,40 @@ const ROUTE_META = [
     path: "/",
     title: "Safe Digitisation of Patient Files in Ireland | Health HIVE",
     description:
-      "Health HIVE is an Irish digital health platform for the safe, auditable digitisation of patient files in primary and secondary care — patient-held records, streamlined clinical documentation and GDPR-first data protection, aligned with Digital for Care 2024–2030 and the Sláintecare direction.",
+      "Health HIVE is an Irish digital health platform for the safe, auditable digitisation of patient files — GDPR-first records for patients, GPs and hospitals.",
     ogTitle: "Health HIVE — Safe, Auditable Digital Patient Records for Ireland",
     ogDescription:
-      "Irish digital health platform for the safe digitisation of patient files across primary and secondary care. Audit-ready records, GDPR-first, aligned with Ireland's Digital for Care framework.",
+      "Safe, auditable digital patient records for Ireland — GDPR-first, built for patients, GPs and hospital teams.",
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        name: "Health HIVE",
+        legalName: "IbnCeena Ltd",
+        url: "https://healthhive.app",
+        logo: "https://healthhive.app/favicon.png",
+        email: "info@ibnceena.ie",
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: "Dublin",
+          addressCountry: "IE",
+        },
+        description:
+          "Irish digital health platform for the safe, auditable digitisation of patient files in primary and secondary care.",
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        name: "HIVE Companion",
+        operatingSystem: "Android",
+        applicationCategory: "HealthApplication",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+        description:
+          "Patient-held digital health record app — organised records, prescriptions, standardised questionnaires and an emergency health card, with all personal data stored on the device.",
+        url: "https://healthhive.app/",
+        publisher: { "@type": "Organization", name: "Health HIVE" },
+      },
+    ],
     body: `
       <header>
         <h1>Health HIVE — Safe Digitisation of Patient Files in Ireland</h1>
@@ -309,6 +339,8 @@ function buildMetaBlock(meta, robots = "index, follow") {
     `<meta name="robots" content="${robots}" />`,
     // Canonical + og:url only make sense on indexable pages.
     ...(indexable ? [`<link rel="canonical" href="${canonical}" />`] : []),
+    `<meta property="og:site_name" content="Health HIVE" />`,
+    `<meta property="og:locale" content="en_IE" />`,
     `<meta property="og:title" content="${esc(meta.ogTitle)}" />`,
     `<meta property="og:description" content="${esc(meta.ogDescription)}" />`,
     `<meta property="og:type" content="website" />`,
@@ -322,6 +354,11 @@ function buildMetaBlock(meta, robots = "index, follow") {
     `<meta name="twitter:description" content="${esc(meta.ogDescription)}" />`,
     `<meta name="twitter:image" content="${DEFAULT_IMAGE}" />`,
     `<meta name="twitter:image:alt" content="${esc(IMAGE_ALT)}" />`,
+    // Structured data must be in the initial HTML for non-rendering crawlers.
+    ...(meta.jsonLd ?? []).map(
+      (schema) =>
+        `<script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`
+    ),
   ].join("\n    ");
 }
 

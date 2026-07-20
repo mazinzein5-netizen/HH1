@@ -113,10 +113,10 @@ export default function Home() {
     <div className="flex flex-col min-h-[100dvh] bg-transparent text-foreground overflow-x-hidden font-sans">
       <PageHead
         title="Safe Digitisation of Patient Files in Ireland"
-        description="Health HIVE is an Irish digital health platform for the safe, auditable digitisation of patient files in primary and secondary care — patient-held records, streamlined clinical documentation and GDPR-first data protection, aligned with Digital for Care 2024–2030 and the Sláintecare direction."
+        description="Health HIVE is an Irish digital health platform for the safe, auditable digitisation of patient files — GDPR-first records for patients, GPs and hospitals."
         path="/"
         ogTitle="Health HIVE — Safe, Auditable Digital Patient Records for Ireland"
-        ogDescription="Irish digital health platform for the safe digitisation of patient files across primary and secondary care. Audit-ready records, GDPR-first, aligned with Ireland's Digital for Care framework."
+        ogDescription="Safe, auditable digital patient records for Ireland — GDPR-first, built for patients, GPs and hospital teams."
         keywords="digital health Ireland, digital patient records, safe digitisation patient files, audit trail patient records, GDPR healthcare Ireland, Digital for Care 2030, Sláintecare digital, HIQA information standards, GP practice software Ireland, hospital documentation Ireland, primary care digitisation, secondary care digitisation"
         jsonLd={[
           {
