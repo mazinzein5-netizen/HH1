@@ -775,7 +775,7 @@ export default function Home() {
                 Enterprise
               </div>
               <h2 className="text-[clamp(2.2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground leading-tight text-balance">
-                For hospitals &amp; established GP practices
+                For Hospitals &amp; GP Practice
               </h2>
               <p className="text-lg md:text-xl text-muted-foreground font-light glass-panel px-6 py-3 rounded-2xl">
                 Cut the paperwork, not the care. Health HIVE streamlines patient-data
