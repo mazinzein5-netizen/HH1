@@ -28,7 +28,7 @@ import brandSurgical from "@assets/IMG_0658_1784507522095.jpeg";
 import { 
   ArrowRight, ShieldCheck, FileText, Smartphone, 
   Stethoscope, Mail, Activity,
-  AlertCircle, Heart, Shield,
+  AlertCircle, Heart,
   MapPin, Pill, Video, Users,
   Menu, X, Building2, ClipboardList, Sparkles, Clock, Euro,
   ChevronDown, UserPlus, LogIn, Download
@@ -577,8 +577,12 @@ export default function Home() {
               <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/10 blur-[100px] pointer-events-none rounded-full" />
 
               <div className="relative z-10">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl glass-panel text-foreground mb-8 shadow-2xl">
-                  <Shield className="h-10 w-10 text-primary" />
+                <div className="inline-flex items-center justify-center mb-8">
+                  <img
+                    src={beeMascot}
+                    alt="Health HIVE bee mascot"
+                    className="w-24 sm:w-28 object-contain drop-shadow-[0_0_25px_rgba(245,197,24,0.35)]"
+                  />
                 </div>
                 <h2 className="text-[clamp(2rem,4.5vw,3.75rem)] font-bold mb-8 tracking-tight text-foreground text-balance">Gold Standards in documentation and advanced privacy features</h2>
                 <p className="text-xl md:text-2xl font-light mb-12 text-foreground/80 leading-relaxed max-w-3xl mx-auto">
@@ -586,7 +590,7 @@ export default function Home() {
                 </p>
                 
                 <h3 className="text-lg md:text-xl font-bold text-foreground mb-6" data-testid="text-download-title">
-                  Get <HiveMark /> Companion{appVersion ? ` — Android v${appVersion}` : " for Android"}
+                  Try the Health <HiveMark /> Android test flight version{appVersion ? ` — v${appVersion}` : ""}
                 </h3>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
