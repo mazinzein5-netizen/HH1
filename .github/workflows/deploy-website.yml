@@ -45,4 +45,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./artifacts/website/dist/public
           publish_branch: gh-pages
-          cname: heathhive.ie
+          cname: www.heathhive.ie
