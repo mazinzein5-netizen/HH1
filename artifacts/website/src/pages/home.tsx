@@ -22,6 +22,10 @@ import { PortalAdvertsSection } from "@/components/PortalAdvertsSection";
 import { IrishAlignmentSection } from "@/components/IrishAlignmentSection";
 import { HiveMark } from "@/components/HiveMark";
 import { AttentionVideo } from "@/components/AttentionVideo";
+import beeMascot from "@assets/bee_mascot_transparent.png";
+import brandEcosystem from "@assets/IMG_0651_1784507381258.jpeg";
+import brandCompanion from "@assets/IMG_0654_1784507381258.jpeg";
+import brandSurgical from "@assets/IMG_0658_1784507522095.jpeg";
 import { 
   ArrowRight, ShieldCheck, FileText, Smartphone, 
   Stethoscope, Mail, Activity,
@@ -121,7 +125,7 @@ export default function Home() {
             name: "Health HIVE",
             legalName: "IbnCeena Ltd",
             url: "https://healthhive.app",
-            logo: "https://healthhive.app/favicon.svg",
+            logo: "https://healthhive.app/favicon.png",
             email: "info@ibnceena.ie",
             address: {
               "@type": "PostalAddress",
@@ -156,7 +160,7 @@ export default function Home() {
       >
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <HiveLogo size={32} />
+            <img src={beeMascot} alt="Health HIVE bee mascot" className="h-10 w-10 object-contain drop-shadow-[0_0_10px_rgba(245,197,24,0.35)]" />
             <span className="font-semibold text-lg tracking-tight text-foreground">HEALTH <HiveMark /></span>
           </div>
           <nav aria-label="Main navigation" className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -310,6 +314,19 @@ export default function Home() {
                 <a href="#companion">Explore HIVE Companion</a>
               </Button>
             </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: 0.5, ease: SMOOTH_EASE }}
+              className="mt-14 flex justify-center"
+            >
+              <img
+                src={brandEcosystem}
+                alt="Health HIVE — health ecosystem brand emblem"
+                className="w-full max-w-md rounded-[2rem] glass-panel-heavy border border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+              />
+            </motion.div>
           </motion.div>
         </section>
 
@@ -414,6 +431,11 @@ export default function Home() {
                 <Smartphone className="h-3 w-3 text-primary" />
                 Mobile App
               </div>
+              <img
+                src={brandCompanion}
+                alt="HIVE Companion — Patient Portal brand artwork"
+                className="w-44 sm:w-56 rounded-3xl glass-panel border border-primary/20 shadow-[0_12px_40px_rgba(0,0,0,0.3)] mb-8"
+              />
               <h2 className="text-[clamp(2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground text-balance"><HiveMark /> Companion</h2>
               <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground font-light glass-panel px-5 sm:px-6 py-3 rounded-2xl inline-block">
                 A steady hand on your shoulder. Your health story, already organised.
@@ -685,6 +707,11 @@ export default function Home() {
                   <Activity className="h-3 w-3 text-primary" />
                   Web App
                 </div>
+                <img
+                  src={brandSurgical}
+                  alt="HIVE Hospital Surgical Assistant brand artwork"
+                  className="w-40 sm:w-48 rounded-3xl glass-panel border border-primary/20 shadow-[0_12px_40px_rgba(0,0,0,0.3)] mb-8"
+                />
                 <h2 className="text-[clamp(2rem,4.5vw,3.75rem)] font-bold mb-6 text-foreground leading-tight text-balance"><HiveMark /> Hospital Surgical Assistant</h2>
                 <p className="text-xl text-muted-foreground mb-10 leading-relaxed font-light">
                   HIVE Hospital digitises the patient file into a member-accessed platform — organising patient flow and flagging safety risks with advanced algorithmic workflows, supported by robust evidence. Advanced AI risk oversight coming soon.

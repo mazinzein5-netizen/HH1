@@ -25,4 +25,5 @@
 - [Pro membership](pro-membership.md) — practitioner bookings/video gated server-side by PracStore.membership; patient-facing booking uses acceptingBookings(); Stripe lookup keys hive_pro_monthly/yearly.
 - [Android splash & icon checks](android-splash-icons.md) — Android 12+ clips splash icons to a circle; use expo-splash-screen plugin + prebuild inspection to verify without a device.
 - [Git guard & plumbing](git-guard-plumbing.md) — git guard blocks porcelain by name even in /tmp clones; use read-tree/hash-object/update-ref plumbing and verify trees before pushing.
+- [Brand assets](brand-assets.md) — user-supplied bee mascot/honeycomb art is the canonical logo; reuse from attached_assets/@assets, don't generate new art.
 - [H.264 in Playwright](h264-in-playwright.md) — test Chromium can't decode H.264 MP4s; swap a tiny VP9 webm onto the same element to e2e-test video autoplay/observer logic.

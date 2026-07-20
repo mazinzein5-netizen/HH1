@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   AccessibilityInfo,
   Animated,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -405,6 +406,12 @@ export default function DashboardScreen() {
                 textWeight={prefs.textWeight}
                 showText
               />
+              <Image
+                source={require("@/assets/images/bee-mascot.png")}
+                style={styles.heroBee}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
             </View>
             <View style={styles.heroContent}>
               <Text style={[styles.heroTitle1, { fontFamily: "Inter_700Bold" }]}>Organised Records.</Text>
@@ -589,7 +596,14 @@ const styles = StyleSheet.create({
   heroOuter: { borderRadius: 22, overflow: "hidden" },
   heroCard: { borderRadius: 22, overflow: "hidden", padding: 24, minHeight: 210 },
   goldAccentBar: { position: "absolute", top: 0, left: 0, right: 0, height: 2.5, opacity: 0.85 },
-  heroLogoRow: { marginBottom: 14, zIndex: 1 },
+  heroLogoRow: {
+    marginBottom: 14,
+    zIndex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  heroBee: { width: 58, height: 58, marginTop: -6 },
   heroContent: { gap: 12, zIndex: 1 },
   heroTitle1: { fontSize: 28, color: "#FFFFFF", letterSpacing: -0.5, lineHeight: 34 },
   heroTitle2: { fontSize: 28, letterSpacing: -0.5, lineHeight: 34, marginTop: -4 },

@@ -12,6 +12,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -154,7 +155,12 @@ export default function SarahBubble({
       <View style={[styles.bubble, { backgroundColor: colors.card, borderColor: colors.gold + "55" }]}>
         <View style={styles.headRow}>
           <View style={styles.headLeft}>
-            <MaterialCommunityIcons name="bee" size={15} color={colors.gold} />
+            <Image
+              source={require("@/assets/images/bee-mascot.png")}
+              style={{ width: 22, height: 22 }}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
             <Text style={[styles.name, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Sarah</Text>
             {status !== "idle" && (
               <Text style={[styles.status, { color: colors.gold, fontFamily: "Inter_500Medium" }]}>
