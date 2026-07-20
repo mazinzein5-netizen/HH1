@@ -336,7 +336,7 @@ export default function Home() {
             >
               <motion.div variants={fadeInUp}>
                 <div className="text-primary font-bold tracking-widest uppercase mb-4 text-[14px]">One Unified <HiveMark /> HUB</div>
-                <h2 className="text-[clamp(1.9rem,3.6vw,3rem)] font-bold mb-6 leading-tight text-balance text-foreground">Clinicians Receive Streamlined & Organized Data  </h2>
+                <h2 className="text-[clamp(2rem,7vw,3.4rem)] md:text-[clamp(1.9rem,3.3vw,3.4rem)] font-bold mb-6 leading-[1.12] text-foreground w-full">Clinicians Receive Streamlined &amp; Organized Data</h2>
                 <div className="mb-6">
                   <VideoEmbed
                     src="/hub-video/?embed=1"
