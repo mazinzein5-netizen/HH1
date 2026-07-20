@@ -23,7 +23,6 @@ import { IrishAlignmentSection } from "@/components/IrishAlignmentSection";
 import { HiveMark } from "@/components/HiveMark";
 import { AttentionVideo } from "@/components/AttentionVideo";
 import beeMascot from "@assets/bee_mascot_transparent.png";
-import brandEcosystem from "@assets/IMG_0651_1784507381258.jpeg";
 import brandCompanion from "@assets/IMG_0654_1784507381258.jpeg";
 import brandSurgical from "@assets/IMG_0658_1784507522095.jpeg";
 import { 
@@ -275,14 +274,20 @@ export default function Home() {
         {/* Section 1: Hero */}
         <section ref={heroRef} className="relative pt-24 pb-32 lg:pt-40 lg:pb-40 flex items-center min-h-[90vh]">
           <motion.div style={{ y: heroY, opacity: heroOpacity }} className="container mx-auto px-6 relative z-10 text-center max-w-5xl">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.7, ease: SMOOTH_EASE }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-primary text-xs font-bold tracking-[0.2em] uppercase mb-8 shadow-[0_0_15px_rgba(245,197,24,0.1)]"
+              className="flex flex-col items-center gap-4 mb-8"
             >
-              <HiveLogo size={16} />
-              HEALTH <HiveMark /> ECOSYSTEM
+              <img
+                src={beeMascot}
+                alt="Health HIVE bee mascot"
+                className="w-24 sm:w-32 object-contain drop-shadow-[0_0_25px_rgba(245,197,24,0.35)]"
+              />
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-primary text-xs font-bold tracking-[0.2em] uppercase shadow-[0_0_15px_rgba(245,197,24,0.1)]">
+                HEALTH <HiveMark /> ECOSYSTEM
+              </div>
             </motion.div>
             
             <motion.h1 
@@ -313,19 +318,6 @@ export default function Home() {
               <Button asChild size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 text-base shadow-[0_0_20px_rgba(245,197,24,0.3)] hover:shadow-[0_0_30px_rgba(245,197,24,0.5)] transition-all duration-300">
                 <a href="#companion">Explore HIVE Companion</a>
               </Button>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, delay: 0.5, ease: SMOOTH_EASE }}
-              className="mt-14 flex justify-center"
-            >
-              <img
-                src={brandEcosystem}
-                alt="Health HIVE — health ecosystem brand emblem"
-                className="w-full max-w-md rounded-[2rem] glass-panel-heavy border border-primary/20 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
-              />
             </motion.div>
           </motion.div>
         </section>
