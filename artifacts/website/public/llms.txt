@@ -11,7 +11,3 @@ Health HIVE is an Irish digital health platform for the safe, auditable digitisa
 - /portal/signup: Create a new Health HIVE portal account
 - /portal/pricing: Membership tiers and pricing plans (Blue, Gold, Red)
 - /portal/privacy: Privacy policy and data handling information
-- /portal/emergency: Emergency care guidance and rapid-access resources
-- /portal/caretaker: Caretaker and family member access information
-- /portal/supportive: Supportive and palliative care services
-- /portal/responder: First responder integration and resources

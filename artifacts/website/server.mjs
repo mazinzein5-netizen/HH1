@@ -204,7 +204,7 @@ const ROUTE_META = [
       </main>`,
   },
   {
-    match: (p) => p === "/portal" || p.startsWith("/portal/"),
+    match: (p) => p === "/portal",
     path: "/portal",
     title: "HIVE Emergency Portal | Health HIVE",
     description:
@@ -230,23 +230,64 @@ const ROUTE_META = [
   },
 ];
 
-const DEFAULT_META = {
-  path: "/",
-  title: "Health HIVE Ecosystem | Connected Health Platform Ireland",
-  description:
-    "A connected health platform from Ireland. Patients keep their records organised; clinicians stay supported on call.",
-  ogTitle: "Health HIVE Ecosystem",
-  ogDescription:
-    "A connected health platform from Ireland. Patients keep their records organised; clinicians stay supported on call.",
-  body: `<main><h1>Health HIVE Ecosystem</h1><p>A connected health platform from Ireland.</p></main>`,
+/**
+ * Client-side routes that exist in the SPA but are gated, role-specific
+ * utility flows — not public landing pages. They are served (so direct
+ * entry still works for signed-in users) but marked noindex so crawlers
+ * do not treat them as public content.
+ */
+const GATED_PORTAL_ROUTES = new Set([
+  "/portal/emergency",
+  "/portal/caretaker",
+  "/portal/supportive",
+  "/portal/responder",
+  "/portal/practitioner",
+]);
+
+function isGatedRoute(p) {
+  return GATED_PORTAL_ROUTES.has(p) || p.startsWith("/portal/practitioner/");
+}
+
+const GATED_META = {
+  path: "/portal",
+  title: "HIVE Portal | Health HIVE",
+  description: "Sign in required. This HIVE Portal area is for verified account holders.",
+  ogTitle: "HIVE Portal — Sign In Required",
+  ogDescription: "This HIVE Portal area is for verified account holders.",
+  body: `<main><h1>HIVE Portal</h1><p>This area requires a verified HIVE Portal account. <a href="/portal/login">Log in</a> or <a href="/portal">return to the portal landing page</a>.</p></main>`,
 };
 
-function resolveMeta(urlPath) {
+const NOT_FOUND_META = {
+  path: "/",
+  title: "Page Not Found | Health HIVE",
+  description: "The page you are looking for does not exist on Health HIVE.",
+  ogTitle: "Page Not Found — Health HIVE",
+  ogDescription: "The page you are looking for does not exist on Health HIVE.",
+  body: `<main><h1>Page Not Found</h1><p>The page you are looking for does not exist. <a href="/">Return to Health HIVE</a>.</p></main>`,
+};
+
+function normalizePath(urlPath) {
   const stripped = basePath && urlPath.startsWith(basePath)
     ? urlPath.slice(basePath.length) || "/"
     : urlPath;
-  const clean = (stripped.split("?")[0].split("#")[0]) || "/";
-  return ROUTE_META.find((r) => r.match(clean)) ?? DEFAULT_META;
+  let clean = (stripped.split("?")[0].split("#")[0]) || "/";
+  // Trailing-slash variants resolve to their canonical no-slash route.
+  while (clean.length > 1 && clean.endsWith("/")) clean = clean.slice(0, -1);
+  return clean || "/";
+}
+
+/**
+ * Resolve a request path to { meta, status, robots }:
+ *  - explicit public routes  → 200, index
+ *  - gated portal utilities  → 200, noindex (SPA still loads for users)
+ *  - anything else           → 404, noindex
+ */
+function resolveRoute(urlPath) {
+  const clean = normalizePath(urlPath);
+  const meta = ROUTE_META.find((r) => r.match(clean));
+  if (meta) return { meta, status: 200, robots: "index, follow" };
+  if (isGatedRoute(clean)) return { meta: GATED_META, status: 200, robots: "noindex, nofollow" };
+  return { meta: NOT_FOUND_META, status: 404, robots: "noindex, nofollow" };
 }
 
 // ─── Injectors ────────────────────────────────────────────────────────────────
@@ -259,17 +300,19 @@ function esc(str) {
     .replace(/>/g, "&gt;");
 }
 
-function buildMetaBlock(meta) {
+function buildMetaBlock(meta, robots = "index, follow") {
   const canonical = `${SITE_URL}${meta.path}`;
+  const indexable = robots.startsWith("index");
   return [
     `<title>${esc(meta.title)}</title>`,
     `<meta name="description" content="${esc(meta.description)}" />`,
-    `<meta name="robots" content="index, follow" />`,
-    `<link rel="canonical" href="${canonical}" />`,
+    `<meta name="robots" content="${robots}" />`,
+    // Canonical + og:url only make sense on indexable pages.
+    ...(indexable ? [`<link rel="canonical" href="${canonical}" />`] : []),
     `<meta property="og:title" content="${esc(meta.ogTitle)}" />`,
     `<meta property="og:description" content="${esc(meta.ogDescription)}" />`,
     `<meta property="og:type" content="website" />`,
-    `<meta property="og:url" content="${canonical}" />`,
+    ...(indexable ? [`<meta property="og:url" content="${canonical}" />`] : []),
     `<meta property="og:image" content="${DEFAULT_IMAGE}" />`,
     `<meta property="og:image:alt" content="${esc(IMAGE_ALT)}" />`,
     `<meta property="og:image:width" content="1200" />`,
@@ -286,10 +329,26 @@ function buildMetaBlock(meta) {
  * Replace only the two named placeholders — all other head content
  * (Vite-injected CSS, preload tags, module scripts) is untouched.
  */
-function injectMeta(html, meta) {
+function injectMeta(html, meta, robots) {
   return html
-    .replace("<!-- @ROUTE_META@ -->", buildMetaBlock(meta))
+    .replace("<!-- @ROUTE_META@ -->", buildMetaBlock(meta, robots))
     .replace("<!-- @ROUTE_BODY@ -->", meta.body ?? "");
+}
+
+/**
+ * 301-redirect trailing-slash variants (e.g. /book/ → /book) so each public
+ * route has exactly one canonical URL. Returns true if a redirect was sent.
+ */
+function redirectTrailingSlash(req, res) {
+  if (req.path.length > 1 && req.path.endsWith("/")) {
+    const target = req.path.replace(/\/+$/, "") || "/";
+    const query = req.originalUrl.includes("?")
+      ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
+      : "";
+    res.redirect(301, target + query);
+    return true;
+  }
+  return false;
 }
 
 // ─── App ──────────────────────────────────────────────────────────────────────
@@ -302,10 +361,11 @@ if (isProd) {
   app.use(basePath || "/", express.static(distDir, { index: false }));
 
   app.use((req, res) => {
+    if (redirectTrailingSlash(req, res)) return;
     const template = fs.readFileSync(path.join(distDir, "index.html"), "utf-8");
-    const meta = resolveMeta(req.path);
-    const html = injectMeta(template, meta);
-    res.status(200).set("Content-Type", "text/html").end(html);
+    const { meta, status, robots } = resolveRoute(req.path);
+    const html = injectMeta(template, meta, robots);
+    res.status(status).set("Content-Type", "text/html").end(html);
   });
 } else {
   const { createServer: createViteServer } = await import("vite");
@@ -319,14 +379,15 @@ if (isProd) {
 
   app.use(async (req, res, next) => {
     try {
+      if (redirectTrailingSlash(req, res)) return;
       const url = req.originalUrl;
       const templatePath = path.resolve(__dirname, "index.html");
       let template = fs.readFileSync(templatePath, "utf-8");
       // Let Vite inject its dev-server tags (@vite/client, HMR, etc.)
       template = await vite.transformIndexHtml(url, template);
-      const meta = resolveMeta(req.path);
-      const html = injectMeta(template, meta);
-      res.status(200).set("Content-Type", "text/html").end(html);
+      const { meta, status, robots } = resolveRoute(req.path);
+      const html = injectMeta(template, meta, robots);
+      res.status(status).set("Content-Type", "text/html").end(html);
     } catch (err) {
       vite.ssrFixStacktrace(err);
       next(err);
