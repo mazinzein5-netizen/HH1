@@ -3,6 +3,14 @@ import { db, appReleasesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { requirePortalSession, getPortalSession } from "./portalAuth";
+import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+
+const objectStorage = new ObjectStorageService();
+
+/** Self-hosted APKs are stored in App Storage under an /objects/… path. */
+function isStoragePath(apkUrl: string): boolean {
+  return apkUrl.startsWith("/objects/");
+}
 
 /**
  * Latest Android release, served to the website download section and the
@@ -75,6 +83,18 @@ export async function verifyApkReachable(
   url: string,
   timeoutMs = 10_000,
 ): Promise<{ ok: boolean; status?: number; reason?: string }> {
+  // Self-hosted builds: check the object exists in App Storage.
+  if (isStoragePath(url)) {
+    try {
+      await objectStorage.getObjectEntityFile(url);
+      return { ok: true };
+    } catch (err) {
+      return {
+        ok: false,
+        reason: err instanceof ObjectNotFoundError ? "not found in App Storage" : "storage error",
+      };
+    }
+  }
   const attempt = async (method: "HEAD" | "GET") => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -166,6 +186,67 @@ router.get("/app/latest", (_req, res) => {
 router.get("/app/download/android", async (req, res) => {
   const { version, apkUrl } = androidRelease;
   const filename = `HealthHIVE-v${version}.apk`;
+
+  // Self-hosted build: stream straight from App Storage with Range support.
+  if (isStoragePath(apkUrl)) {
+    try {
+      const file = await objectStorage.getObjectEntityFile(apkUrl);
+      const [metadata] = await file.getMetadata();
+      const size = Number(metadata.size ?? 0);
+      const rawRange = req.headers.range;
+      let start = 0;
+      let end = size > 0 ? size - 1 : 0;
+      let partial = false;
+      if (typeof rawRange === "string" && size > 0) {
+        const m = /^bytes=(\d*)-(\d*)$/.exec(rawRange.trim());
+        if (m && (m[1] !== "" || m[2] !== "")) {
+          if (m[1] === "") {
+            // suffix range: last N bytes
+            const suffix = Number(m[2]);
+            if (suffix > 0) {
+              start = Math.max(0, size - suffix);
+              partial = true;
+            }
+          } else {
+            start = Number(m[1]);
+            end = m[2] === "" ? size - 1 : Math.min(Number(m[2]), size - 1);
+            partial = true;
+          }
+          if (start >= size || start > end) {
+            res.status(416);
+            res.setHeader("Content-Range", `bytes */${size}`);
+            res.setHeader("Accept-Ranges", "bytes");
+            res.end();
+            return;
+          }
+        }
+      }
+      res.status(partial ? 206 : 200);
+      res.setHeader("Content-Type", "application/vnd.android.package-archive");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Accept-Ranges", "bytes");
+      if (partial) res.setHeader("Content-Range", `bytes ${start}-${end}/${size}`);
+      if (size > 0) res.setHeader("Content-Length", String(end - start + 1));
+      const stream = file.createReadStream(size > 0 ? { start, end } : undefined);
+      stream.on("error", (err) => {
+        logger.error({ err, apkUrl }, "App Storage APK stream failed");
+        res.destroy();
+      });
+      res.on("close", () => stream.destroy());
+      stream.pipe(res);
+    } catch (err) {
+      logger.error({ err, apkUrl }, "App Storage APK download failed");
+      if (!res.headersSent) {
+        res.status(err instanceof ObjectNotFoundError ? 404 : 500).json({
+          error: "APK_UNAVAILABLE",
+          message: "The APK file is currently unavailable. Please try again shortly.",
+        });
+      }
+    }
+    return;
+  }
+
   try {
     // Forward Range requests so Android's DownloadManager (and browsers) can
     // resume an interrupted 100MB download instead of restarting from zero.
@@ -215,6 +296,31 @@ router.get("/app/download/android", async (req, res) => {
 });
 
 /**
+ * POST /app/release/upload-url — founder-only: get a short-lived presigned
+ * URL to upload an APK straight into App Storage from the browser (the file
+ * never passes through this server). The founder then publishes the release
+ * with the returned URL as apkUrl; PUT /app/release normalizes it to the
+ * stable /objects/… path.
+ */
+router.post(
+  "/app/release/upload-url",
+  requirePortalSession,
+  requireSuperuser,
+  async (_req, res) => {
+    try {
+      const uploadURL = await objectStorage.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (err) {
+      logger.error({ err }, "Failed to create APK upload URL");
+      res.status(500).json({
+        error: "UPLOAD_URL_FAILED",
+        message: "Could not prepare the upload. Please try again.",
+      });
+    }
+  },
+);
+
+/**
  * PUT /app/release — founder-only update flow for a new EAS build.
  * Body: { version: "1.0.2", versionCode: 3, apkUrl: "https://expo.dev/artifacts/eas/….apk" }
  * The website and mobile update banner pick up the new values immediately.
@@ -229,10 +335,22 @@ router.put("/app/release", requirePortalSession, requireSuperuser, async (req, r
     res.status(400).json({ error: "INVALID_VERSION_CODE", message: "versionCode must be a positive integer" });
     return;
   }
-  if (typeof apkUrl !== "string" || !APK_URL.test(apkUrl.trim())) {
+  if (typeof apkUrl !== "string") {
     res.status(400).json({
       error: "INVALID_APK_URL",
-      message: "apkUrl must be an https://expo.dev/artifacts/eas/….apk link",
+      message: "apkUrl must be an https://expo.dev/artifacts/eas/….apk link or an uploaded App Storage file",
+    });
+    return;
+  }
+  // Uploaded builds arrive as the raw presigned GCS URL — normalize to the
+  // stable /objects/… path before validating and persisting.
+  const normalizedApkUrl = objectStorage.normalizeObjectEntityPath(
+    apkUrl.trim().split("?")[0],
+  );
+  if (!isStoragePath(normalizedApkUrl) && !APK_URL.test(normalizedApkUrl)) {
+    res.status(400).json({
+      error: "INVALID_APK_URL",
+      message: "apkUrl must be an https://expo.dev/artifacts/eas/….apk link or an uploaded App Storage file",
     });
     return;
   }
@@ -243,7 +361,7 @@ router.put("/app/release", requirePortalSession, requireSuperuser, async (req, r
     });
     return;
   }
-  const reachable = await verifyApkReachable(apkUrl.trim());
+  const reachable = await verifyApkReachable(normalizedApkUrl);
   if (!reachable.ok) {
     res.status(422).json({
       error: "APK_UNREACHABLE",
@@ -255,7 +373,7 @@ router.put("/app/release", requirePortalSession, requireSuperuser, async (req, r
     platform: "android",
     version: version.trim(),
     versionCode: versionCode as number,
-    apkUrl: apkUrl.trim(),
+    apkUrl: normalizedApkUrl,
     updatedAt: Date.now(),
   };
   try {
