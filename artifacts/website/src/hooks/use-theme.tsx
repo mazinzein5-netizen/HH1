@@ -1,35 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type Theme = "dark" | "light" | "system";
 
+function resolveSystem(): "dark" | "light" {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Default to dark so the black rubber surface is the first impression
-    return (localStorage.getItem("theme") as Theme) || "dark";
+    return (localStorage.getItem("theme") as Theme) || "system";
   });
 
+  /* Apply theme class to <html> */
   useEffect(() => {
     const root = window.document.documentElement;
-    
     root.classList.remove("light", "dark");
-    
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
-      
-      root.classList.add(systemTheme);
-      return;
-    }
-    
-    root.classList.add(theme);
+    root.classList.add(theme === "system" ? resolveSystem() : theme);
   }, [theme]);
 
-  const setAndSaveTheme = (newTheme: Theme) => {
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-  };
+  /* Listen for device theme changes when in system mode */
+  useEffect(() => {
+    if (theme !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = () => {
+      const root = window.document.documentElement;
+      root.classList.remove("light", "dark");
+      root.classList.add(resolveSystem());
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [theme]);
+
+  const setAndSaveTheme = useCallback((t: Theme) => {
+    setTheme(t);
+    localStorage.setItem("theme", t);
+  }, []);
 
   return { theme, setTheme: setAndSaveTheme };
 }
