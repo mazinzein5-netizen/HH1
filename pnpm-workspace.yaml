@@ -162,3 +162,7 @@ overrides:
   # change the range in artifacts/mobile/package.json; this override prevents
   # any version drift from silently breaking the Gold Intensity slider.
   "@react-native-community/slider": "5.0.1"
+
+allowBuilds:
+  dtrace-provider: set this to true or false
+  esbuild: true

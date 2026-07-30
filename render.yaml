@@ -1,0 +1,44 @@
+# ──────────────────────────────────────────────────────────────────────
+# Render Blueprint — Health HIVE Website
+# ──────────────────────────────────────────────────────────────────────
+# Auto-detected by Render when connected to this GitHub repo.
+# Deploys as a Web Service (not static) to preserve per-route SSR SEO
+# meta injection from server.mjs.
+# ──────────────────────────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: healthhive-website
+    runtime: node
+    
+    # Build from repo root (pnpm workspace needs access to all packages)
+    buildCommand: |
+      corepack enable pnpm
+      pnpm install --frozen-lockfile
+      pnpm --filter @workspace/website run build
+    
+    # Express server serves built static files + injects per-route SEO
+    startCommand: cd artifacts/website && NODE_ENV=production node server.mjs
+    
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        sync: false          # Render injects its own PORT automatically
+      - key: BASE_PATH
+        value: "/"
+      - key: PNPM_VERSION
+        value: "10.30.3"
+    
+    # Health check so Render knows the service is ready
+    healthCheckPath: /
+    
+    # Auto-deploy on push to main
+    branch: main
+    
+    # Custom domain is configured in Render Dashboard:
+    # Settings → Custom Domains → Add healthhive.ie
+    # DNS: CNAME healthhive.ie → <your-service>.onrender.com
+    
+    # Optimize for cold starts
+    plan: free

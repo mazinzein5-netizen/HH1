@@ -32,7 +32,7 @@ if (!port || Number.isNaN(port)) {
 
 // ─── Route metadata & static body content ────────────────────────────────────
 
-const SITE_URL = "https://healthhive.app";
+const SITE_URL = "https://healthhive.ie";
 const DEFAULT_IMAGE = `${SITE_URL}/opengraph.jpg`;
 const IMAGE_ALT =
   "Health HIVE — safe, auditable digitisation of patient files for primary and secondary care in Ireland";
@@ -60,8 +60,8 @@ const ROUTE_META = [
         "@type": "Organization",
         name: "Health HIVE",
         legalName: "IbnCeena Ltd",
-        url: "https://healthhive.app",
-        logo: "https://healthhive.app/favicon.png",
+        url: "https://healthhive.ie",
+        logo: "https://healthhive.ie/favicon.png",
         email: "info@ibnceena.ie",
         address: {
           "@type": "PostalAddress",

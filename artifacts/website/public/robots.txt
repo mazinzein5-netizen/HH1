@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://healthhive.app/sitemap.xml
+Sitemap: https://healthhive.ie/sitemap.xml

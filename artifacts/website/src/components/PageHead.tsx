@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 
 const SITE_NAME = "Health HIVE";
-const SITE_URL = "https://healthhive.app";
+const SITE_URL = "https://healthhive.ie";
 const DEFAULT_IMAGE = `${SITE_URL}/opengraph.jpg`;
 const DEFAULT_IMAGE_ALT =
   "Health HIVE — safe, auditable digitisation of patient files for primary and secondary care in Ireland";
