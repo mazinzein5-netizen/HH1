@@ -198,8 +198,16 @@
   -webkit-text-fill-color: transparent;
 }
 
-.hive-gradient-bg {
+.dark .hive-gradient-bg {
   background: linear-gradient(135deg, #F5C518, #D4A017);
+}
+
+/* Scroll-snap sections for cinematic auto-scroll pages */
+.section-snap {
+  height: 100dvh;
+  min-height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
 }
 
 /* Smooth native scrolling (anchor jumps handled in JS respect this too) */
