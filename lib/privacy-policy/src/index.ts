@@ -1,5 +1,5 @@
 export const PRIVACY_POLICY_APP_NAME = "HIVE Companion™ : Patient Portal";
-export const PRIVACY_POLICY_COMPANY = "IbnCeena Ltd.";
+export const PRIVACY_POLICY_COMPANY = "HIVE HEALTH ECOSYSTEM Ltd";
 export const PRIVACY_POLICY_LAST_UPDATED = "July 2026";
 
 export interface PrivacyPolicySection {
@@ -11,7 +11,7 @@ export const PRIVACY_POLICY_SECTIONS: PrivacyPolicySection[] = [
   {
     heading: "Who we are",
     body:
-      "HIVE Companion™ : Patient Portal is developed by IbnCeena Ltd. This app is a personal health record organiser and health guideline information viewer.",
+      "HIVE Companion™ : Patient Portal is developed by HIVE HEALTH ECOSYSTEM Ltd This app is a personal health record organiser and health guideline information viewer.",
   },
   {
     heading: "Not a medical device",
@@ -51,6 +51,6 @@ export const PRIVACY_POLICY_SECTIONS: PrivacyPolicySection[] = [
   {
     heading: "Contact",
     body:
-      "For privacy questions, contact IbnCeena Ltd. through the Help & Support section in Settings.",
+      "For privacy questions, contact HIVE HEALTH ECOSYSTEM Ltd through the Help & Support section in Settings.",
   },
 ];
