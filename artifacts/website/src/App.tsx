@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -64,6 +65,7 @@ function App() {
           <Router />
         </WouterRouter>
         <Toaster />
+        <SpeedInsights />
       </TooltipProvider>
     </QueryClientProvider>
   );
