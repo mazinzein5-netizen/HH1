@@ -33,19 +33,19 @@ const PORTALS = [
     accent: "text-primary",
     accentBg: "bg-primary/10 border-primary/25",
     badge: "For doctors",
-    title: "GP & HIVE HUB",
+    title: "HIVE GP AutoCoder & Scribe",
     titleNode: (
       <>
-        GP &amp; <HiveMark /> HUB
+        HIVE GP AutoCoder &amp; Scribe
       </>
     ),
-    desc: "The doctors' workspace — GPs, hospital doctors and clinic specialists managing their HIVE patients.",
+    desc: "The doctors' workspace — AI-powered clinical coding, scribing and documentation for GPs and hospital doctors.",
     points: [
       { icon: FolderHeart, text: "Patient files with questionnaires, notes & attachments" },
       { icon: CalendarClock, text: "Automated HIVE booking & video consultations" },
     ],
     href: "/portal/practitioner",
-    cta: "Enter the GP & HIVE HUB",
+    cta: "Enter the AutoCoder & Scribe",
   },
   {
     icon: HeartHandshake,

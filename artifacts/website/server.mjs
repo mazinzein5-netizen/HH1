@@ -59,7 +59,7 @@ const ROUTE_META = [
         "@context": "https://schema.org",
         "@type": "Organization",
         name: "Health HIVE",
-        legalName: "IbnCeena Ltd",
+        legalName: "HIVE HEALTH ECOSYSTEM Ltd",
         url: "https://healthhive.ie",
         logo: "https://healthhive.ie/favicon.png",
         email: "info@ibnceena.ie",

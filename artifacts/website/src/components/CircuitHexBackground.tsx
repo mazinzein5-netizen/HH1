@@ -17,41 +17,25 @@ const CPU = { x: 480, y: 300, w: 240, h: 200 };
 
 // Circuit trace paths — right-angle motherboard routing radiating from the
 // CPU pin rows outward, plus perimeter buses. 1200x800 viewBox, slice-fill.
-const TRACES: { d: string; dur: string; delay: string; color: string }[] = [
-  // Left pin fan-out
+const TRACES = [
+  // Left pin fan-out (3 traces instead of 4)
   { d: "M 480 330 H 380 V 250 H 220 V 140 H -40", dur: "5.5s", delay: "0s", color: "#f5c518" },
-  { d: "M 480 370 H 340 V 430 H 180 V 560 H -40", dur: "6s", delay: "1.4s", color: "#6ea8ff" },
   { d: "M 480 410 H 400 V 480 H 260 V 660 H -40", dur: "6.5s", delay: "0.7s", color: "#f5c518" },
   { d: "M 480 450 H 360 V 390 H 120 V 300 H -40", dur: "5.8s", delay: "2.2s", color: "#8ad7c1" },
-  // Right pin fan-out
+  // Right pin fan-out (3 traces instead of 4)
   { d: "M 720 330 H 820 V 240 H 980 V 130 H 1260", dur: "5.2s", delay: "0.4s", color: "#6ea8ff" },
-  { d: "M 720 370 H 860 V 440 H 1020 V 560 H 1260", dur: "6.2s", delay: "1.8s", color: "#f5c518" },
   { d: "M 720 410 H 800 V 500 H 940 V 660 H 1260", dur: "6.8s", delay: "0.2s", color: "#f5c518" },
   { d: "M 720 450 H 880 V 380 H 1080 V 300 H 1260", dur: "5.6s", delay: "2.6s", color: "#8ad7c1" },
-  // Top pin fan-out
-  { d: "M 530 300 V 210 H 420 V 100 H 300 V -40", dur: "5.4s", delay: "1s", color: "#6ea8ff" },
-  { d: "M 600 300 V 180 V 180 H 600 V -40", dur: "4.8s", delay: "0.5s", color: "#f5c518" },
-  { d: "M 670 300 V 220 H 780 V 110 H 900 V -40", dur: "5.9s", delay: "1.9s", color: "#6ea8ff" },
-  // Bottom pin fan-out
-  { d: "M 530 500 V 590 H 410 V 700 H 290 V 840", dur: "6.1s", delay: "0.9s", color: "#f5c518" },
-  { d: "M 600 500 V 620 H 600 V 840", dur: "5s", delay: "2.4s", color: "#8ad7c1" },
-  { d: "M 670 500 V 580 H 790 V 690 H 910 V 840", dur: "6.4s", delay: "1.2s", color: "#6ea8ff" },
-  // Perimeter buses
-  { d: "M -40 80 H 240 V 40 H 720 V 80 H 1260", dur: "7s", delay: "0.3s", color: "#f5c518" },
-  { d: "M -40 740 H 360 V 700 H 880 V 740 H 1260", dur: "7.5s", delay: "1.6s", color: "#6ea8ff" },
-  { d: "M 60 -40 V 200 H 100 V 640 H 60 V 840", dur: "7.2s", delay: "2.8s", color: "#8ad7c1" },
-  { d: "M 1140 -40 V 180 H 1100 V 620 H 1140 V 840", dur: "7.8s", delay: "0.6s", color: "#f5c518" },
 ];
 
 // Via/solder-pad nodes at trace corners
-const NODES: { x: number; y: number }[] = [
-  { x: 380, y: 250 }, { x: 220, y: 140 }, { x: 340, y: 430 }, { x: 180, y: 560 },
-  { x: 400, y: 480 }, { x: 260, y: 660 }, { x: 360, y: 390 }, { x: 120, y: 300 },
-  { x: 820, y: 240 }, { x: 980, y: 130 }, { x: 860, y: 440 }, { x: 1020, y: 560 },
-  { x: 800, y: 500 }, { x: 940, y: 660 }, { x: 880, y: 380 }, { x: 1080, y: 300 },
-  { x: 420, y: 210 }, { x: 300, y: 100 }, { x: 780, y: 220 }, { x: 900, y: 110 },
-  { x: 410, y: 590 }, { x: 290, y: 700 }, { x: 790, y: 580 }, { x: 910, y: 690 },
-  { x: 240, y: 80 }, { x: 720, y: 40 }, { x: 360, y: 740 }, { x: 880, y: 700 },
+const NODES = [
+  { x: 380, y: 250 }, { x: 220, y: 140 },
+  { x: 400, y: 480 }, { x: 260, y: 660 },
+  { x: 360, y: 390 }, { x: 120, y: 300 },
+  { x: 820, y: 240 }, { x: 980, y: 130 },
+  { x: 800, y: 500 }, { x: 940, y: 660 },
+  { x: 880, y: 380 }, { x: 1080, y: 300 },
 ];
 
 // Small SMD component footprints (resistor/capacitor pairs) scattered on the board
@@ -249,8 +233,8 @@ export function CircuitHexBackground() {
       </svg>
 
       {/* Ambient brand glow */}
-      <div className="absolute top-[12%] left-[6%] w-[600px] h-[600px] bg-primary/15 dark:bg-primary/[0.07] rounded-full blur-[150px] mix-blend-screen" />
-      <div className="absolute bottom-[6%] right-[6%] w-[700px] h-[700px] bg-blue-600/10 dark:bg-blue-800/20 rounded-full blur-[150px] mix-blend-screen" />
+      <div className="absolute top-[12%] left-[6%] w-[400px] h-[400px] bg-primary/15 dark:bg-primary/[0.07] rounded-full blur-[80px] mix-blend-screen" />
+      <div className="absolute bottom-[6%] right-[6%] w-[450px] h-[450px] bg-blue-600/10 dark:bg-blue-800/20 rounded-full blur-[80px] mix-blend-screen" />
 
       {/* Vignette for depth */}
       <div

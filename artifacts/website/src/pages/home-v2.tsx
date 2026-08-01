@@ -23,8 +23,8 @@ const fi = { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 }, 
 
 const P = [
   { id:"c", badge:"FOR PATIENTS", bi:<Smartphone className="h-3 w-3"/>, title:<><HiveMark/> Companion</>, tag:"Walk into any appointment ready.", desc:"Your health story, already organised. Records, prescriptions, and an emergency health card \u2014 all on your device, all under your control.", feat:[{i:<FileText className="h-4 w-4"/>,t:"Health records & prescriptions in one place"},{i:<Pill className="h-4 w-4"/>,t:"Standardised questionnaires before every visit"},{i:<AlertCircle className="h-4 w-4"/>,t:"Emergency health card when it matters most"}], cta:{l:"Download for Android",h:"/api/app/download/android"}, img:`${import.meta.env.BASE_URL}images/brand-companion.webp`, alt:"HIVE Companion app", glow:"rgba(245,197,24,0.10)", rev:false },
-  { id:"s", badge:"FOR CLINICAL TEAMS", bi:<Activity className="h-3 w-3"/>, title:<>Hospital Surgical Assistant</>, tag:"Precision documentation. Faster workflows.", desc:"Patient files digitised and organised. Photo recognition turns captured data into structured records in seconds.", feat:[{i:<ClipboardList className="h-4 w-4"/>,t:"Fast documentation with photo recognition"},{i:<Lock className="h-4 w-4"/>,t:"Encrypted by design \u2014 data stays on device"},{i:<Sparkles className="h-4 w-4"/>,t:"AI decision support for clinicians"}], cta:{l:"Open Surgical Assistant",h:"/portal/practitioner"}, img:`${import.meta.env.BASE_URL}images/brand-surgical.webp`, alt:"HIVE Surgical Assistant", glow:"rgba(110,168,255,0.10)", rev:true },
-  { id:"g", badge:"FOR PRACTICES", bi:<Stethoscope className="h-3 w-3"/>, title:<>GP & Primary Healthcare Portal</>, tag:"More time with patients. Less time on paperwork.", desc:"Patients arrive with standardised questionnaires already completed. AI drafts referral letters and clinic summaries \u2014 you review and sign off.", feat:[{i:<ClipboardList className="h-4 w-4"/>,t:"Structured pre-appointment intake"},{i:<Sparkles className="h-4 w-4"/>,t:"AI-augmented documentation & referral letters"},{i:<Euro className="h-4 w-4"/>,t:"Measurable savings on administration time"}], cta:{l:"Contact About Enterprise",h:"mailto:info@ibnceena.ie?subject=Enterprise%20enquiry%20%E2%80%94%20Health%20HIVE"}, img:`${import.meta.env.BASE_URL}images/gp-consult.webp`, alt:"GP consulting", glow:"rgba(52,211,153,0.08)", rev:false },
+  { id:"s", badge:"FOR CLINICAL TEAMS", bi:<Activity className="h-3 w-3"/>, title:<>HIVE HOSPITAL Surgical Assistant</>, tag:"Precision documentation. Faster workflows.", desc:"Patient files digitised and organised. Photo recognition turns captured data into structured records in seconds.", feat:[{i:<ClipboardList className="h-4 w-4"/>,t:"Fast documentation with photo recognition"},{i:<Lock className="h-4 w-4"/>,t:"Encrypted by design \u2014 data stays on device"},{i:<Sparkles className="h-4 w-4"/>,t:"AI decision support for clinicians"}], cta:{l:"Open HIVE HOSPITAL Assistant",h:"/portal/practitioner"}, img:`${import.meta.env.BASE_URL}images/brand-surgical.webp`, alt:"HIVE Surgical Assistant", glow:"rgba(110,168,255,0.10)", rev:true },
+  { id:"g", badge:"FOR PRACTICES", bi:<Stethoscope className="h-3 w-3"/>, title:<>HIVE GP AutoCoder & Scribe</>, tag:"More time with patients. Less time on paperwork.", desc:"Patients arrive with standardised questionnaires already completed. AI drafts referral letters and clinic summaries \u2014 you review and sign off.", feat:[{i:<ClipboardList className="h-4 w-4"/>,t:"Structured pre-appointment intake"},{i:<Sparkles className="h-4 w-4"/>,t:"AI-augmented documentation & referral letters"},{i:<Euro className="h-4 w-4"/>,t:"Measurable savings on administration time"}], cta:{l:"Contact About Enterprise",h:"mailto:info@ibnceena.ie?subject=Enterprise%20enquiry%20%E2%80%94%20Health%20HIVE"}, img:`${import.meta.env.BASE_URL}images/gp-consult.webp`, alt:"GP consulting", glow:"rgba(52,211,153,0.08)", rev:false },
 ];
 
 const TRUST=[{i:<ShieldCheck className="h-6 w-6"/>,t:"GDPR & DPA 2018",d:"Built for GDPR and the Irish Data Protection Act 2018"},{i:<HardDrive className="h-6 w-6"/>,t:"Audit-Ready Records",d:"Safe digitisation with full auditability"},{i:<MapPin className="h-6 w-6"/>,t:"Irish Company",d:"Headquartered in Dublin, Ireland"},{i:<Flag className="h-6 w-6"/>,t:"National Alignment",d:"Digital for Care 2024\u20132030 & Sl\u00e1intecare"}];
@@ -135,7 +135,7 @@ export default function HomeV2(){
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>Quick connect</DropdownMenuLabel>
-                <DropdownMenuItem asChild><Link href="/portal/practitioner" className="cursor-pointer"><Stethoscope className="mr-2 h-4 w-4 text-primary"/>GP & HIVE HUB</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/portal/practitioner" className="cursor-pointer"><Stethoscope className="mr-2 h-4 w-4 text-primary"/>HIVE GP AutoCoder & Scribe</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link href="/portal/supportive" className="cursor-pointer"><Heart className="mr-2 h-4 w-4 text-primary"/>Supportive Care</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link href="/portal/responder" className="cursor-pointer"><Activity className="mr-2 h-4 w-4 text-primary"/>First Responders</Link></DropdownMenuItem>
                 <DropdownMenuSeparator/>
@@ -152,7 +152,7 @@ export default function HomeV2(){
             <div className="container mx-auto px-6 py-3 flex flex-col gap-1 text-sm font-medium">
               <Link href="/" onClick={()=>setMenuOpen(false)} className="py-2 px-2 rounded-lg hover:text-primary">Home</Link>
               <Link href="/book" onClick={()=>setMenuOpen(false)} className="py-2 px-2 rounded-lg hover:text-primary">Book a Consultation</Link>
-              <Link href="/portal/practitioner" onClick={()=>setMenuOpen(false)} className="py-2 px-2 rounded-lg text-primary">GP & HIVE HUB</Link>
+              <Link href="/portal/practitioner" onClick={()=>setMenuOpen(false)} className="py-2 px-2 rounded-lg text-primary">HIVE GP AutoCoder & Scribe</Link>
               <Link href="/portal/signup" onClick={()=>setMenuOpen(false)} className="py-2 px-2 rounded-lg text-primary">Create Account</Link>
               <a href="/api/app/download/android" onClick={()=>setMenuOpen(false)} className="py-2 px-2 rounded-lg text-primary">Download Companion</a>
             </div>
@@ -241,7 +241,7 @@ export default function HomeV2(){
           <div className="container mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-center gap-3">
               <div className="flex items-center gap-2"><HiveLogo size={20}/><span className="font-semibold text-sm">HEALTH <HiveMark/></span></div>
-              <p className="text-xs text-muted-foreground">\u00a9 {new Date().getFullYear()} IbnCeena Ltd.</p>
+              <p className="text-xs text-muted-foreground">\u00a9 {new Date().getFullYear()} HIVE HEALTH ECOSYSTEM Ltd.</p>
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <a href="mailto:info@ibnceena.ie" className="hover:text-primary transition-colors flex items-center gap-1"><Mail className="h-3 w-3"/>info@ibnceena.ie</a>
                 <span className="flex items-center gap-1"><MapPin className="h-3 w-3"/>Dublin</span>

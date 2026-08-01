@@ -68,7 +68,7 @@ const SCENES: ProductScene[] = [
     id: "surgical",
     badge: "FOR CLINICAL TEAMS",
     badgeIcon: <Activity className="h-3 w-3" />,
-    title: <>HIVE Hospital Surgical Assistant</>,
+    title: <>HIVE HOSPITAL Surgical Assistant</>,
     tagline: "Precision documentation. Faster workflows.",
     description:
       "Patient files digitised and organised. Photo recognition turns captured data into structured records in seconds. Advanced AI risk oversight coming soon.",
@@ -79,7 +79,7 @@ const SCENES: ProductScene[] = [
     ],
     cta: { label: "Open Surgical Assistant", href: "/portal/practitioner" },
     image: BRAND_SURGICAL,
-    imageAlt: "HIVE Hospital Surgical Assistant",
+    imageAlt: "HIVE HOSPITAL Surgical Assistant",
     glowColor: "rgba(110,168,255,0.08)",
     glowX: "80%",
     glowY: "25%",
@@ -88,17 +88,17 @@ const SCENES: ProductScene[] = [
     id: "gp-portal",
     badge: "FOR PRACTICES",
     badgeIcon: <Stethoscope className="h-3 w-3" />,
-    title: <>GP &amp; Primary Healthcare Portal</>,
-    tagline: "More time with patients. Less time on paperwork.",
+    title: <>HIVE GP AutoCoder &amp; Scribe</>,
+    tagline: "AI-powered coding and scribing — finish documentation in seconds.",
     description:
       "Patients arrive with standardised questionnaires already completed. AI drafts referral letters and clinic summaries \u2014 you review and sign off.",
     features: [
       { icon: <ClipboardList className="h-5 w-5" />, text: "Structured pre-appointment intake" },
-      { icon: <Sparkles className="h-5 w-5" />, text: "AI-augmented documentation & referral letters" },
+      { icon: <Sparkles className="h-5 w-5" />, text: "AI-drafted documentation, referral letters & treatment codes" },
       { icon: <Euro className="h-5 w-5" />, text: "Measurable savings on administration time" },
     ],
     cta: {
-      label: "Contact About Enterprise",
+      label: "Open AutoCoder & Scribe",
       href: "mailto:info@ibnceena.ie?subject=Enterprise%20enquiry%20%E2%80%94%20Health%20HIVE",
     },
     image: `${import.meta.env.BASE_URL}images/gp-consult.webp`,
@@ -120,14 +120,14 @@ const slideVariants = {
     rotateY: direction > 0 ? 20 : -20,
     scale: 0.82,
     opacity: 0,
-    filter: "blur(8px)",
+    filter: "none",
   }),
   center: {
     x: 0,
     rotateY: 0,
     scale: 1,
     opacity: 1,
-    filter: "blur(0px)",
+    filter: "none",
     zIndex: 1,
   },
   exit: (direction: number) => ({
@@ -135,7 +135,7 @@ const slideVariants = {
     rotateY: direction > 0 ? -20 : 20,
     scale: 0.82,
     opacity: 0,
-    filter: "blur(8px)",
+    filter: "none",
     zIndex: 0,
   }),
 };
@@ -148,8 +148,7 @@ const SLIDE_TRANSITION: Record<string, Record<string, unknown>> = {
   rotateY: { duration: 0.95, ease: EASE },
   scale: { duration: 0.95, ease: EASE },
   opacity: { duration: 0.55, ease: "easeOut" },
-  filter: { duration: 0.55 },
-};
+  };
 
 /** Reduced-motion: simple crossfade */
 const reducedSlideVariants = {
@@ -167,11 +166,11 @@ const contentContainer = {
 };
 
 const contentItem = {
-  hidden: { opacity: 0, y: 28, filter: "blur(6px)" },
+  hidden: { opacity: 0, y: 28, filter: "none" },
   visible: {
     opacity: 1,
     y: 0,
-    filter: "blur(0px)",
+    filter: "none",
     transition: { duration: 0.55, ease: EASE },
   },
 };
@@ -219,13 +218,19 @@ function TiltImage({ src, alt, className }: { src: string; alt: string; classNam
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const prefersReduced = useReducedMotion();
 
+  const rafRef = useRef<number | null>(null);
   const onMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (prefersReduced) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const nx = (e.clientX - rect.left) / rect.width - 0.5;
-      const ny = (e.clientY - rect.top) / rect.height - 0.5;
-      setTilt({ x: ny * -10, y: nx * 10 });
+      const el = e.currentTarget;
+      if (rafRef.current) return; // throttle: skip if frame pending
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        const rect = el.getBoundingClientRect();
+        const nx = (e.clientX - rect.left) / rect.width - 0.5;
+        const ny = (e.clientY - rect.top) / rect.height - 0.5;
+        setTilt({ x: ny * -10, y: nx * 10 });
+      });
     },
     [prefersReduced],
   );
@@ -370,11 +375,7 @@ function SceneContent({
 /*  Main cinematic showcase                                             */
 /* ------------------------------------------------------------------ */
 
-const AUTO_INTERVAL = 7000; // ms
-const SWIPE_THRESHOLD = 50; // px
-
-export function CinematicShowcase() {
-  const prefersReduced = useReducedMotion();
+const AUTO_INTERVAL = 0; // Auto-advance removed — users navigate manually
   const [[page, direction], setPage] = useState([0, 0]);
   const [transitioning, setTransitioning] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -394,17 +395,7 @@ export function CinematicShowcase() {
     [],
   );
 
-  /* Auto-advance */
-  useEffect(() => {
-    if (paused || prefersReduced) {
-      if (autoRef.current) clearInterval(autoRef.current);
-      return;
-    }
-    autoRef.current = setInterval(() => paginate(1), AUTO_INTERVAL);
-    return () => {
-      if (autoRef.current) clearInterval(autoRef.current);
-    };
-  }, [paused, prefersReduced, paginate]);
+  /* Auto-advance removed for accessibility — users navigate manually */
 
   /* Keyboard navigation */
   useEffect(() => {
