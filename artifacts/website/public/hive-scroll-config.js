@@ -1,0 +1,110 @@
+/* Health HIVE Scroll-World Configuration
+   Assets served from https://webp-deploy.vercel.app
+   8 videos + 11 WebP images, all pre-verified */
+
+const B = 'https://webp-deploy.vercel.app';
+
+const HIVE_SCROLL_CONFIG = {
+  brand: { name: 'HIVE', href: '#top' },
+  cta: { label: 'Get Started', href: '#download' },
+  hint: 'scroll to fly in',
+  diveScroll: 1.4,
+  connScroll: 0.9,
+  crossfade: 0.12,
+  atmosphere: true,
+  nav: true,
+
+  sections: [
+    {
+      id: 'ecosystem',
+      label: 'Ecosystem',
+      still: B + '/Make_a_360_carousel_for_scroll_Nano_Banana_2_08866.webp',
+      clip: B + '/Combine_these_three_scenes_int_Veo_31_76646.mp4',
+      accent: '#F5C518',
+      scroll: 1.8,
+      linger: 0.35,
+      eyebrow: 'Welcome to',
+      title: 'The HIVE Ecosystem.',
+      body: 'One connected health platform for patients, clinical teams, and GP practices — built in Ireland, designed for everyone.',
+      tags: ['Companion', 'Hospital', 'GP Scribe'],
+    },
+    {
+      id: 'companion',
+      label: 'Companion',
+      still: B + '/HIVE_COMPANION_Patient_App_Sam_Nano_Banana_2_00317.webp',
+      clip: B + '/_360_Camera_52630.mp4',
+      accent: '#FFD44D',
+      scroll: 1.6,
+      linger: 0.4,
+      eyebrow: 'For Patients',
+      title: 'HIVE Companion.',
+      body: 'Walk into any appointment ready. Your health records, prescriptions, and emergency card — all in one calm, clear app.',
+      tags: ['Health records', 'Prescriptions', 'Emergency card', 'Pre-visit questionnaires'],
+    },
+    {
+      id: 'hospital',
+      label: 'Hospital',
+      still: B + '/HIVE_COMPANION_Patient_App_Sam_Nano_Banana_2_44684.webp',
+      clip: B + '/_360_Camera_60200.mp4',
+      accent: '#E8A317',
+      scroll: 1.6,
+      linger: 0.4,
+      eyebrow: 'For Clinical Teams',
+      title: 'HIVE Hospital.',
+      body: 'AI-powered clinical workflows that document with precision. Photo recognition, on-device encryption, and decision support — all compliant.',
+      tags: ['Photo recognition', 'On-device encryption', 'AI decision support'],
+    },
+    {
+      id: 'gp-scribe',
+      label: 'GP Scribe',
+      still: B + '/1_HIVE_GP_SCRIBE_Agentic_AI_Sc_Nano_Banana_2_04431.webp',
+      clip: B + '/_360_Camera_75298.mp4',
+      accent: '#D48806',
+      scroll: 1.6,
+      linger: 0.4,
+      eyebrow: 'For GP Practices',
+      title: 'HIVE GP Scribe.',
+      body: 'Less paperwork, more care. AI drafts referrals and clinic summaries that you review and approve — saving hours of admin every week.',
+      tags: ['AI referrals', 'Admin savings', 'System integration', 'Clinic summaries'],
+    },
+    {
+      id: 'trust',
+      label: 'Trust',
+      still: B + '/Create_a_sleek_and_modern_app__Nano_Banana_2_57634.webp',
+      clip: B + '/Make_a_360_carousel_for_scroll_Kling_16_29830.mp4',
+      accent: '#BF7E0A',
+      scroll: 1.4,
+      linger: 0.3,
+      eyebrow: 'Built for Ireland',
+      title: 'Trust by design.',
+      body: 'GDPR and Data Protection Act 2018 compliant. Your data stays yours — encrypted on-device, never sold, never shared without consent.',
+      tags: ['GDPR compliant', 'DPA 2018', 'HSE-aligned', 'On-device encryption'],
+    },
+    {
+      id: 'download',
+      label: 'Get Started',
+      still: B + '/HIVE_COMPANION_Patient_App_Sam_Nano_Banana_2_14659.webp',
+      clip: B + '/Make_a_360_carousel_for_scroll_Kling_16_30965.mp4',
+      accent: '#F5C518',
+      scroll: 1.2,
+      eyebrow: 'Ready when you are',
+      title: 'Your health, connected.',
+      body: 'Download HIVE Companion today, or get in touch to bring HIVE Hospital and GP Scribe to your organisation.',
+      tags: [],
+      cta: {
+        primary: { label: 'Download App', href: '#' },
+        secondary: { label: 'Contact Us', href: '#' },
+      },
+    },
+  ],
+
+  connectors: [
+    B + '/_Drone_Cam_71357.mp4',
+    B + '/_Drone_Cam_94183.mp4',
+    null,
+    null,
+    null,
+  ],
+};
+
+if (typeof window !== 'undefined') window.HIVE_SCROLL_CONFIG = HIVE_SCROLL_CONFIG;

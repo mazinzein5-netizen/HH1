@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- @ROUTE_META@ -->
     <link rel="icon" type="image/png" href="/favicon.png" />
     <script>
@@ -20,6 +20,9 @@
         } catch (e) {}
       })();
     </script>
+    <!-- Scroll-World Engine + HIVE Config (vanilla JS, loaded before React mounts) -->
+    <script src="/scrub-engine.js"></script>
+    <script src="/hive-scroll-config.js"></script>
   </head>
   <body>
     <div id="root"><!-- @ROUTE_BODY@ --></div>

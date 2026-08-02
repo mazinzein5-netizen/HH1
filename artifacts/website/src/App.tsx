@@ -5,8 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Code-split every route so the initial bundle only contains the shell.
-const Home = lazy(() => import("@/pages/home"));
+const HomeV3 = lazy(() => import("@/pages/home-v3"));
 const HomeV2 = lazy(() => import("@/pages/home-v2"));
+const Home = lazy(() => import("@/pages/home"));
 const BookPage = lazy(() => import("@/pages/book"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const PortalLanding = lazy(() => import("@/portal/Landing"));
@@ -36,8 +37,9 @@ function Router() {
   return (
     <Suspense fallback={<RouteLoader />}>
       <Switch>
-        <Route path="/" component={Home} />
+        <Route path="/" component={HomeV3} />
         <Route path="/v2" component={HomeV2} />
+        <Route path="/v1" component={Home} />
         <Route path="/book" component={BookPage} />
         <Route path="/portal" component={PortalLanding} />
         <Route path="/portal/signup" component={PortalSignup} />

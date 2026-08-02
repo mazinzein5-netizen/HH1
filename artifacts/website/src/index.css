@@ -226,3 +226,40 @@ html {
   h1, h2, h3 { text-wrap: balance; }
   p { text-wrap: pretty; }
 }
+
+/* ============================================
+   Scroll-World HIVE Overrides
+   ============================================ */
+:root {
+  --sw-bg: #0a0a0a;
+  --sw-ink: #ffffff;
+  --sw-ink-soft: #888888;
+  --sw-accent: #F5C518;
+}
+
+/* The scroll world container sits behind the React app shell */
+#hive-scroll-world {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #0a0a0a;
+}
+
+/* The scroll-world engine injects its own scoped CSS via @layer sw {},
+   so these overrides only apply when the engine hasn't defined them.
+   The engine's own layer is lower priority than unlayered styles. */
+
+/* iOS safe area support for scroll-world copy */
+@supports (padding: max(0px)) {
+  .sw-copy {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+
+/* iOS rubber-band fix */
+@supports (-webkit-touch-callout: none) {
+  .sw-root {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+  }
+}
