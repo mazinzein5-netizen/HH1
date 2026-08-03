@@ -228,7 +228,10 @@ html {
 }
 
 /* ============================================
+/* ============================================
    Scroll-World HIVE Overrides
+   The container MUST be position:relative (NOT fixed)
+   so the engine's .sw-track div can create scroll height.
    ============================================ */
 :root {
   --sw-bg: #0a0a0a;
@@ -237,71 +240,11 @@ html {
   --sw-accent: #F5C518;
 }
 
-/* The scroll world container sits behind the React app shell */
 #hive-scroll-world {
-  position: fixed;
-  inset: 0;
+  position: relative;
   z-index: 0;
   background: #0a0a0a;
-}
-
-/* The scroll-world engine injects its own scoped CSS via @layer sw {},
-   so these overrides only apply when the engine hasn't defined them.
-   The engine's own layer is lower priority than unlayered styles. */
-
-/* iOS safe area support for scroll-world copy */
-@supports (padding: max(0px)) {
-  .sw-copy {
-    padding-bottom: max(20px, env(safe-area-inset-bottom));
-  }
-}
-
-/* iOS rubber-band fix */
-@supports (-webkit-touch-callout: none) {
-  .sw-root {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: none;
-  }
-}
-
-/* ============================================
-   SCROLL-WORLD OVERRIDE — CRITICAL
-   Force dark bg, hide React root content on homepage
-   ============================================ */
-
-/* When scroll-world is active, kill the React app's background and text */
-body:has(#hive-scroll-world) {
-  background: #0a0a0a !important;
-  overflow-x: hidden;
-}
-
-/* The React #root should not paint over the scroll world */
-#hive-scroll-world ~ #root {
-  position: relative;
-  z-index: 10;
-  pointer-events: none;
-}
-
-/* But interactive elements inside scroll world need events */
-#hive-scroll-world {
   pointer-events: auto;
-}
-
-/* Ensure the track div (which creates scroll height) works */
-.sw-track {
-  pointer-events: none;
-}
-
-/* ============================================
-   Scroll-World HIVE Overrides
-   ============================================ */
-
-/* Container is relative (NOT fixed) so .sw-track can create scroll height.
-   The engine's own child elements (sky, stage, copylayer) are already position:fixed. */
-#hive-scroll-world {
-  position: relative;
-  z-index: 0;
-  background: #0a0a0a;
 }
 
 body:has(#hive-scroll-world) {
@@ -309,29 +252,24 @@ body:has(#hive-scroll-world) {
   overflow-x: hidden;
 }
 
-/* React root sits above but doesn't block scroll */
+/* React root should not block the scroll world */
 #hive-scroll-world ~ #root {
   position: relative;
   z-index: 10;
   pointer-events: none;
 }
 
-#hive-scroll-world {
-  pointer-events: auto;
-}
-
 .sw-track {
   pointer-events: none;
 }
 
-/* iOS safe area support */
+/* iOS safe area */
 @supports (padding: max(0px)) {
   .sw-copy {
     padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 }
 
-/* iOS rubber-band fix */
 @supports (-webkit-touch-callout: none) {
   .sw-root {
     -webkit-overflow-scrolling: touch;
