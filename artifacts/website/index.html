@@ -20,43 +20,125 @@
         } catch (e) {}
       })();
     </script>
-    <!-- Scroll-World Engine + HIVE Config (vanilla JS, loaded synchronously before anything else) -->
+    <style>
+      :root, .sw-root {
+        --sw-bg: #0a0a0a;
+        --sw-ink: #f8f8f8;
+        --sw-ink-soft: #999;
+        --sw-accent: #F5C518;
+      }
+      html, body { background: #0a0a0a; margin: 0; }
+    </style>
+    <!-- Scroll-World Engine — loaded synchronously, same as working sw2 deploy -->
     <script src="/scrub-engine.js"></script>
-    <script src="/hive-scroll-config.js"></script>
   </head>
   <body>
+    <div id="top"></div>
+    <div id="world"></div>
     <div id="root"><!-- @ROUTE_BODY@ --></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Mount scroll-world engine ASAP — runs as soon as body parses, no React dependency -->
+    <!-- Mount scroll-world SYNCHRONOUSLY — same pattern as sw2-lilac (confirmed working) -->
     <script>
-      (function() {
-        function tryMount() {
-          // Create container if it doesn't exist yet
-          var container = document.getElementById('hive-scroll-world');
-          if (!container) {
-            container = document.createElement('div');
-            container.id = 'hive-scroll-world';
-            container.style.cssText = 'position:relative;z-index:0;background:#0a0a0a;';
-            document.body.insertBefore(container, document.body.firstChild);
-          }
+      mountScrollWorld(document.getElementById('world'), {
+        brand: { name: 'HIVE', href: '#top' },
+        cta: { label: 'Get Started', href: '#download' },
+        hint: 'scroll to fly in',
+        diveScroll: 1.4,
+        connScroll: 0.9,
 
-          if (window.mountScrollWorld && window.HIVE_SCROLL_CONFIG) {
-            container.innerHTML = '';
-            window.mountScrollWorld(container, window.HIVE_SCROLL_CONFIG);
-            console.log('[HIVE] Scroll-World mounted successfully');
-          } else {
-            // Retry every 100ms until both scripts are loaded
-            setTimeout(tryMount, 100);
-          }
-        }
+        sections: [
+          {
+            id: 'ecosystem',
+            label: 'Ecosystem',
+            still: 'https://webp-deploy.vercel.app/Make_a_360_carousel_for_scroll_Nano_Banana_2_08866.webp',
+            clip: 'https://webp-deploy.vercel.app/Combine_these_three_scenes_int_Veo_31_76646.mp4',
+            accent: '#F5C518',
+            scroll: 1.8,
+            linger: 0.35,
+            eyebrow: 'Welcome to',
+            title: 'The HIVE Ecosystem.',
+            body: 'One connected health platform for patients, clinical teams, and GP practices — built in Ireland, designed for everyone.',
+            tags: ['Companion', 'Hospital', 'GP Scribe'],
+          },
+          {
+            id: 'companion',
+            label: 'Companion',
+            still: 'https://webp-deploy.vercel.app/HIVE_COMPANION_Patient_App_Sam_Nano_Banana_2_00317.webp',
+            clip: 'https://webp-deploy.vercel.app/_360_Camera_52630.mp4',
+            accent: '#FFD44D',
+            scroll: 1.6,
+            linger: 0.4,
+            eyebrow: 'For Patients',
+            title: 'HIVE Companion.',
+            body: 'Walk into any appointment ready. Your health records, prescriptions, and emergency card — all in one calm, clear app.',
+            tags: ['Health records', 'Prescriptions', 'Emergency card', 'Pre-visit questionnaires'],
+          },
+          {
+            id: 'hospital',
+            label: 'Hospital',
+            still: 'https://webp-deploy.vercel.app/HIVE_COMPANION_Patient_App_Sam_Nano_Banana_2_44684.webp',
+            clip: 'https://webp-deploy.vercel.app/_360_Camera_60200.mp4',
+            accent: '#E8A317',
+            scroll: 1.6,
+            linger: 0.4,
+            eyebrow: 'For Clinical Teams',
+            title: 'HIVE Hospital.',
+            body: 'AI-powered clinical workflows that document with precision. Photo recognition, on-device encryption, and decision support — all compliant.',
+            tags: ['Photo recognition', 'On-device encryption', 'AI decision support'],
+          },
+          {
+            id: 'gp-scribe',
+            label: 'GP Scribe',
+            still: 'https://webp-deploy.vercel.app/1_HIVE_GP_SCRIBE_Agentic_AI_Sc_Nano_Banana_2_04431.webp',
+            clip: 'https://webp-deploy.vercel.app/_360_Camera_75298.mp4',
+            accent: '#D48806',
+            scroll: 1.6,
+            linger: 0.4,
+            eyebrow: 'For GP Practices',
+            title: 'HIVE GP Scribe.',
+            body: 'Less paperwork, more care. AI drafts referrals and clinic summaries that you review and approve — saving hours of admin every week.',
+            tags: ['AI referrals', 'Admin savings', 'System integration', 'Clinic summaries'],
+          },
+          {
+            id: 'trust',
+            label: 'Trust',
+            still: 'https://webp-deploy.vercel.app/Create_a_sleek_and_modern_app__Nano_Banana_2_57634.webp',
+            clip: 'https://webp-deploy.vercel.app/Make_a_360_carousel_for_scroll_Kling_16_29830.mp4',
+            accent: '#BF7E0A',
+            scroll: 1.4,
+            linger: 0.3,
+            eyebrow: 'Built for Ireland',
+            title: 'Trust by design.',
+            body: 'GDPR and Data Protection Act 2018 compliant. Your data stays yours — encrypted on-device, never sold, never shared without consent.',
+            tags: ['GDPR compliant', 'DPA 2018', 'HSE-aligned', 'On-device encryption'],
+          },
+          {
+            id: 'download',
+            label: 'Get Started',
+            still: 'https://webp-deploy.vercel.app/HIVE_COMPANION_Patient_App_Sam_Nano_Banana_2_14659.webp',
+            clip: 'https://webp-deploy.vercel.app/Make_a_360_carousel_for_scroll_Kling_16_30965.mp4',
+            accent: '#F5C518',
+            scroll: 1.2,
+            eyebrow: 'Ready when you are',
+            title: 'Your health, connected.',
+            body: 'Download HIVE Companion today, or get in touch to bring HIVE Hospital and GP Scribe to your organisation.',
+            tags: [],
+            cta: {
+              primary: { label: 'Download App', href: '#' },
+              secondary: { label: 'Contact Us', href: '#' },
+            },
+          },
+        ],
 
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', tryMount);
-        } else {
-          tryMount();
-        }
-      })();
+        connectors: [
+          'https://webp-deploy.vercel.app/_Drone_Cam_71357.mp4',
+          'https://webp-deploy.vercel.app/_Drone_Cam_94183.mp4',
+          null,
+          null,
+          null,
+        ],
+      });
     </script>
   </body>
 </html>
