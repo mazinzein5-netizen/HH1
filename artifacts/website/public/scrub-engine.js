@@ -395,7 +395,7 @@ function injectCSS() {
   @media (prefers-reduced-motion:reduce){.sw-hint i::after{animation:none;}.sw-pt{display:none;}}
   `;
   const style = document.createElement('style'); style.id = 'sw-css';
-  style.textContent = '@layer sw {\n' + css + '\n}';
+  style.textContent = css;
   document.head.appendChild(style);
 }
 

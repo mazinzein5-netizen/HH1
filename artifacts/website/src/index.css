@@ -263,3 +263,31 @@ html {
     overscroll-behavior-y: none;
   }
 }
+
+/* ============================================
+   SCROLL-WORLD OVERRIDE — CRITICAL
+   Force dark bg, hide React root content on homepage
+   ============================================ */
+
+/* When scroll-world is active, kill the React app's background and text */
+body:has(#hive-scroll-world) {
+  background: #0a0a0a !important;
+  overflow-x: hidden;
+}
+
+/* The React #root should not paint over the scroll world */
+#hive-scroll-world ~ #root {
+  position: relative;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* But interactive elements inside scroll world need events */
+#hive-scroll-world {
+  pointer-events: auto;
+}
+
+/* Ensure the track div (which creates scroll height) works */
+.sw-track {
+  pointer-events: none;
+}

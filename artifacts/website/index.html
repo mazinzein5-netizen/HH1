@@ -20,12 +20,43 @@
         } catch (e) {}
       })();
     </script>
-    <!-- Scroll-World Engine + HIVE Config (vanilla JS, loaded before React mounts) -->
+    <!-- Scroll-World Engine + HIVE Config (vanilla JS, loaded synchronously before anything else) -->
     <script src="/scrub-engine.js"></script>
     <script src="/hive-scroll-config.js"></script>
   </head>
   <body>
     <div id="root"><!-- @ROUTE_BODY@ --></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Mount scroll-world engine ASAP — runs as soon as body parses, no React dependency -->
+    <script>
+      (function() {
+        function tryMount() {
+          // Create container if it doesn't exist yet
+          var container = document.getElementById('hive-scroll-world');
+          if (!container) {
+            container = document.createElement('div');
+            container.id = 'hive-scroll-world';
+            container.style.cssText = 'position:fixed;inset:0;z-index:0;background:#0a0a0a;';
+            document.body.insertBefore(container, document.body.firstChild);
+          }
+
+          if (window.mountScrollWorld && window.HIVE_SCROLL_CONFIG) {
+            container.innerHTML = '';
+            window.mountScrollWorld(container, window.HIVE_SCROLL_CONFIG);
+            console.log('[HIVE] Scroll-World mounted successfully');
+          } else {
+            // Retry every 100ms until both scripts are loaded
+            setTimeout(tryMount, 100);
+          }
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', tryMount);
+        } else {
+          tryMount();
+        }
+      })();
+    </script>
   </body>
 </html>
